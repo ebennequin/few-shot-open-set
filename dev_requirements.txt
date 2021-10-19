@@ -1,0 +1,14 @@
+click==8.0.1
+pygit2==1.5.0
+dvc==2.2.0
+boto3==1.17.49
+s3fs==2021.5.0
+numpy==1.20.3
+scikit-learn==0.24.2
+networkx==2.5.1
+pygraphviz==1.7
+PyYAML==5.4.1
+streamlit==0.88.0
+tensorboard==2.5.0
+seaborn==0.11.1
+-r easyfsl_requirements.txt

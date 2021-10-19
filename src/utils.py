@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.models import resnet18
 
-from easyfsl.data_tools import EasySet
+from easyfsl.data_tools import EasySet, TaskSampler
 from easyfsl.data_tools.samplers import (
     AbstractTaskSampler,
     AdaptiveTaskSampler,
@@ -132,7 +132,7 @@ def get_sampler(
             forgetting=adaptive_forgetting, hardness=adaptive_hardness, **common_args
         )
     if sampler == "uniform":
-        return UniformTaskSampler(**common_args)
+        return TaskSampler(**common_args)
     else:
         raise ValueError(f"Unknown sampler : {sampler}")
 
@@ -242,7 +242,6 @@ def create_dataloader(dataset: EasySet, sampler: AbstractTaskSampler, n_workers:
 
 def build_model(
     device: str,
-    tb_writer: Optional[SummaryWriter] = None,
     pretrained_weights: Optional[Path] = None,
 ):
     """
@@ -258,11 +257,7 @@ def build_model(
     convolutional_network = resnet18(pretrained=False)
     convolutional_network.fc = nn.Flatten()
 
-    model = PrototypicalNetworks(
-        backbone=convolutional_network,
-        tensorboard_writer=tb_writer,
-        device=device,
-    ).to(device)
+    model = PrototypicalNetworks(convolutional_network).to(device)
 
     if pretrained_weights is not None:
         model.load_state_dict(torch.load(pretrained_weights))

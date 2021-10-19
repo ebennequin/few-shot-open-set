@@ -1,15 +1,10 @@
 from pathlib import Path
 
 import click
-import torch
 from loguru import logger
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision.models import resnet18
 
 from easyfsl.data_tools import EasySet
 from easyfsl.data_tools.samplers.testbed_sampler import TestbedSampler
-from easyfsl.methods import PrototypicalNetworks
 from src.utils import build_model, create_dataloader
 
 

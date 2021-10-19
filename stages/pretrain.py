@@ -66,7 +66,7 @@ def main(
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
-    train_set = EasySet(specs_file=specs_dir / "train.json", training=True)
+    train_  set = EasySet(specs_file=specs_dir / "train.json", training=True)
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,

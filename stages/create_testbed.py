@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Dict, List
 
 import click
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch

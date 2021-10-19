@@ -4,7 +4,7 @@ stages:
       - train
       - test
     do:
-      cmd: python -m src.compute_semantic_distances
+      cmd: python -m stages.compute_semantic_distances
         --split ${item}
         --specs-dir ${specs_dir}
         --output-dir ${distances_dir}
@@ -12,7 +12,7 @@ stages:
       deps:
         - ${specs_dir}/${item}.json
         - ${specs_dir}/wordnet.is_a.txt
-        - src/compute_semantic_distances.py
+        - stages/compute_semantic_distances.py
       outs:
         - ${logs_dir}/compute_distances_${item}.out
         - ${distances_dir}/${item}.csv
@@ -20,7 +20,7 @@ stages:
   create_testbed:
     foreach: ${testbed.n_shot}
     do:
-      cmd: python -m src.create_testbed
+      cmd: python -m stages.create_testbed
         --n-tasks ${testbed.n_tasks}
         --n-way ${n_way}
         --n-query ${n_query}
@@ -32,7 +32,7 @@ stages:
       deps:
         - ${distances_dir}/test.csv
         - ${specs_dir}/test.json
-        - src/create_testbed.py
+        - stages/create_testbed.py
       outs:
         - ${testbeds_dir}/testbed_${item}_shot.csv
         - ${testbeds_dir}/testbed_${item}_shot_pv.png
@@ -40,7 +40,7 @@ stages:
         - ${logs_dir}/create_testbed_${item}.out
 
   train:
-    cmd: python -m src.train
+    cmd: python -m stages.train
       --specs-dir ${specs_dir}
       --distances-dir ${distances_dir}
       --metrics-dir ${metrics_dir}
@@ -61,7 +61,7 @@ stages:
       - ${distances_dir}/train.csv
       - ${specs_dir}/train.json
       - ${specs_dir}/val.json
-      - src/train.py
+      - stages/train.py
     outs:
       - ${models_dir}/trained_model.tar
       - ${metrics_dir}/training_tasks.pkl
@@ -69,7 +69,7 @@ stages:
       - ${logs_dir}/train.out
 
   evaluate:
-    cmd: python -m src.evaluate
+    cmd: python -m stages.evaluate
       --specs-dir ${specs_dir}
       --testbed ${testbeds_dir}/testbed_${n_shot}_shot.csv
       --trained-model ${models_dir}/trained_model.tar
@@ -80,20 +80,20 @@ stages:
       - ${models_dir}/trained_model.tar
       - ${testbeds_dir}/testbed_${n_shot}_shot.csv
       - ${specs_dir}/test.json
-      - src/evaluate.py
+      - stages/evaluate.py
     outs:
       - ${metrics_dir}/raw_results.csv
       - ${logs_dir}/evaluate.out
 
   compute_metrics:
-    cmd: python -m src.compute_metrics
+    cmd: python -m stages.compute_metrics
       --testbed ${testbeds_dir}/testbed_${n_shot}_shot.csv
       --metrics-dir ${metrics_dir}
       &> ${logs_dir}/compute_metrics.out
     deps:
       - ${testbeds_dir}/testbed_${n_shot}_shot.csv
       - ${metrics_dir}/raw_results.csv
-      - src/compute_metrics.py
+      - stages/compute_metrics.py
     outs:
       - ${metrics_dir}/accuracy_v_variance.png
       - ${logs_dir}/compute_metrics.out
@@ -107,7 +107,7 @@ stages:
           template: smooth
 
   get_train_stats:
-    cmd: python -m src.get_training_tasks_stats
+    cmd: python -m stages.get_training_tasks_stats
       --training-tasks-record ${metrics_dir}/training_tasks.pkl
       --distances-dir ${distances_dir}
       --metrics-dir ${metrics_dir}
@@ -115,7 +115,7 @@ stages:
     deps:
       - ${metrics_dir}/training_tasks.pkl
       - ${distances_dir}/train.csv
-      - src/get_training_tasks_stats.py
+      - stages/get_training_tasks_stats.py
     outs:
       - ${metrics_dir}/intra_training_task_distances.csv
       - ${metrics_dir}/training_classes_sampled_together.png

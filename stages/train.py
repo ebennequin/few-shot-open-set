@@ -5,14 +5,10 @@ from typing import Optional
 import click
 import torch
 from loguru import logger
-from torch import nn
 from torch.optim import Adam
-from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.models import resnet18
 
 from easyfsl.data_tools import EasySet
-from easyfsl.methods import PrototypicalNetworks
 from src.utils import build_model, create_dataloader, get_sampler, set_random_seed
 
 SAMPLERS = [

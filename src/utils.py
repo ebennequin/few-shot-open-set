@@ -14,16 +14,9 @@ from matplotlib import pyplot as plt
 from networkx.drawing.nx_agraph import graphviz_layout
 from torch import nn
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from torchvision.models import resnet18
 
 from easyfsl.data_tools import EasySet, TaskSampler
-from easyfsl.data_tools.samplers import (
-    AbstractTaskSampler,
-    AdaptiveTaskSampler,
-    SemanticTaskSampler,
-    UniformTaskSampler,
-)
 from easyfsl.methods import PrototypicalNetworks
 
 
@@ -94,47 +87,6 @@ def get_pseudo_variance(labels: List[int], distances: np.ndarray) -> float:
             for label_a, label_b in itertools.combinations(labels, 2)
         ]
     )
-
-
-def get_sampler(
-    sampler: str,
-    dataset: EasySet,
-    n_way: int,
-    n_shot: int,
-    n_query: int,
-    n_tasks: int,
-    distances_csv: Path = None,
-    semantic_alpha: float = None,
-    semantic_strategy: str = None,
-    adaptive_forgetting: float = None,
-    adaptive_hardness: float = None,
-):
-    common_args = {
-        "dataset": dataset,
-        "n_way": n_way,
-        "n_shot": n_shot,
-        "n_query": n_query,
-        "n_tasks": n_tasks,
-    }
-    if sampler == "semantic":
-        if semantic_alpha is None or distances_csv is None or semantic_strategy is None:
-            raise ValueError("Missing arguments for semantic sampler")
-        return SemanticTaskSampler(
-            alpha=semantic_alpha,
-            strategy=semantic_strategy,
-            semantic_distances_csv=distances_csv,
-            **common_args,
-        )
-    if sampler == "adaptive":
-        if adaptive_forgetting is None or adaptive_hardness is None:
-            raise ValueError("Missing arguments for adaptive sampler")
-        return AdaptiveTaskSampler(
-            forgetting=adaptive_forgetting, hardness=adaptive_hardness, **common_args
-        )
-    if sampler == "uniform":
-        return TaskSampler(**common_args)
-    else:
-        raise ValueError(f"Unknown sampler : {sampler}")
 
 
 def get_intra_class_distances(training_tasks_record: List, distances: np.ndarray):
@@ -219,7 +171,7 @@ def set_random_seed(seed: int):
     logger.info(f"Random seed : {seed}")
 
 
-def create_dataloader(dataset: EasySet, sampler: AbstractTaskSampler, n_workers: int):
+def create_dataloader(dataset: EasySet, sampler: TaskSampler, n_workers: int):
     """
     Create a torch dataloader of tasks from the input dataset sampled according
     to the input tensor.

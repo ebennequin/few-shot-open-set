@@ -1,98 +1,43 @@
-import pickle
 from pathlib import Path
 from typing import Optional
 
-import click
 import torch
+import typer
 from loguru import logger
 from torch.optim import Adam
-from torch.utils.tensorboard import SummaryWriter
 
 from easyfsl.data_tools import EasySet, TaskSampler
-from src.utils import build_model, create_dataloader, get_sampler, set_random_seed
+
+from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR
+from src.utils import build_model, create_dataloader, set_random_seed
 
 
-@click.option(
-    "--n-way",
-    help="Number of classes per task",
-    type=int,
-    default=5,
-)
-@click.option(
-    "--n-shot",
-    help="Number of support examples per class",
-    type=int,
-    default=5,
-)
-@click.option(
-    "--n-query",
-    help="Number of query samples per class",
-    type=int,
-    default=10,
-)
-@click.option(
-    "--n-epochs",
-    help="Number of training epochs",
-    type=int,
-    default=100,
-)
-@click.option(
-    "--n-tasks-per-epoch",
-    help="Number of episodes per training epoch",
-    type=int,
-    default=500,
-)
-@click.option(
-    "--pretrained-weights",
-    help="It's possible to load pretrained weights. "
-    "This ensures that different algorithms have the same starting weights.",
-    type=Path,
-    required=False,
-)
-@click.option(
-    "--specs-dir",
-    help="Where to find the dataset specs files",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--tb-log-dir",
-    help="Where to dump tensorboard event files",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--output-model",
-    help="Where to dump the archive containing trained model weights",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--random-seed",
-    help="Defined random seed, for reproducibility",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--device",
-    help="What device to train the model on",
-    type=str,
-    default="cuda",
-)
-@click.command()
 def main(
-    n_way: int,
-    n_shot: int,
-    n_query: int,
-    n_epochs: int,
-    n_tasks_per_epoch: int,
-    pretrained_weights: Optional[Path],
-    specs_dir: Path,
-    tb_log_dir: Path,
-    output_model: Path,
-    random_seed: int,
-    device: str,
+    specs_dir: Path = CIFAR_SPECS_DIR,
+    output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
+    n_way: int = 5,
+    n_shot: int = 5,
+    n_query: int = 5,
+    n_epochs: int = 100,
+    n_tasks_per_epoch: int = 500,
+    random_seed: int = 0,
+    device: str = "cuda",
+    pretrained_weights: Optional[Path] = None,
 ):
+    """
+    Train a model in an episodic fashion.
+    Args:
+        specs_dir: where to find the dataset specs files
+        output_model: where to dump the archive containing trained model weights
+        n_way: number of classes per task
+        n_shot: number of support examples per class
+        n_query: number of query samples per class
+        n_epochs: number of training epochs
+        n_tasks_per_epoch: number of episodes per training epoch
+        random_seed: defined random seed, for reproducibility
+        device: what device to train the model on
+        pretrained_weights: path to a tar archive of a pretrained model to start from
+    """
     n_validation_tasks = 100
     n_workers = 12
 
@@ -120,8 +65,6 @@ def main(
     )
     val_loader = create_dataloader(val_set, val_sampler, n_workers)
 
-    tb_log_dir.mkdir(parents=True, exist_ok=True)
-
     logger.info("Building model...")
     model = build_model(
         device=device,
@@ -143,4 +86,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)

@@ -13,5 +13,6 @@ streamlit==1.0.0
 tensorboard==2.5.0
 torch==1.9.1
 torchvision==0.10.1
+typer==0.4.0
 seaborn==0.11.1
 easyfsl==0.2.0

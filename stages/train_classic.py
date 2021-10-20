@@ -2,6 +2,7 @@ from pathlib import Path
 
 import click
 import torch
+import typer
 from loguru import logger
 from torch import nn
 from torch.optim import Adam
@@ -10,55 +11,30 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models import resnet18
 
 from easyfsl.data_tools import EasySet
-from easyfsl.erm_trainer import ERMTrainer
+
+from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR
+from src.erm_trainer import ERMTrainer
 from src.utils import set_random_seed
 
 
-@click.option(
-    "--n-epochs",
-    help="Number of training epochs",
-    type=int,
-    default=100,
-)
-@click.option(
-    "--specs-dir",
-    help="Where to find the dataset specs files",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--tb-log-dir",
-    help="Where to dump tensorboard event files",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--output-model",
-    help="Where to dump the archive containing trained model weights",
-    type=Path,
-    required=True,
-)
-@click.option(
-    "--random-seed",
-    help="Defined random seed, for reproducibility",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--device",
-    help="What device to train the model on",
-    type=str,
-    default="cuda",
-)
-@click.command()
 def main(
-    n_epochs: int,
-    specs_dir: Path,
-    tb_log_dir: Path,
-    output_model: Path,
-    random_seed: int,
-    device: str,
+    specs_dir: Path = CIFAR_SPECS_DIR,
+    output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
+    n_epochs: int = 100,
+    tb_log_dir: Path = TB_LOGS_DIR,
+    random_seed: int = 0,
+    device: str = "cuda",
 ):
+    """
+
+    Args:
+        specs_dir: where to find the dataset specs files
+        output_model: where to dump the archive containing trained model weights
+        n_epochs: number of training epochs
+        tb_log_dir: where to dump tensorboard event files
+        random_seed: defined random seed, for reproducibility
+        device: what device to train the model on
+    """
     n_workers = 12
     batch_size = 64
     loss_fn = nn.CrossEntropyLoss()
@@ -97,4 +73,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)

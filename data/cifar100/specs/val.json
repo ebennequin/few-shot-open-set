@@ -1,0 +1,14 @@
+{
+    "class_names": [
+        "bridge",
+        "castle",
+        "house",
+        "road",
+        "skyscraper",
+        "cloud",
+        "forest",
+        "mountain",
+        "plain",
+        "sea"
+    ]
+}

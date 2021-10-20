@@ -13,6 +13,8 @@ from src.utils import build_model, create_dataloader, set_random_seed
 
 
 def main(
+    backbone: str,
+    method: str = "protonet",
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,
@@ -27,6 +29,9 @@ def main(
     """
     Train a model in an episodic fashion.
     Args:
+        backbone: what model to train. Must be a key of constants.BACKBONES.
+        method: what few-shot method to use during episodic training.
+            Must be a key of constants.FEW_SHOT_METHODS.
         specs_dir: where to find the dataset specs files
         output_model: where to dump the archive containing trained model weights
         n_way: number of classes per task
@@ -67,6 +72,8 @@ def main(
 
     logger.info("Building model...")
     model = build_model(
+        backbone=backbone,
+        method=method,
         device=device,
         pretrained_weights=pretrained_weights,
     )

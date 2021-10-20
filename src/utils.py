@@ -17,7 +17,9 @@ from torch.utils.data import DataLoader
 from torchvision.models import resnet18
 
 from easyfsl.data_tools import EasySet, TaskSampler
-from easyfsl.methods import PrototypicalNetworks
+from easyfsl.methods import PrototypicalNetworks, AbstractMetaLearner
+
+from src.constants import BACKBONES, FEW_SHOT_METHODS
 
 
 def plot_dag(dag: nx.DiGraph):
@@ -193,23 +195,26 @@ def create_dataloader(dataset: EasySet, sampler: TaskSampler, n_workers: int):
 
 
 def build_model(
+    backbone: str,
+    method: str,
     device: str,
     pretrained_weights: Optional[Path] = None,
-):
+) -> AbstractMetaLearner:
     """
-    Build a model and cast it on the appropriate device
+    Build a meta-learner and cast it on the appropriate device
     Args:
+        backbone: backbone of the model to build. Must be a key of constants.BACKBONES.
+        method: few-shot learning method to use
         device: device on which to put the model
-        tb_writer: a tensorboard writer to log training events
         pretrained_weights: if you want to use pretrained_weights for the backbone
 
     Returns:
-        a few-shot learning model
+        a PrototypicalNetworks
     """
-    convolutional_network = resnet18(pretrained=False)
+    convolutional_network = BACKBONES[backbone](pretrained=False)
     convolutional_network.fc = nn.Flatten()
 
-    model = PrototypicalNetworks(convolutional_network).to(device)
+    model = FEW_SHOT_METHODS[method](convolutional_network).to(device)
 
     if pretrained_weights is not None:
         model.load_state_dict(torch.load(pretrained_weights))

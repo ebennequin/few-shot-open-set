@@ -8,12 +8,12 @@ stages:
         ${item}
         --output-model ${models_dir}/${item}_episodic.tar
         --n-epochs 2
-        &> ${logs_dir}/train_episodic.out
+        &> ${logs_dir}/train_episodic_${item}.out
       deps:
         - stages/train_episodic.py
       outs:
         - ${models_dir}/${item}_episodic.tar
-        - ${logs_dir}/train_episodic.out
+        - ${logs_dir}/train_episodic_${item}.out
 
   train_classic:
     foreach:
@@ -24,10 +24,10 @@ stages:
         ${item}
         --output-model ${models_dir}/${item}_classic.tar
         --n-epochs 2
-        &> ${logs_dir}/train_classic.out
+        &> ${logs_dir}/train_classic_${item}.out
       deps:
         - stages/train_classic.py
       outs:
         - ${models_dir}/${item}_classic.tar
         - ${tb_logs_dir}
-        - ${logs_dir}/train_classic.out
+        - ${logs_dir}/train_classic_${item}.out

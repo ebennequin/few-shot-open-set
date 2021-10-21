@@ -1,123 +1,31 @@
 stages:
-  compute_distances:
+  train_episodic:
     foreach:
-      - train
-      - test
+      - resnet18
+      - mobilenet
     do:
-      cmd: python -m stages.compute_semantic_distances
-        --split ${item}
-        --specs-dir ${specs_dir}
-        --output-dir ${distances_dir}
-        &> ${logs_dir}/compute_distances_${item}.out
+      cmd: python -m stages.train_episodic
+        ${item}
+        --output-model ${models_dir}/${item}_episodic.tar
+        &> ${logs_dir}/train_episodic.out
       deps:
-        - ${specs_dir}/${item}.json
-        - ${specs_dir}/wordnet.is_a.txt
-        - stages/compute_semantic_distances.py
+        - stages/train_episodic.py
       outs:
-        - ${logs_dir}/compute_distances_${item}.out
-        - ${distances_dir}/${item}.csv
+        - ${models_dir}/${item}_episodic.tar
+        - ${logs_dir}/train_episodic.out
 
-  create_testbed:
-    foreach: ${testbed.n_shot}
+  train_classic:
+    foreach:
+      - resnet18
+      - mobilenet
     do:
-      cmd: python -m stages.create_testbed
-        --n-tasks ${testbed.n_tasks}
-        --n-way ${n_way}
-        --n-query ${n_query}
-        --n-shot ${item}
-        --distances-csv ${distances_dir}/test.csv
-        --specs-json ${specs_dir}/test.json
-        --out-file ${testbeds_dir}/testbed_${item}_shot.csv
-        &> ${logs_dir}/create_testbed_${item}.out
+      cmd: python -m stages.train_classic
+        ${item}
+        --output-model ${models_dir}/${item}_classic.tar
+        &> ${logs_dir}/train_classic.out
       deps:
-        - ${distances_dir}/test.csv
-        - ${specs_dir}/test.json
-        - stages/create_testbed.py
+        - stages/train_classic.py
       outs:
-        - ${testbeds_dir}/testbed_${item}_shot.csv
-        - ${testbeds_dir}/testbed_${item}_shot_pv.png
-        - ${testbeds_dir}/testbed_${item}_shot_occ.png
-        - ${logs_dir}/create_testbed_${item}.out
-
-  train:
-    cmd: python -m stages.train
-      --specs-dir ${specs_dir}
-      --distances-dir ${distances_dir}
-      --metrics-dir ${metrics_dir}
-      --tb-log-dir ${tb_logs_dir}
-      --output-model ${models_dir}/trained_model.tar
-      --n-epochs ${train.n_epoch}
-      --n-tasks-per-epoch ${train.n_tasks_per_epoch}
-      --n-way ${n_way}
-      --n-query ${n_query}
-      --n-shot ${n_shot}
-      --sampler ${train.sampler}
-      --semantic-alpha ${train.alpha}
-      --semantic-strategy ${train.strategy}
-      --random-seed ${train.seed}
-      --device ${device}
-      &> ${logs_dir}/train.out
-    deps:
-      - ${distances_dir}/train.csv
-      - ${specs_dir}/train.json
-      - ${specs_dir}/val.json
-      - stages/train.py
-    outs:
-      - ${models_dir}/trained_model.tar
-      - ${metrics_dir}/training_tasks.pkl
-      - ${tb_logs_dir}
-      - ${logs_dir}/train.out
-
-  evaluate:
-    cmd: python -m stages.evaluate
-      --specs-dir ${specs_dir}
-      --testbed ${testbeds_dir}/testbed_${n_shot}_shot.csv
-      --trained-model ${models_dir}/trained_model.tar
-      --output-dir ${metrics_dir}
-      --device ${device}
-      &> ${logs_dir}/evaluate.out
-    deps:
-      - ${models_dir}/trained_model.tar
-      - ${testbeds_dir}/testbed_${n_shot}_shot.csv
-      - ${specs_dir}/test.json
-      - stages/evaluate.py
-    outs:
-      - ${metrics_dir}/raw_results.csv
-      - ${logs_dir}/evaluate.out
-
-  compute_metrics:
-    cmd: python -m stages.compute_metrics
-      --testbed ${testbeds_dir}/testbed_${n_shot}_shot.csv
-      --metrics-dir ${metrics_dir}
-      &> ${logs_dir}/compute_metrics.out
-    deps:
-      - ${testbeds_dir}/testbed_${n_shot}_shot.csv
-      - ${metrics_dir}/raw_results.csv
-      - stages/compute_metrics.py
-    outs:
-      - ${metrics_dir}/accuracy_v_variance.png
-      - ${logs_dir}/compute_metrics.out
-    metrics:
-      - ${metrics_dir}/evaluation_metrics.json
-    plots:
-      - ${metrics_dir}/task_performances.csv:
-          x: variance
-          y: accuracy
-          title: accuracy depending on task's pseudo-variance
-          template: smooth
-
-  get_train_stats:
-    cmd: python -m stages.get_training_tasks_stats
-      --training-tasks-record ${metrics_dir}/training_tasks.pkl
-      --distances-dir ${distances_dir}
-      --metrics-dir ${metrics_dir}
-      &> ${logs_dir}/get_train_stats.out
-    deps:
-      - ${metrics_dir}/training_tasks.pkl
-      - ${distances_dir}/train.csv
-      - stages/get_training_tasks_stats.py
-    outs:
-      - ${metrics_dir}/intra_training_task_distances.csv
-      - ${metrics_dir}/training_classes_sampled_together.png
-      - ${metrics_dir}/training_classes_biconfusion.png
-      - ${logs_dir}/get_train_stats.out
+        - ${models_dir}/${item}_classic.tar
+        - ${tb_logs_dir}
+        - ${logs_dir}/train_classic.out

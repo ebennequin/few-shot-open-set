@@ -1,27 +1,3 @@
-specs_dir: data/tiered_imagenet/specs
-distances_dir: data/tiered_imagenet/distances
-models_dir: data/tiered_imagenet/models
-metrics_dir: data/tiered_imagenet/metrics
-tb_logs_dir: data/tiered_imagenet/tb_logs
-logs_dir: data/tiered_imagenet/logs
-testbeds_dir: data/tiered_imagenet/testbeds
-
-device: cuda:2
-
-n_way: 5
-n_query: 10
-n_shot: 5
-
-testbed:
-  n_tasks: 5000
-  n_shot:
-  - 1
-  - 5
-
-train:
-  n_epoch: 150
-  n_tasks_per_epoch: 500
-  sampler: semantic
-  alpha: 0.001
-  strategy: weibull
-  seed: 2
+models_dir: data/models
+tb_logs_dir: data/tb_logs
+logs_dir: data/logs

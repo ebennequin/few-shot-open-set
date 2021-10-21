@@ -7,7 +7,7 @@ import torch
 from torch.optim import Adam
 import typer
 
-
+from src.cifar import FewShotCIFAR100
 from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR
 from src.utils import build_model, create_dataloader, set_random_seed
 
@@ -49,7 +49,11 @@ def main(
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
-    train_set = EasySet(specs_file=specs_dir / "train.json", training=True)
+    train_set = FewShotCIFAR100(
+        root=Path("data/cifar100/data"),
+        specs_file=specs_dir / "train.json",
+        training=True,
+    )
     train_sampler = TaskSampler(
         dataset=train_set,
         n_way=n_way,
@@ -60,7 +64,11 @@ def main(
     train_loader = create_dataloader(train_set, train_sampler, n_workers)
 
     logger.info("Fetching validation data...")
-    val_set = EasySet(specs_file=specs_dir / "val.json", training=True)
+    val_set = FewShotCIFAR100(
+        root=Path("data/cifar100/data"),
+        specs_file=specs_dir / "val.json",
+        training=False,
+    )
     val_sampler = TaskSampler(
         dataset=val_set,
         n_way=n_way,
@@ -81,12 +89,12 @@ def main(
     optimizer = Adam(params=model.parameters())
 
     logger.info("Starting training...")
-    model.fit_multiple_epochs(
-        train_loader,
-        optimizer,
-        n_epochs=n_epochs,
-        val_loader=val_loader,
-    )
+    for epoch in range(n_epochs):
+        model.fit(
+            train_loader,
+            optimizer,
+        )
+        model.validate(val_loader)
 
     torch.save(model.state_dict(), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")

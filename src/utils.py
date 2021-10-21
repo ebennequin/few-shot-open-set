@@ -15,7 +15,7 @@ from loguru import logger
 from matplotlib import pyplot as plt
 from networkx.drawing.nx_agraph import graphviz_layout
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from src.constants import BACKBONES, FEW_SHOT_METHODS
 
@@ -171,7 +171,7 @@ def set_random_seed(seed: int):
     logger.info(f"Random seed : {seed}")
 
 
-def create_dataloader(dataset: EasySet, sampler: TaskSampler, n_workers: int):
+def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
     """
     Create a torch dataloader of tasks from the input dataset sampled according
     to the input tensor.

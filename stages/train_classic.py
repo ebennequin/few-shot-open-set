@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 import typer
 from tqdm import tqdm
 
+from src.cifar import FewShotCIFAR100
 from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR, BACKBONES
 from src.utils import set_random_seed
 
@@ -42,7 +43,11 @@ def main(
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
-    whole_set = EasySet(specs_file=specs_dir / "train-val.json", training=True)
+    whole_set = FewShotCIFAR100(
+        root=Path("data/cifar100/data"),
+        specs_file=specs_dir / "train-val.json",
+        training=True,
+    )
 
     train_loader, val_loader = get_loaders(
         whole_set, batch_size, n_workers, random_seed
@@ -54,9 +59,10 @@ def main(
         in_features=model.fc.in_features,
         out_features=len(set(whole_set.labels)),
     ).to(device)
+    model.device = device
 
     logger.info("Starting training...")
-    model = train(model, n_epochs, train_loader, device, tb_log_dir)
+    model = train(model, n_epochs, train_loader, val_loader, tb_log_dir)
 
     model.fc = nn.Flatten()
     torch.save(model.state_dict(prefix="backbone."), output_model)
@@ -89,7 +95,7 @@ def get_loaders(whole_set, batch_size, n_workers, random_seed):
     return train_loader, val_loader
 
 
-def train(model, n_epochs, train_loader, val_loader, device, tb_log_dir):
+def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
     tb_log_dir.mkdir(parents=True, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
     optimizer = Adam(model.parameters())
@@ -99,10 +105,11 @@ def train(model, n_epochs, train_loader, val_loader, device, tb_log_dir):
         model, average_loss = training_epoch(
             model, train_loader, optimizer, loss_fn, epoch
         )
-        # validation_accuracy = validate_model(model, val_loader)
+        validation_accuracy = validate_model(model, val_loader)
 
         if tb_writer is not None:
             tb_writer.add_scalar("Train/loss", average_loss, epoch)
+            tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
 
     return model
 
@@ -116,8 +123,7 @@ def training_epoch(model, train_loader, optimizer, loss_fn, epoch):
     ) as tqdm_train:
         for images, labels in tqdm_train:
             optimizer.zero_grad()
-            scores = model(images)
-            loss = loss_fn(scores, labels)
+            loss = loss_fn(model(images.to(model.device)), labels.to(model.device))
             loss.backward()
             optimizer.step()
 
@@ -129,7 +135,17 @@ def training_epoch(model, train_loader, optimizer, loss_fn, epoch):
 
 
 def validate_model(model, val_loader):
-    pass
+    model.eval()
+    predictions_are_accurate = []
+    for images, labels in val_loader:
+        predictions_are_accurate += torch.max(model(images.to(model.device)), 1)[
+            1
+        ] == labels.to(model.device)
+    average_accuracy = sum(predictions_are_accurate) / len(predictions_are_accurate)
+
+    print(f"Validation accuracy: {(100 * average_accuracy):.2f}%")
+
+    return average_accuracy
 
 
 if __name__ == "__main__":

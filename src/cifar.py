@@ -1,9 +1,10 @@
-from functools import partial
 import json
 import os
+from pathlib import Path
+
 from PIL import Image
 import pickle
-from typing import Any, Callable, Optional
+from typing import Any
 
 import numpy as np
 from torchvision import transforms
@@ -13,11 +14,10 @@ from torchvision.datasets import CIFAR10, CIFAR100
 class FewShotCIFAR100(CIFAR100):
     def __init__(
         self,
-        root: str,
-        specs_file: str,
+        root: Path,
+        specs_file: Path,
         image_size: int = 32,
         training: bool = False,
-        target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
 
@@ -39,7 +39,8 @@ class FewShotCIFAR100(CIFAR100):
         )
 
         super(CIFAR10, self).__init__(
-            root, transform=transform, target_transform=target_transform
+            str(root),
+            transform=transform,
         )
 
         if download:
@@ -62,7 +63,7 @@ class FewShotCIFAR100(CIFAR100):
             class_name: self.class_to_idx[class_name]
             for class_name in self.specs["class_names"]
         }
-        self.id_to_class = {v: k for k, v in self.class_to_idx.items()}
+        self.sorted_class_ids = sorted(self.class_to_idx.values())
 
         self.images: Any = []
         self.labels = []
@@ -90,6 +91,7 @@ class FewShotCIFAR100(CIFAR100):
 
     def __getitem__(self, item):
         img = self.transform(Image.fromarray(self.images[item]))
-        label = self.labels[item]
+
+        label = self.sorted_class_ids.index(self.labels[item])
 
         return img, label

@@ -1,22 +1,18 @@
 from math import floor
-
-import numpy as np
 from pathlib import Path
+from statistics import mean
 
-import click
-import torch
-import typer
+from easyfsl.data_tools import EasySet
 from loguru import logger
+import torch
 from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.models import resnet18
-
-from easyfsl.data_tools import EasySet
+import typer
+from tqdm import tqdm
 
 from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR, BACKBONES
-from src.erm_trainer import ERMTrainer
 from src.utils import set_random_seed
 
 
@@ -42,12 +38,32 @@ def main(
     """
     n_workers = 12
     batch_size = 64
-    loss_fn = nn.CrossEntropyLoss()
 
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
     whole_set = EasySet(specs_file=specs_dir / "train-val.json", training=True)
+
+    train_loader, val_loader = get_loaders(
+        whole_set, batch_size, n_workers, random_seed
+    )
+
+    logger.info("Building model...")
+    model = BACKBONES[backbone](pretrained=False).to(device)
+    model.fc = nn.Linear(
+        in_features=model.fc.in_features,
+        out_features=len(set(whole_set.labels)),
+    ).to(device)
+
+    logger.info("Starting training...")
+    model = train(model, n_epochs, train_loader, device, tb_log_dir)
+
+    model.fc = nn.Flatten()
+    torch.save(model.state_dict(prefix="backbone."), output_model)
+    logger.info(f"Trained model weights dumped at {output_model}")
+
+
+def get_loaders(whole_set, batch_size, n_workers, random_seed):
     train_set_size = floor(
         0.87 * len(whole_set)
     )  # Same factor as in the few-shot setting
@@ -70,26 +86,50 @@ def main(
         pin_memory=True,
     )
 
-    logger.info("Building model...")
-    model = BACKBONES[backbone](pretrained=False).to(device)
-    model.fc = nn.Linear(
-        in_features=model.fc.in_features,
-        out_features=len(set(train_set.labels)),
-    ).to(device)
+    return train_loader, val_loader
 
-    logger.info("Starting training...")
+
+def train(model, n_epochs, train_loader, val_loader, device, tb_log_dir):
     tb_log_dir.mkdir(parents=True, exist_ok=True)
-    trainer = ERMTrainer(
-        optimizer=Adam(params=model.parameters()),
-        loss_fn=loss_fn,
-        device=device,
-        tb_writer=SummaryWriter(log_dir=str(tb_log_dir)),
-    )
-    model = trainer.train(model, train_loader, n_epochs)
+    tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
+    optimizer = Adam(model.parameters())
+    loss_fn = nn.CrossEntropyLoss()
 
-    model.fc = nn.Flatten()
-    torch.save(model.state_dict(prefix="backbone."), output_model)
-    logger.info(f"Trained model weights dumped at {output_model}")
+    for epoch in range(n_epochs):
+        model, average_loss = training_epoch(
+            model, train_loader, optimizer, loss_fn, epoch
+        )
+        # validation_accuracy = validate_model(model, val_loader)
+
+        if tb_writer is not None:
+            tb_writer.add_scalar("Train/loss", average_loss, epoch)
+
+    return model
+
+
+def training_epoch(model, train_loader, optimizer, loss_fn, epoch):
+    loss_list = []
+    model.train()
+    with tqdm(
+        train_loader,
+        desc=f"Epoch {epoch}",
+    ) as tqdm_train:
+        for images, labels in tqdm_train:
+            optimizer.zero_grad()
+            scores = model(images)
+            loss = loss_fn(scores, labels)
+            loss.backward()
+            optimizer.step()
+
+            loss_list.append(loss.item())
+
+            tqdm_train.set_postfix(loss=mean(loss_list))
+
+    return model, mean(loss_list)
+
+
+def validate_model(model, val_loader):
+    pass
 
 
 if __name__ == "__main__":

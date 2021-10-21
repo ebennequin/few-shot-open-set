@@ -5,6 +5,8 @@ from pathlib import Path
 from statistics import mean, median, stdev
 from typing import List, Optional
 
+from easyfsl.data_tools import EasySet, TaskSampler
+from easyfsl.methods import AbstractMetaLearner
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -14,10 +16,6 @@ from matplotlib import pyplot as plt
 from networkx.drawing.nx_agraph import graphviz_layout
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision.models import resnet18
-
-from easyfsl.data_tools import EasySet, TaskSampler
-from easyfsl.methods import PrototypicalNetworks, AbstractMetaLearner
 
 from src.constants import BACKBONES, FEW_SHOT_METHODS
 

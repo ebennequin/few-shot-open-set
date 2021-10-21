@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Optional
 
-import torch
-import typer
-from loguru import logger
-from torch.optim import Adam
-
 from easyfsl.data_tools import EasySet, TaskSampler
+from loguru import logger
+import torch
+from torch.optim import Adam
+import typer
+
 
 from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR
 from src.utils import build_model, create_dataloader, set_random_seed

@@ -7,6 +7,7 @@ stages:
       cmd: python -m stages.train_episodic
         ${item}
         --output-model ${models_dir}/${item}_episodic.tar
+        --n-epochs 2
         &> ${logs_dir}/train_episodic.out
       deps:
         - stages/train_episodic.py
@@ -22,6 +23,7 @@ stages:
       cmd: python -m stages.train_classic
         ${item}
         --output-model ${models_dir}/${item}_classic.tar
+        --n-epochs 2
         &> ${logs_dir}/train_classic.out
       deps:
         - stages/train_classic.py

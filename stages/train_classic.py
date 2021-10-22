@@ -2,7 +2,6 @@ from math import floor
 from pathlib import Path
 from statistics import mean
 
-from easyfsl.data_tools import EasySet
 from loguru import logger
 import torch
 from torch import nn
@@ -22,6 +21,7 @@ def main(
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
     n_epochs: int = 100,
+    batch_size: int = 64,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
@@ -33,12 +33,12 @@ def main(
         specs_dir: where to find the dataset specs files
         output_model: where to dump the archive containing trained model weights
         n_epochs: number of training epochs
+        batch_size: the batch size
         tb_log_dir: where to dump tensorboard event files
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
     """
     n_workers = 12
-    batch_size = 64
 
     set_random_seed(random_seed)
 

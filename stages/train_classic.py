@@ -54,17 +54,14 @@ def main(
     )
 
     logger.info("Building model...")
-    model = BACKBONES[backbone](pretrained=False).to(device)
-    model.fc = nn.Linear(
-        in_features=model.fc.in_features,
-        out_features=len(set(whole_set.labels)),
+    model = BACKBONES[backbone](
+        pretrained=False, num_classes=len(set(whole_set.labels))
     ).to(device)
     model.device = device
 
     logger.info("Starting training...")
     model = train(model, n_epochs, train_loader, val_loader, tb_log_dir)
 
-    model.fc = nn.Flatten()
     torch.save(model.state_dict(prefix="backbone."), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")
 

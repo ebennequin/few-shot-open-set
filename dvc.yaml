@@ -24,10 +24,11 @@ stages:
         ${item}
         --output-model ${models_dir}/${item}_classic.tar
         --n-epochs 2
+        --tb-log-dir ${tb_logs_dir}/${item}_classic
         &> ${logs_dir}/train_classic_${item}.out
       deps:
         - stages/train_classic.py
       outs:
         - ${models_dir}/${item}_classic.tar
-        - ${tb_logs_dir}
+        - ${tb_logs_dir}/${item}_classic
         - ${logs_dir}/train_classic_${item}.out

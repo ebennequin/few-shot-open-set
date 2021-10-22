@@ -194,6 +194,7 @@ def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
 
 def build_model(
     backbone: str,
+    feature_dimension: int,
     method: str,
     device: str,
     pretrained_weights: Optional[Path] = None,
@@ -202,6 +203,7 @@ def build_model(
     Build a meta-learner and cast it on the appropriate device
     Args:
         backbone: backbone of the model to build. Must be a key of constants.BACKBONES.
+        feature_dimension: dimension of the feature space
         method: few-shot learning method to use
         device: device on which to put the model
         pretrained_weights: if you want to use pretrained_weights for the backbone
@@ -209,8 +211,9 @@ def build_model(
     Returns:
         a PrototypicalNetworks
     """
-    convolutional_network = BACKBONES[backbone](pretrained=False)
-    convolutional_network.fc = nn.Flatten()
+    convolutional_network = BACKBONES[backbone](
+        pretrained=False, num_classes=feature_dimension
+    )
 
     model = FEW_SHOT_METHODS[method](convolutional_network).to(device)
 

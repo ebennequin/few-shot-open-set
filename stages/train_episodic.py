@@ -17,9 +17,9 @@ from src.utils import build_model, create_dataloader, set_random_seed
 
 def main(
     backbone: str,
-    feature_dimension: int = 512,
+    feature_dimension: int = 256,
     method: str = "protonet",
-    learning_rate: float = 0.1,
+    learning_rate: float = 0.01,
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,

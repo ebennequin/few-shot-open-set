@@ -1,0 +1,66 @@
+schema: '2.0'
+stages:
+  train_episodic@resnet18:
+    cmd: python -m stages.train_episodic resnet18 --output-model data/models/resnet18_episodic.tar
+      --n-epochs 2 &> data/logs/train_episodic_resnet18.out
+    deps:
+    - path: stages/train_episodic.py
+      md5: f4431edf1c91542d086ccf15dda61043
+      size: 3292
+    outs:
+    - path: data/logs/train_episodic_resnet18.out
+      md5: 5c0856f493a62ccb431723e20fb15adc
+      size: 102871
+    - path: data/models/resnet18_episodic.tar
+      md5: 29ebaa8aa843ed4f62fb3b5443fd2eec
+      size: 45836429
+  train_classic@resnet18:
+    cmd: python -m stages.train_classic resnet18 --output-model data/models/resnet18_classic.tar
+      --n-epochs 2 --tb-log-dir data/tb_logs/resnet18_classic &> data/logs/train_classic_resnet18.out
+    deps:
+    - path: stages/train_classic.py
+      md5: 4146ab772ab674e4a5da4ef0fccec489
+      size: 4399
+    outs:
+    - path: data/logs/train_classic_resnet18.out
+      md5: a62219dc4d25bfdd40583fd898deac27
+      size: 148526
+    - path: data/models/resnet18_classic.tar
+      md5: dcb92aada1a0c177cd017bf2091047b9
+      size: 44939597
+    - path: data/tb_logs/resnet18_classic
+      md5: 459e4524bdf6d3499b780ab8f8dd4a3d.dir
+      size: 222
+      nfiles: 1
+  train_episodic@mobilenet:
+    cmd: python -m stages.train_episodic mobilenet --output-model data/models/mobilenet_episodic.tar
+      --n-epochs 2 &> data/logs/train_episodic_mobilenet.out
+    deps:
+    - path: stages/train_episodic.py
+      md5: f4431edf1c91542d086ccf15dda61043
+      size: 3292
+    outs:
+    - path: data/logs/train_episodic_mobilenet.out
+      md5: 94c6714669009c1a1c0432bfe829e82a
+      size: 58251
+    - path: data/models/mobilenet_episodic.tar
+      md5: 09acdee325ee7ce77c55263878f5ad26
+      size: 8306905
+  train_classic@mobilenet:
+    cmd: python -m stages.train_classic mobilenet --output-model data/models/mobilenet_classic.tar
+      --n-epochs 2 --tb-log-dir data/tb_logs/mobilenet_classic &> data/logs/train_classic_mobilenet.out
+    deps:
+    - path: stages/train_classic.py
+      md5: 4146ab772ab674e4a5da4ef0fccec489
+      size: 4399
+    outs:
+    - path: data/logs/train_classic_mobilenet.out
+      md5: abc187755667e5eed7a0b54c5eea1a5b
+      size: 124056
+    - path: data/models/mobilenet_classic.tar
+      md5: 9b1ab2e0905828dc997c818b975db874
+      size: 6515097
+    - path: data/tb_logs/mobilenet_classic
+      md5: a74f9a4866e1c08b3854ef79afa8b0ee.dir
+      size: 222
+      nfiles: 1

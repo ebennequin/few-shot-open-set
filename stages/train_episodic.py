@@ -19,6 +19,7 @@ def main(
     backbone: str,
     feature_dimension: int = 512,
     method: str = "protonet",
+    learning_rate: float = 0.1,
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,
@@ -38,6 +39,7 @@ def main(
         feature_dimension: dimension of the feature space
         method: what few-shot method to use during episodic training.
             Must be a key of constants.FEW_SHOT_METHODS.
+        learning_rate: optimizer's learning rate
         specs_dir: where to find the dataset specs files
         output_model: where to dump the archive containing trained model weights
         n_way: number of classes per task
@@ -94,7 +96,7 @@ def main(
         pretrained_weights=pretrained_weights,
     )
 
-    optimizer = Adam(params=model.parameters())
+    optimizer = Adam(params=model.parameters(), lr=learning_rate)
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
 

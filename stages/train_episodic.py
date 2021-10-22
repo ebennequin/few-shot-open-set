@@ -1,4 +1,5 @@
 from pathlib import Path
+from statistics import mean
 from typing import Optional
 
 from easyfsl.data_tools import EasySet, TaskSampler
@@ -6,9 +7,11 @@ from loguru import logger
 import torch
 from torch.optim import Adam
 import typer
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from src.cifar import FewShotCIFAR100
-from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR
+from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR
 from src.utils import build_model, create_dataloader, set_random_seed
 
 
@@ -23,6 +26,7 @@ def main(
     n_query: int = 5,
     n_epochs: int = 100,
     n_tasks_per_epoch: int = 500,
+    tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
     pretrained_weights: Optional[Path] = None,
@@ -41,6 +45,7 @@ def main(
         n_query: number of query samples per class
         n_epochs: number of training epochs
         n_tasks_per_epoch: number of episodes per training epoch
+        tb_log_dir: where to dump tensorboard event files
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
         pretrained_weights: path to a tar archive of a pretrained model to start from
@@ -91,13 +96,38 @@ def main(
 
     optimizer = Adam(params=model.parameters())
 
+    tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
+
     logger.info("Starting training...")
     for epoch in range(n_epochs):
-        model.fit(
-            train_loader,
-            optimizer,
-        )
-        model.validate(val_loader)
+        all_loss = []
+        model.train()
+        with tqdm(
+            enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch}"
+        ) as tqdm_train:
+            for episode_index, (
+                support_images,
+                support_labels,
+                query_images,
+                query_labels,
+                _,
+            ) in tqdm_train:
+                loss_value = model.fit_on_task(
+                    support_images,
+                    support_labels,
+                    query_images,
+                    query_labels,
+                    optimizer,
+                )
+                all_loss.append(loss_value)
+
+                tqdm_train.set_postfix(loss=mean(all_loss))
+
+        validation_accuracy = model.validate(val_loader)
+
+        if tb_writer is not None:
+            tb_writer.add_scalar("Train/loss", mean(all_loss), epoch)
+            tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
 
     torch.save(model.state_dict(), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")

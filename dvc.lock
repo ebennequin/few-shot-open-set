@@ -2,26 +2,26 @@ schema: '2.0'
 stages:
   train_episodic@resnet18:
     cmd: python -m stages.train_episodic resnet18 --output-model data/models/resnet18_episodic.tar
-      --n-epochs 50 --n-query 20 --n-tasks-per-epoch 250 --tb-log-dir data/tb_logs/resnet18_episodic
+      --n-epochs 100 --n-query 20 --n-tasks-per-epoch 1000 --tb-log-dir data/tb_logs/resnet18_episodic
       &> data/logs/train_episodic_resnet18.out
     deps:
     - path: stages/train_episodic.py
-      md5: d7c2f5ec9f8bf68d42283ef7f99e4b3b
-      size: 4396
+      md5: 55a6412c1c2eea67eb6ed06c2be1609a
+      size: 4496
     outs:
     - path: data/logs/train_episodic_resnet18.out
-      md5: 10f5776a44a1af2b33eba30971641807
-      size: 1851140
+      md5: 72d12092e829b8ff3df52c9a103ca6fa
+      size: 11995032
     - path: data/models/resnet18_episodic.tar
-      md5: aae13bd498ac7359fb9145248ab789c7
-      size: 45836429
+      md5: 498d0179cd535eb4bcac5fbcd0294b34
+      size: 45311117
     - path: data/tb_logs/resnet18_episodic
-      md5: f7df72e89f073bca190a9af8cade592a.dir
-      size: 4686
+      md5: 1b90a530df9eced748456ba54773bb95.dir
+      size: 9336
       nfiles: 1
   train_classic@resnet18:
     cmd: python -m stages.train_classic resnet18 --output-model data/models/resnet18_classic.tar
-      --n-epochs 100 --batch-size 256 --tb-log-dir data/tb_logs/resnet18_classic &>
+      --n-epochs 150 --batch-size 256 --tb-log-dir data/tb_logs/resnet18_classic &>
       data/logs/train_classic_resnet18.out
     deps:
     - path: stages/train_classic.py
@@ -29,32 +29,37 @@ stages:
       size: 4401
     outs:
     - path: data/logs/train_classic_resnet18.out
-      md5: cd2c9e6d9c8d8d7be63fa0a53fee70b1
-      size: 1607993
+      md5: bbc9490d299236260186dbb54af356c4
+      size: 2437004
     - path: data/models/resnet18_classic.tar
-      md5: fb88a2f3a7cdbddcfbcf11352c5bf33c
+      md5: d0e07cf32a6af33a4cdd9e339c9ed19b
       size: 44939597
     - path: data/tb_logs/resnet18_classic
-      md5: b64bb7b1f767f21b45377cbbe9fc574e.dir
-      size: 9336
+      md5: 834a31562345cf7a501f137223ee72c3.dir
+      size: 14030
       nfiles: 1
   train_episodic@mobilenet:
     cmd: python -m stages.train_episodic mobilenet --output-model data/models/mobilenet_episodic.tar
-      --n-epochs 100 --n-query 20 --n-tasks-per-epoch 250 &> data/logs/train_episodic_mobilenet.out
+      --n-epochs 100 --n-query 20 --n-tasks-per-epoch 1000 --tb-log-dir data/tb_logs/mobilenet_episodic
+      &> data/logs/train_episodic_mobilenet.out
     deps:
     - path: stages/train_episodic.py
-      md5: f4431edf1c91542d086ccf15dda61043
-      size: 3292
+      md5: 55a6412c1c2eea67eb6ed06c2be1609a
+      size: 4496
     outs:
     - path: data/logs/train_episodic_mobilenet.out
-      md5: e19a8c61b1b70192192a4dd98b91613a
-      size: 2220207
+      md5: ce7a6c389d9283185792c86fc91bb612
+      size: 13176889
     - path: data/models/mobilenet_episodic.tar
-      md5: 847570393b22fead04014dcb6b4d66bf
-      size: 8306905
+      md5: bba6d74546953b35687f6c5995a117fd
+      size: 7257305
+    - path: data/tb_logs/mobilenet_episodic
+      md5: 276c0877c4971a98d4356ca10034c777.dir
+      size: 9336
+      nfiles: 1
   train_classic@mobilenet:
     cmd: python -m stages.train_classic mobilenet --output-model data/models/mobilenet_classic.tar
-      --n-epochs 100 --batch-size 256 --tb-log-dir data/tb_logs/mobilenet_classic
+      --n-epochs 150 --batch-size 256 --tb-log-dir data/tb_logs/mobilenet_classic
       &> data/logs/train_classic_mobilenet.out
     deps:
     - path: stages/train_classic.py
@@ -62,12 +67,12 @@ stages:
       size: 4401
     outs:
     - path: data/logs/train_classic_mobilenet.out
-      md5: 8ecbb8208406821deb54eaff54c01bc9
-      size: 1643541
+      md5: 5e58a855279534b10a32d47d90df871f
+      size: 2482342
     - path: data/models/mobilenet_classic.tar
-      md5: 83663521b58ad5f3ebc39d1704831cf4
+      md5: d51bbb713709e1d696c06f22ef68cd19
       size: 6515097
     - path: data/tb_logs/mobilenet_classic
-      md5: ff9fe89dcd339275cd8be401790c00ea.dir
-      size: 9336
+      md5: 9a48fec172d02023f5d44a85f983ab0d.dir
+      size: 14030
       nfiles: 1

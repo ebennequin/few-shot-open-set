@@ -5,7 +5,8 @@ from statistics import mean
 from loguru import logger
 import torch
 from torch import nn
-from torch.optim import Adam
+from torch.optim import Adam, SGD
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 import typer
@@ -20,8 +21,8 @@ def main(
     backbone: str,
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
-    n_epochs: int = 100,
-    batch_size: int = 64,
+    n_epochs: int = 200,
+    batch_size: int = 512,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
@@ -95,10 +96,13 @@ def get_loaders(whole_set, batch_size, n_workers, random_seed):
 def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
     tb_log_dir.mkdir(parents=True, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
-    optimizer = Adam(model.parameters())
+    optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
     loss_fn = nn.CrossEntropyLoss()
 
     for epoch in range(n_epochs):
+        if epoch > 0:
+            train_scheduler.step(epoch)
         model, average_loss = training_epoch(
             model, train_loader, optimizer, loss_fn, epoch
         )

@@ -101,8 +101,6 @@ def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
     loss_fn = nn.CrossEntropyLoss()
 
     for epoch in range(n_epochs):
-        if epoch > 0:
-            train_scheduler.step(epoch)
         model, average_loss = training_epoch(
             model, train_loader, optimizer, loss_fn, epoch
         )
@@ -111,6 +109,8 @@ def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
         if tb_writer is not None:
             tb_writer.add_scalar("Train/loss", average_loss, epoch)
             tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
+
+        train_scheduler.step(epoch)
 
     return model
 

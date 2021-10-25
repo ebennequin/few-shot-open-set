@@ -5,8 +5,9 @@ from typing import Optional
 from easyfsl.data_tools import EasySet, TaskSampler
 from loguru import logger
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 import typer
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
@@ -24,8 +25,8 @@ def main(
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,
     n_shot: int = 5,
-    n_query: int = 5,
-    n_epochs: int = 100,
+    n_query: int = 20,
+    n_epochs: int = 200,
     n_tasks_per_epoch: int = 500,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
@@ -96,7 +97,8 @@ def main(
         pretrained_weights=pretrained_weights,
     )
 
-    optimizer = Adam(params=model.parameters(), lr=learning_rate)
+    optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
 
@@ -130,6 +132,8 @@ def main(
         if tb_writer is not None:
             tb_writer.add_scalar("Train/loss", mean(all_loss), epoch)
             tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
+
+        train_scheduler.step(epoch)
 
     torch.save(model.state_dict(), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")

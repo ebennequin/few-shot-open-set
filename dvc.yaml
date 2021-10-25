@@ -2,14 +2,14 @@ stages:
   train_episodic:
     foreach:
       - resnet18
-      - mobilenet
+      - resnet34
     do:
       cmd: python -m stages.train_episodic
         ${item}
         --output-model ${models_dir}/${item}_episodic.tar
-        --n-epochs 100
+        --n-epochs 200
         --n-query 20
-        --n-tasks-per-epoch 1000
+        --n-tasks-per-epoch 500
         --tb-log-dir ${tb_logs_dir}/${item}_episodic
         &> ${logs_dir}/train_episodic_${item}.out
       deps:
@@ -22,13 +22,13 @@ stages:
   train_classic:
     foreach:
       - resnet18
-      - mobilenet
+      - resnet34
     do:
       cmd: python -m stages.train_classic
         ${item}
         --output-model ${models_dir}/${item}_classic.tar
-        --n-epochs 150
-        --batch-size 256
+        --n-epochs 200
+        --batch-size 512
         --tb-log-dir ${tb_logs_dir}/${item}_classic
         &> ${logs_dir}/train_classic_${item}.out
       deps:

@@ -61,7 +61,7 @@ def main(
     logger.info("Fetching training data...")
     train_set = FewShotCIFAR100(
         root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "train.json",
+        specs_file=specs_dir / "train_r.json",
         training=True,
     )
     train_sampler = TaskSampler(
@@ -76,7 +76,7 @@ def main(
     logger.info("Fetching validation data...")
     val_set = FewShotCIFAR100(
         root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "val.json",
+        specs_file=specs_dir / "val_r.json",
         training=False,
     )
     val_sampler = TaskSampler(
@@ -98,7 +98,7 @@ def main(
     )
 
     optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
+    train_scheduler = MultiStepLR(optimizer, milestones=[20, 40, 60], gamma=0.2)
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
 

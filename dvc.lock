@@ -6,17 +6,17 @@ stages:
       &> data/logs/train_episodic_resnet18.out
     deps:
     - path: stages/train_episodic.py
-      md5: 9d9db4a732e81a8fb70450519c605076
-      size: 4686
+      md5: 2f9eb3fdeea85068e0013ca2591f6ad4
+      size: 4688
     outs:
     - path: data/logs/train_episodic_resnet18.out
-      md5: 6e35e11d88bba9af883f414d69d515ad
-      size: 12966996
+      md5: 1882c8fd9317fa1495aa86cf631f3992
+      size: 13019898
     - path: data/models/resnet18_episodic.tar
-      md5: b0d6d678874cbc3f1df2f1c9821c02dc
+      md5: 5e5cb0c61aa1e4419da9e0cb065549ad
       size: 45311117
     - path: data/tb_logs/resnet18_episodic
-      md5: c4039d73c945db1cb78da08de2b0ae5c.dir
+      md5: 6b80a9ca023490cfe7746af235b57537.dir
       size: 18780
       nfiles: 1
   train_classic@resnet18:
@@ -82,17 +82,17 @@ stages:
       &> data/logs/train_episodic_resnet34.out
     deps:
     - path: stages/train_episodic.py
-      md5: 9d9db4a732e81a8fb70450519c605076
-      size: 4686
+      md5: 2f9eb3fdeea85068e0013ca2591f6ad4
+      size: 4688
     outs:
     - path: data/logs/train_episodic_resnet34.out
-      md5: 639085e569e5f21e1da2e278c296ed4e
-      size: 14464611
+      md5: 1403e86b04595580c516dc8661963041
+      size: 14523348
     - path: data/models/resnet34_episodic.tar
-      md5: c5ce9ab3dfd731a3e3cb7e79ee5d76ca
+      md5: 549dc001b20861491f8eddb4dcac463c
       size: 85806349
     - path: data/tb_logs/resnet34_episodic
-      md5: 22c5cf1b75a2303a5bbc15da0205243d.dir
+      md5: 39cde8e3c02fa188d13f2c88cc0cad99.dir
       size: 18780
       nfiles: 1
   train_classic@resnet34:

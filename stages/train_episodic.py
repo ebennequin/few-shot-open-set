@@ -20,7 +20,7 @@ def main(
     backbone: str,
     feature_dimension: int = 256,
     method: str = "protonet",
-    learning_rate: float = 0.01,
+    learning_rate: float = 0.1,
     specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,
@@ -81,7 +81,7 @@ def main(
     )
     val_sampler = TaskSampler(
         dataset=val_set,
-        n_way=n_way,
+        n_way=10,
         n_shot=n_shot,
         n_query=n_query,
         n_tasks=n_validation_tasks,
@@ -97,7 +97,7 @@ def main(
         pretrained_weights=pretrained_weights,
     )
 
-    optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    optimizer = SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
     train_scheduler = MultiStepLR(optimizer, milestones=[20, 40, 60], gamma=0.2)
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))

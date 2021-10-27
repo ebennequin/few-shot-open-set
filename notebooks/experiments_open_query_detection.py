@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 #%%
 from pathlib import Path
 
@@ -62,11 +64,16 @@ model.load_state_dict(torch.load("data/models/resnet18_episodic.tar"))
 
 #%%
 def get_pseudo_renyi_entropy(predictions):
-    return torch.pow(nn.functional.softmax(predictions, dim=1), 2).sum(dim=1).detach().cpu()
+    return (
+        torch.pow(nn.functional.softmax(predictions, dim=1), 2)
+        .sum(dim=1)
+        .detach()
+        .cpu()
+    )
 
 
-def plot_roc(outliers_df):
-    gamma_range = np.linspace(0.,1.,1000)
+def plot_roc(outliers_df, title):
+    gamma_range = np.linspace(0.0, 1.0, 1000)
     precisions = []
     recall = []
 
@@ -75,17 +82,26 @@ def plot_roc(outliers_df):
             outlier_prediction=lambda df: df.outlier_score < gamma
         )
         precisions.append(
-            (this_gamma_detection_df.outlier & this_gamma_detection_df.outlier_prediction).sum()
+            (
+                this_gamma_detection_df.outlier
+                & this_gamma_detection_df.outlier_prediction
+            ).sum()
             / (this_gamma_detection_df.outlier.sum() + 1)
         )
         recall.append(
-            (~this_gamma_detection_df.outlier & this_gamma_detection_df.outlier_prediction).sum()
-            / ((~this_gamma_detection_df.outlier).sum() +1)
+            (
+                ~this_gamma_detection_df.outlier
+                & this_gamma_detection_df.outlier_prediction
+            ).sum()
+            / ((~this_gamma_detection_df.outlier).sum() + 1)
         )
 
-
     plt.plot(recall, precisions)
+    plt.xlim(0.0, 1.0)
+    plt.ylim(0.0, 1.0)
+    plt.title(title)
     plt.show()
+
 
 #%% Test DOCTOR strategy
 
@@ -95,22 +111,31 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(train_
     model.process_support_set(support_images.cuda(), support_labels.cuda())
     predictions = model(query_images.cuda())
 
-    accuracy_list.append((
+    accuracy_list.append(
+        (
             torch.max(
-                predictions[:n_way*n_query].detach().data,
+                predictions[: n_way * n_query].detach().data,
                 1,
             )[1]
-            == query_labels[:n_way*n_query].cuda()
-        ).sum().item()/(n_way*n_query))
+            == query_labels[: n_way * n_query].cuda()
+        )
+        .sum()
+        .item()
+        / (n_way * n_query)
+    )
 
-    outlier_detection_df_list.append(pd.DataFrame({
-        "outlier": (n_way*n_query) * [False] + (n_way*n_query) * [True],
-        "outlier_score": get_pseudo_renyi_entropy(predictions)
-    }))
+    outlier_detection_df_list.append(
+        pd.DataFrame(
+            {
+                "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
+                "outlier_score": get_pseudo_renyi_entropy(predictions),
+            }
+        )
+    )
 
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
-plot_roc(outlier_detection_df)
+plot_roc(outlier_detection_df, title="DOCTOR")
 
 
 #%% Test LocalOutlierFactor
@@ -120,13 +145,21 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(train_
     support_features = model.backbone(support_images.cuda())
     query_features = model.backbone(query_images.cuda())
 
-    clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean").fit(support_features.detach().cpu())
+    clustering = LocalOutlierFactor(
+        n_neighbors=3, novelty=True, metric="euclidean"
+    ).fit(support_features.detach().cpu())
 
-    outlier_detection_df_list.append(pd.DataFrame({
-        "outlier": (n_way*n_query) * [False] + (n_way*n_query) * [True],
-        "outlier_score": clustering.decision_function(query_features.detach().cpu())
-    }))
+    outlier_detection_df_list.append(
+        pd.DataFrame(
+            {
+                "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
+                "outlier_score": clustering.decision_function(
+                    query_features.detach().cpu()
+                ),
+            }
+        )
+    )
 
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
-plot_roc(outlier_detection_df)
+plot_roc(outlier_detection_df, title="Local Outlier Factor")

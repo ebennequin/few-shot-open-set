@@ -78,21 +78,21 @@ stages:
       nfiles: 1
   train_episodic@resnet34:
     cmd: python -m stages.train_episodic resnet34 --output-model data/models/resnet34_episodic.tar
-      --n-epochs 200 --n-query 20 --n-tasks-per-epoch 500 --tb-log-dir data/tb_logs/resnet34_episodic
-      &> data/logs/train_episodic_resnet34.out
+      --n-epochs 200 --n-way 30 --n-query 20 --n-tasks-per-epoch 250 --tb-log-dir
+      data/tb_logs/resnet34_episodic &> data/logs/train_episodic_resnet34.out
     deps:
     - path: stages/train_episodic.py
-      md5: 2f9eb3fdeea85068e0013ca2591f6ad4
-      size: 4688
+      md5: be9d7e396ae87913b480a3136ae49ece
+      size: 4694
     outs:
     - path: data/logs/train_episodic_resnet34.out
-      md5: 1403e86b04595580c516dc8661963041
-      size: 14523348
+      md5: 8b62fddb05c657e0482857909b44b64b
+      size: 10409354
     - path: data/models/resnet34_episodic.tar
-      md5: 549dc001b20861491f8eddb4dcac463c
+      md5: f568c29072109705b15e7d4d669f6bee
       size: 85806349
     - path: data/tb_logs/resnet34_episodic
-      md5: 39cde8e3c02fa188d13f2c88cc0cad99.dir
+      md5: 231d107948954d4a0442ade9940b82f6.dir
       size: 18780
       nfiles: 1
   train_classic@resnet34:

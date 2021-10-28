@@ -28,3 +28,7 @@ If you can't host the data there for any reason, you can create a symlink:
 ```bash
 ln -s path/to/where/your/data/really/is data/tiered_imagenet/images
 ```
+
+### Retrieving trained models
+
+Run `dvc pull` to retrieve experiment outputs from the DVC remote.

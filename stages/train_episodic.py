@@ -61,7 +61,7 @@ def main(
     logger.info("Fetching training data...")
     train_set = FewShotCIFAR100(
         root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "train_r.json",
+        specs_file=specs_dir / "train.json",
         training=True,
     )
     train_sampler = TaskSampler(
@@ -76,7 +76,7 @@ def main(
     logger.info("Fetching validation data...")
     val_set = FewShotCIFAR100(
         root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "val_r.json",
+        specs_file=specs_dir / "val.json",
         training=False,
     )
     val_sampler = TaskSampler(

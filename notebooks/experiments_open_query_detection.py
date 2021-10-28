@@ -163,3 +163,5 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(train_
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
 plot_roc(outlier_detection_df, title="Local Outlier Factor")
+
+# TODO: tester LocalOutlierFactor item apr item pour voir si c'est différent

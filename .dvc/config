@@ -1,6 +1,8 @@
 [core]
     analytics = false
     remote = origin
-['remote "origin"']
+['remote "public"']
     url = s3://public-sicara/dvc-remotes/open-query-set
     profile = public-sicara
+['remote "origin"']
+    url = s3://thesis-etienne/dvc-remotes/open-query-set

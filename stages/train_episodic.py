@@ -98,7 +98,7 @@ def main(
     )
 
     optimizer = SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = MultiStepLR(optimizer, milestones=[20, 40, 60], gamma=0.2)
+    train_scheduler = MultiStepLR(optimizer, milestones=[168], gamma=0.1)
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
 

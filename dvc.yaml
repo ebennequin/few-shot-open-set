@@ -7,10 +7,11 @@ stages:
       cmd: python -m stages.train_episodic
         ${item}
         --output-model ${models_dir}/${item}_episodic.tar
-        --n-epochs 200
-        --n-way 30
-        --n-query 20
-        --n-tasks-per-epoch 250
+        --n-epochs 240
+        --n-way 32
+        --n-query 15
+        --n-tasks-per-epoch 75
+        --feature-dimension 512
         --tb-log-dir ${tb_logs_dir}/${item}_episodic
         &> ${logs_dir}/train_episodic_${item}.out
       deps:

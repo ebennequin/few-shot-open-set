@@ -28,6 +28,8 @@ def main(
     n_query: int = 20,
     n_epochs: int = 200,
     n_tasks_per_epoch: int = 500,
+    scheduler_milestones: str = "160",
+    scheduler_gamma: float = 0.1,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
@@ -48,6 +50,9 @@ def main(
         n_query: number of query samples per class
         n_epochs: number of training epochs
         n_tasks_per_epoch: number of episodes per training epoch
+        scheduler_milestones: all milestones for optimizer scheduler, must be a string of
+            comma-separated integers
+        scheduler_gamma: discount factor for optimizer scheduler
         tb_log_dir: where to dump tensorboard event files
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
@@ -98,7 +103,11 @@ def main(
     )
 
     optimizer = SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
+    train_scheduler = MultiStepLR(
+        optimizer,
+        milestones=list(map(int, scheduler_milestones.split(","))),
+        gamma=scheduler_gamma,
+    )
 
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
 

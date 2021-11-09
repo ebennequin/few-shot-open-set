@@ -15,7 +15,7 @@ class MiniImageNet(VisionDataset):
         self,
         root: Path,
         specs_file: Path,
-        image_size: int,
+        image_size: int = 224,
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
@@ -47,7 +47,7 @@ class MiniImageNet(VisionDataset):
                 lambda row: root / row["class_name"] / row["image_name"], axis=1
             )
         )
-        self.images = torch.vstack(
+        self.images = torch.stack(
             [
                 self.load_image_as_tensor(image_path)
                 for image_path in tqdm(data_df.image_paths)
@@ -75,4 +75,4 @@ class MiniImageNet(VisionDataset):
         return img, label
 
     def load_image_as_tensor(self, filename):
-        return self.transform(Image.open(filename))
+        return self.transform(Image.open(filename).convert("RGB"))

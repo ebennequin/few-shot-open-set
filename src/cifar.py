@@ -10,6 +10,9 @@ import numpy as np
 from torchvision import transforms
 from torchvision.datasets import CIFAR10, CIFAR100
 
+NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
 
 class FewShotCIFAR100(CIFAR100):
     def __init__(
@@ -27,6 +30,7 @@ class FewShotCIFAR100(CIFAR100):
                     transforms.RandomResizedCrop(image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
+                    NORMALIZE,
                 ]
             )
             if training
@@ -34,6 +38,7 @@ class FewShotCIFAR100(CIFAR100):
                 [
                     transforms.Resize([image_size, image_size]),
                     transforms.ToTensor(),
+                    NORMALIZE,
                 ]
             )
         )

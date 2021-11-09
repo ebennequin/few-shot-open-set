@@ -2,22 +2,22 @@ schema: '2.0'
 stages:
   train_episodic@resnet18:
     cmd: python -m stages.train_episodic resnet18 --output-model data/models/resnet18_episodic.tar
-      --n-epochs 200 --n-query 20 --n-tasks-per-epoch 500 --tb-log-dir data/tb_logs/resnet18_episodic
-      &> data/logs/train_episodic_resnet18.out
+      --n-epochs 240 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
+      512 --tb-log-dir data/tb_logs/resnet18_episodic &> data/logs/train_episodic_resnet18.out
     deps:
     - path: stages/train_episodic.py
-      md5: 2f9eb3fdeea85068e0013ca2591f6ad4
-      size: 4688
+      md5: 31622b67d6678f3c46ac8f374260272f
+      size: 4683
     outs:
     - path: data/logs/train_episodic_resnet18.out
-      md5: 1882c8fd9317fa1495aa86cf631f3992
-      size: 13019898
+      md5: ada0d35f5a29c284a752c8273af70e0a
+      size: 4616247
     - path: data/models/resnet18_episodic.tar
-      md5: 5e5cb0c61aa1e4419da9e0cb065549ad
-      size: 45311117
+      md5: 2ad208203e06c9ee521d5a179d473c43
+      size: 45836429
     - path: data/tb_logs/resnet18_episodic
-      md5: 6b80a9ca023490cfe7746af235b57537.dir
-      size: 18780
+      md5: f18cb8487ee5da3d21908a282b015ad3.dir
+      size: 22580
       nfiles: 1
   train_classic@resnet18:
     cmd: python -m stages.train_classic resnet18 --output-model data/models/resnet18_classic.tar
@@ -78,22 +78,22 @@ stages:
       nfiles: 1
   train_episodic@resnet34:
     cmd: python -m stages.train_episodic resnet34 --output-model data/models/resnet34_episodic.tar
-      --n-epochs 200 --n-way 30 --n-query 20 --n-tasks-per-epoch 250 --tb-log-dir
-      data/tb_logs/resnet34_episodic &> data/logs/train_episodic_resnet34.out
+      --n-epochs 240 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
+      512 --tb-log-dir data/tb_logs/resnet34_episodic &> data/logs/train_episodic_resnet34.out
     deps:
     - path: stages/train_episodic.py
-      md5: be9d7e396ae87913b480a3136ae49ece
-      size: 4694
+      md5: 31622b67d6678f3c46ac8f374260272f
+      size: 4683
     outs:
     - path: data/logs/train_episodic_resnet34.out
-      md5: 8b62fddb05c657e0482857909b44b64b
-      size: 10409354
+      md5: c1741b2b008cf2ba7793b9cc9cc2c166
+      size: 5420157
     - path: data/models/resnet34_episodic.tar
-      md5: f568c29072109705b15e7d4d669f6bee
-      size: 85806349
+      md5: 3ce06a5f2cd74c9a9eea77c36f308b0d
+      size: 86331661
     - path: data/tb_logs/resnet34_episodic
-      md5: 231d107948954d4a0442ade9940b82f6.dir
-      size: 18780
+      md5: adb9343d5826f1dccc89e0bab04a2ddb.dir
+      size: 22580
       nfiles: 1
   train_classic@resnet34:
     cmd: python -m stages.train_classic resnet34 --output-model data/models/resnet34_classic.tar

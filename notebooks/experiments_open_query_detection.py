@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 
 #%%
 from pathlib import Path
@@ -40,7 +39,7 @@ set_random_seed(random_seed)
 
 train_set = FewShotCIFAR100(
     root=cifar_root / "data",
-    specs_file=specs_dir / "train.json",
+    specs_file=specs_dir / "test.json",
     training=False,
 )
 train_sampler = OpenQuerySampler(
@@ -57,7 +56,7 @@ one_episode = next(iter(train_loader))
 plot_episode(one_episode[0], one_episode[2])
 
 #%%
-backbone = resnet18(num_classes=256)
+backbone = resnet18(num_classes=512)
 model = PrototypicalNetworks(backbone).cuda()
 model.load_state_dict(torch.load("data/models/resnet18_episodic.tar"))
 # model.backbone.fc = nn.Flatten()

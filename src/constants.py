@@ -4,7 +4,15 @@ from pathlib import Path
 from easyfsl.methods import PrototypicalNetworks
 from torchvision.models import resnet18, mobilenet_v3_small, squeezenet1_1, resnet34
 
+# Data
 CIFAR_SPECS_DIR = Path("data") / "cifar100" / "specs"
+MINI_IMAGENET_SPECS_DIR = Path("data") / "mini_imagenet" / "specs"
+
+CIFAR_ROOT_DIR = Path("data") / "cifar100" / "data"
+MINI_IMAGENET_ROOT_DIR = Path("data") / "mini_imagenet" / "images"
+
+
+# Stage outputs
 TRAINED_MODELS_DIR = Path("data") / "models"
 TB_LOGS_DIR = Path("data") / "tb_logs"
 

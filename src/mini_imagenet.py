@@ -15,7 +15,7 @@ class MiniImageNet(VisionDataset):
         self,
         root: Path,
         specs_file: Path,
-        image_size: int = 224,
+        image_size: int = 84,
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):

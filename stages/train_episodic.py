@@ -1,6 +1,6 @@
 from pathlib import Path
 from statistics import mean
-from typing import Optional
+from typing import Optional, Tuple
 
 from easyfsl.data_tools import EasySet, TaskSampler
 from loguru import logger
@@ -9,19 +9,22 @@ from torch.optim import Adam, SGD
 import typer
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
 from src.cifar import FewShotCIFAR100
-from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR
+from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR, CIFAR_ROOT_DIR, \
+    MINI_IMAGENET_SPECS_DIR, MINI_IMAGENET_ROOT_DIR
+from src.mini_imagenet import MiniImageNet
 from src.utils import build_model, create_dataloader, set_random_seed
 
 
 def main(
     backbone: str,
+    dataset: str,
     feature_dimension: int = 256,
     method: str = "protonet",
     learning_rate: float = 0.1,
-    specs_dir: Path = CIFAR_SPECS_DIR,
     output_model: Path = TRAINED_MODELS_DIR / "trained_episodic.tar",
     n_way: int = 5,
     n_shot: int = 5,
@@ -39,6 +42,7 @@ def main(
     Train a model in an episodic fashion.
     Args:
         backbone: what model to train. Must be a key of constants.BACKBONES.
+        dataset: what dataset to train the model on.
         feature_dimension: dimension of the feature space
         method: what few-shot method to use during episodic training.
             Must be a key of constants.FEW_SHOT_METHODS.
@@ -63,12 +67,9 @@ def main(
 
     set_random_seed(random_seed)
 
-    logger.info("Fetching training data...")
-    train_set = FewShotCIFAR100(
-        root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "train.json",
-        training=True,
-    )
+    logger.info("Fetching data...")
+    train_set, val_set = get_datasets(dataset_name=dataset)
+
     train_sampler = TaskSampler(
         dataset=train_set,
         n_way=n_way,
@@ -78,12 +79,6 @@ def main(
     )
     train_loader = create_dataloader(train_set, train_sampler, n_workers)
 
-    logger.info("Fetching validation data...")
-    val_set = FewShotCIFAR100(
-        root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "val.json",
-        training=False,
-    )
     val_sampler = TaskSampler(
         dataset=val_set,
         n_way=10,
@@ -154,6 +149,34 @@ def main(
     torch.save(best_state, output_model)
     logger.info(f"Trained model weights dumped at {output_model}")
 
+
+def get_datasets(dataset_name: str) -> Tuple[VisionDataset, VisionDataset]:
+    if dataset_name == "cifar":
+        train_set = FewShotCIFAR100(
+            root=CIFAR_ROOT_DIR,
+            specs_file=CIFAR_SPECS_DIR / "train.json",
+            training=True,
+        )
+        val_set = FewShotCIFAR100(
+            root=CIFAR_ROOT_DIR,
+            specs_file=CIFAR_SPECS_DIR / "val.json",
+            training=False,
+        )
+    elif dataset_name == "mini_imagenet":
+        train_set = MiniImageNet(
+            root=MINI_IMAGENET_ROOT_DIR,
+            specs_file=MINI_IMAGENET_SPECS_DIR / "train_images.csv",
+            training=True,
+        )
+        val_set = MiniImageNet(
+            root=MINI_IMAGENET_ROOT_DIR,
+            specs_file=MINI_IMAGENET_SPECS_DIR / "val_images.csv",
+            training=False,
+        )
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+    return train_set, val_set
 
 if __name__ == "__main__":
     typer.run(main)

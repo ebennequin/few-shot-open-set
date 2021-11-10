@@ -1,25 +1,32 @@
 stages:
   train_episodic:
     foreach:
-      - resnet18
-      - resnet34
+      - backbone: resnet18
+        dataset: cifar
+      - backbone: resnet34
+        dataset: cifar
+      - backbone: resnet18
+        dataset: mini_imagenet
+      - backbone: resnet34
+        dataset: mini_imagenet
     do:
       cmd: python -m stages.train_episodic
-        ${item}
-        --output-model ${models_dir}/${item}_episodic.tar
-        --n-epochs 200
+        ${item.backbone}
+        ${item.dataset}
+        --output-model ${models_dir}/${item.backbone}_${item.dataset}_episodic.tar
+        --n-epochs 240
         --n-way 32
         --n-query 15
         --n-tasks-per-epoch 75
         --feature-dimension 512
-        --tb-log-dir ${tb_logs_dir}/${item}_episodic
-        &> ${logs_dir}/train_episodic_${item}.out
+        --tb-log-dir ${tb_logs_dir}/${item}_${item.dataset}_episodic
+        &> ${logs_dir}/train_episodic_${item}_${item.dataset}.out
       deps:
         - stages/train_episodic.py
       outs:
-        - ${models_dir}/${item}_episodic.tar
-        - ${tb_logs_dir}/${item}_episodic
-        - ${logs_dir}/train_episodic_${item}.out
+        - ${models_dir}/${item}_${item.dataset}_episodic.tar
+        - ${tb_logs_dir}/${item}_${item.dataset}_episodic
+        - ${logs_dir}/train_episodic_${item}_${item.dataset}.out
 
   train_classic:
     foreach:

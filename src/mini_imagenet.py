@@ -9,6 +9,8 @@ from torchvision.datasets import VisionDataset
 from torchvision import transforms
 from tqdm import tqdm
 
+NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
 
 class MiniImageNet(VisionDataset):
     def __init__(
@@ -20,19 +22,25 @@ class MiniImageNet(VisionDataset):
         training: bool = False,
     ):
 
+        self.loading_transform = transforms.Compose(
+            [
+                transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
+                transforms.ToTensor(),
+                NORMALIZE,
+            ]
+        )
+
         transform = (
             transforms.Compose(
                 [
                     transforms.RandomResizedCrop(image_size),
                     transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
                 ]
             )
             if training
             else transforms.Compose(
                 [
                     transforms.Resize([image_size, image_size]),
-                    transforms.ToTensor(),
                 ]
             )
         )
@@ -65,7 +73,7 @@ class MiniImageNet(VisionDataset):
     def __getitem__(self, item):
 
         img, label = (
-            self.images[item],
+            self.transform(self.images[item]),
             self.labels[item],
         )
 
@@ -75,4 +83,4 @@ class MiniImageNet(VisionDataset):
         return img, label
 
     def load_image_as_tensor(self, filename):
-        return self.transform(Image.open(filename).convert("RGB"))
+        return self.loading_transform(Image.open(filename).convert("RGB"))

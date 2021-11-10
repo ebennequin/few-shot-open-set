@@ -10,8 +10,7 @@ import numpy as np
 from torchvision import transforms
 from torchvision.datasets import CIFAR10, CIFAR100
 
-NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
 class FewShotCIFAR100(CIFAR100):

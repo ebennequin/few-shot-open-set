@@ -5,7 +5,7 @@ import torch
 from easyfsl.data_tools import TaskSampler
 from torch.utils.data import Sampler, Dataset
 
-#TODO: This is a v0 of an OpenQuerySampler, for fast iteration.
+# TODO: This is a v0 of an OpenQuerySampler, for fast iteration.
 class OpenQuerySampler(TaskSampler):
     def __iter__(self):
         for _ in range(self.n_tasks):

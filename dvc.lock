@@ -2,21 +2,21 @@ schema: '2.0'
 stages:
   train_episodic@resnet18:
     cmd: python -m stages.train_episodic resnet18 --output-model data/models/resnet18_episodic.tar
-      --n-epochs 200 --n-query 20 --n-tasks-per-epoch 500 --tb-log-dir data/tb_logs/resnet18_episodic
-      &> data/logs/train_episodic_resnet18.out
+      --n-epochs 200 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
+      512 --tb-log-dir data/tb_logs/resnet18_episodic &> data/logs/train_episodic_resnet18.out
     deps:
     - path: stages/train_episodic.py
-      md5: 2f9eb3fdeea85068e0013ca2591f6ad4
-      size: 4688
+      md5: ba701bc90896408005ec9d4a21ed9082
+      size: 5392
     outs:
     - path: data/logs/train_episodic_resnet18.out
-      md5: 1882c8fd9317fa1495aa86cf631f3992
-      size: 13019898
+      md5: 0ac60a1a83f534830c87db0a3b3d360d
+      size: 3840482
     - path: data/models/resnet18_episodic.tar
-      md5: 5e5cb0c61aa1e4419da9e0cb065549ad
-      size: 45311117
+      md5: 001d55c5362254a1a24d425c23afb00c
+      size: 45836429
     - path: data/tb_logs/resnet18_episodic
-      md5: 6b80a9ca023490cfe7746af235b57537.dir
+      md5: e5ee617fe2acf0b4cbfe03c8db7acada.dir
       size: 18780
       nfiles: 1
   train_classic@resnet18:
@@ -78,21 +78,21 @@ stages:
       nfiles: 1
   train_episodic@resnet34:
     cmd: python -m stages.train_episodic resnet34 --output-model data/models/resnet34_episodic.tar
-      --n-epochs 200 --n-way 30 --n-query 20 --n-tasks-per-epoch 250 --tb-log-dir
-      data/tb_logs/resnet34_episodic &> data/logs/train_episodic_resnet34.out
+      --n-epochs 200 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
+      512 --tb-log-dir data/tb_logs/resnet34_episodic &> data/logs/train_episodic_resnet34.out
     deps:
     - path: stages/train_episodic.py
-      md5: be9d7e396ae87913b480a3136ae49ece
-      size: 4694
+      md5: ba701bc90896408005ec9d4a21ed9082
+      size: 5392
     outs:
     - path: data/logs/train_episodic_resnet34.out
-      md5: 8b62fddb05c657e0482857909b44b64b
-      size: 10409354
+      md5: fcbbf6d28b736812d75961d8f7d8d251
+      size: 4511636
     - path: data/models/resnet34_episodic.tar
-      md5: f568c29072109705b15e7d4d669f6bee
-      size: 85806349
+      md5: 2fae8877708cf68d2d2af4baceed7bc9
+      size: 86331661
     - path: data/tb_logs/resnet34_episodic
-      md5: 231d107948954d4a0442ade9940b82f6.dir
+      md5: bf366c1d525cea4aa2f03f606e747a8e.dir
       size: 18780
       nfiles: 1
   train_classic@resnet34:

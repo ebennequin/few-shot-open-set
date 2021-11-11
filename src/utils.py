@@ -213,7 +213,7 @@ def build_model(
         a PrototypicalNetworks
     """
     convolutional_network = BACKBONES[backbone](
-        pretrained=False, num_classes=feature_dimension
+        num_classes=feature_dimension
     )
 
     model = FEW_SHOT_METHODS[method](convolutional_network).to(device)

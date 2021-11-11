@@ -3,11 +3,11 @@ stages:
     foreach:
       - backbone: resnet18
         dataset: cifar
-      - backbone: resnet34
+      - backbone: resnet12
         dataset: cifar
       - backbone: resnet18
         dataset: mini_imagenet
-      - backbone: resnet34
+      - backbone: resnet12
         dataset: mini_imagenet
     do:
       cmd: python -m stages.train_episodic

@@ -170,37 +170,19 @@ class ResNet(nn.Module):
         x = self.bn1(x)
         x = self.relu(x)
 
-        if cat and not self.training:
-            # returns intermediate layers for multi-eval evaluation
-            x2 = self.layer1(x)
-            x2_avg = self.avgpool(x2).view(x.size(0), -1)
-            x3 = self.layer2(x2)
-            x3_avg = self.avgpool(x3).view(x.size(0), -1)
-            x4 = self.layer3(x3)
-            x4_avg = self.avgpool(x4).view(x.size(0), -1)
-            x5 = self.layer4(x4)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
 
-            x5_avg = self.avgpool(x5).view(x.size(0), -1)
+        x = self.avgpool(x)
 
-            x = torch.cat([x3_avg, x4_avg, x5_avg], axis=1)
+        x = x.view(x.size(0), -1)
 
-            x1 = None
-        else:
-            x = self.layer1(x)
-            x = self.layer2(x)
-            x = self.layer3(x)
-            x = self.layer4(x)
+        if use_fc:
+            x = self.fc(x)
 
-            x = self.avgpool(x)
-
-            x = x.view(x.size(0), -1)
-
-            x1 = self.fc(x) if use_fc else None
-
-        if self.training and self.projection:
-            x = self.proj1(x)
-
-        return x, x1
+        return x
 
 
 def resnet10(**kwargs):

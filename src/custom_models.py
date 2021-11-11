@@ -104,7 +104,7 @@ class ResNet(nn.Module):
         self,
         block,
         layers,
-        widths=[64, 128, 256, 512],
+        widths=[64, 128, 256, 512], # TODO: est-ce que c'est pris en compte ?
         feature_dim=512,
         num_classes=1000,
         projection=False,

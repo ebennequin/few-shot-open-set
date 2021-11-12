@@ -115,22 +115,22 @@ stages:
       size: 18780
       nfiles: 1
   train_episodic@3:
-    cmd: python -m stages.train_episodic resnet34 mini_imagenet --output-model data/models/resnet34_mini_imagenet_episodic.tar
+    cmd: python -m stages.train_episodic resnet12 mini_imagenet --output-model data/models/resnet12_mini_imagenet_episodic.tar
       --n-epochs 240 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
-      512 --tb-log-dir data/tb_logs/resnet34_mini_imagenet_episodic &> data/logs/train_episodic_resnet34_mini_imagenet.out
+      512 --tb-log-dir data/tb_logs/resnet12_mini_imagenet_episodic &> data/logs/train_episodic_resnet12_mini_imagenet.out
     deps:
     - path: stages/train_episodic.py
       md5: 357cd82f04f176247c65f76e06bd7290
       size: 6240
     outs:
-    - path: data/logs/train_episodic_resnet34_mini_imagenet.out
-      md5: d4827bd5a108bd85ee6b8064432d5e72
-      size: 6135745
-    - path: data/models/resnet34_mini_imagenet_episodic.tar
-      md5: b0d4778339faca4f002ab5f890fd004a
-      size: 86331661
-    - path: data/tb_logs/resnet34_mini_imagenet_episodic
-      md5: 7026b240b35a7eec109e1fe316882c88.dir
+    - path: data/logs/train_episodic_resnet12_mini_imagenet.out
+      md5: 2aaa177aba97323da6b37af4927813cc
+      size: 7321583
+    - path: data/models/resnet12_mini_imagenet_episodic.tar
+      md5: e8030951f579cb48fad1f4dcdbe22b0f
+      size: 37773289
+    - path: data/tb_logs/resnet12_mini_imagenet_episodic
+      md5: 99bd599bdc645aa8664cf1696b03dd7c.dir
       size: 22580
       nfiles: 1
   train_episodic@1:

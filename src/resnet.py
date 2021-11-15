@@ -1,5 +1,5 @@
 """
-From https://github.com/fiveai/on-episodes-fsl/blob/master/src/models/ResNet.py
+Custom ResNet from https://github.com/fiveai/on-episodes-fsl/blob/master/src/models/ResNet.py
 """
 
 

@@ -16,7 +16,7 @@ from src.constants import (
     CIFAR_ROOT_DIR,
     BACKBONES,
 )
-from src.custom_protonet import CustomProtoNet
+from src.inference_protonet import InferenceProtoNet
 from src.mini_imagenet import MiniImageNet
 from src.open_query_sampler import OpenQuerySampler
 
@@ -101,7 +101,7 @@ def get_train_loader(dataset_name, batch_size=1024):
 
 def get_inference_model(backbone, weights_path, train_loader):
     # We learnt that this custom ProtoNet gives better ROC curve (can be checked again later)
-    inference_model = CustomProtoNet(backbone, train_loader=train_loader).cuda()
+    inference_model = InferenceProtoNet(backbone, train_loader=train_loader).cuda()
     inference_model.load_state_dict(torch.load(weights_path))
     inference_model.eval()
 

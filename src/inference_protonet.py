@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-class CustomProtoNet(PrototypicalNetworks):
+class InferenceProtoNet(PrototypicalNetworks):
     def __init__(self, *args, train_loader: DataLoader):
         """
         Following Bertinetto's inference strategy.

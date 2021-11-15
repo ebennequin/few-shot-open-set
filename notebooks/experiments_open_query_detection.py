@@ -2,16 +2,10 @@
 from pathlib import Path
 from statistics import mean
 
-from easyfsl.methods import PrototypicalNetworks
-from easyfsl.utils import compute_prototypes
-from matplotlib import pyplot as plt
-import numpy as np
 import pandas as pd
 import torch
 from sklearn.neighbors import LocalOutlierFactor
-from torch import nn
 from torch.utils.data import DataLoader
-from torchvision.models import resnet18
 from tqdm import tqdm
 
 from src.cifar import FewShotCIFAR100
@@ -20,11 +14,19 @@ from src.constants import (
     MINI_IMAGENET_SPECS_DIR,
     CIFAR_SPECS_DIR,
     CIFAR_ROOT_DIR,
+    BACKBONES,
 )
+from src.custom_protonet import CustomProtoNet
 from src.mini_imagenet import MiniImageNet
 from src.open_query_sampler import OpenQuerySampler
 
-from src.utils import set_random_seed, create_dataloader, build_model, plot_episode
+from src.utils import (
+    set_random_seed,
+    create_dataloader,
+    plot_episode,
+    plot_roc,
+    get_pseudo_renyi_entropy,
+)
 
 #%%
 
@@ -38,115 +40,88 @@ device: str = "cuda"
 n_validation_tasks = 100
 n_workers = 12
 
-
-#%%
-
 set_random_seed(random_seed)
 
-# dataset = FewShotCIFAR100(
-#     root=CIFAR_ROOT_DIR,
-#     specs_file=CIFAR_SPECS_DIR / "test.json",
-#     training=False,
-# )
-dataset = MiniImageNet(
-    root=MINI_IMAGENET_ROOT_DIR,
-    specs_file=MINI_IMAGENET_SPECS_DIR / "test_images.csv",
-    training=False,
-)
-sampler = OpenQuerySampler(
-    dataset=dataset,
-    n_way=n_way,
-    n_shot=n_shot,
-    n_query=n_query,
-    n_tasks=n_tasks_per_epoch,
-)
-data_loader = create_dataloader(dataset, sampler, n_workers)
+DATASET_CHOICE = "cifar"
+# DATASET_CHOICE = "mini_imagenet"
+BACKBONE_CHOICE = "resnet12"
+
+model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_episodic.tar"
 
 #%%
-one_episode = next(iter(data_loader))
-plot_episode(one_episode[0], one_episode[2])
-
-#%%
-backbone = resnet18(num_classes=512)
-model = PrototypicalNetworks(backbone).cuda()
-# model.load_state_dict(torch.load("data/models/resnet18_cifar_episodic.tar"))
-model.load_state_dict(torch.load("data/models/resnet18_mini_imagenet_episodic.tar"))
-# model.backbone.fc = nn.Flatten()
-model.eval()
-
-#%%
-def get_pseudo_renyi_entropy(predictions):
-    return (
-        torch.pow(nn.functional.softmax(predictions, dim=1), 2)
-        .sum(dim=1)
-        .detach()
-        .cpu()
-    )
-
-
-def plot_roc(outliers_df, title):
-    gamma_range = np.linspace(0.0, 1.0, 1000)
-    precisions = []
-    recall = []
-
-    for gamma in gamma_range:
-        this_gamma_detection_df = outliers_df.assign(
-            outlier_prediction=lambda df: df.outlier_score < gamma
-        )
-        precisions.append(
-            (
-                this_gamma_detection_df.outlier
-                & this_gamma_detection_df.outlier_prediction
-            ).sum()
-            / (this_gamma_detection_df.outlier.sum() + 1)
-        )
-        recall.append(
-            (
-                ~this_gamma_detection_df.outlier
-                & this_gamma_detection_df.outlier_prediction
-            ).sum()
-            / ((~this_gamma_detection_df.outlier).sum() + 1)
-        )
-
-    plt.plot(recall, precisions)
-    plt.xlim(0.0, 1.0)
-    plt.ylim(0.0, 1.0)
-    plt.title(title)
-    plt.show()
-
-
-#%%
-# Compute the mean of all features extracted from the train set
-# To follow Bertinetto's inference strategy
-def get_train_set_feature_mean(model):
-    # train_set = FewShotCIFAR100(
-    #     root=CIFAR_ROOT_DIR,
-    #     specs_file=CIFAR_SPECS_DIR / "train.json",
-    #     training=False,
-    # )
-    train_set = MiniImageNet(
-        root=MINI_IMAGENET_ROOT_DIR,
-        specs_file=MINI_IMAGENET_SPECS_DIR / "train_images.csv",
+def get_cifar_set(split):
+    return FewShotCIFAR100(
+        root=CIFAR_ROOT_DIR,
+        specs_file=CIFAR_SPECS_DIR / f"{split}.json",
         training=False,
     )
-    train_loader = DataLoader(
+
+
+def get_mini_imagenet_set(split):
+    return MiniImageNet(
+        root=MINI_IMAGENET_ROOT_DIR,
+        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}_images.csv",
+        training=False,
+    )
+
+
+def get_test_loader(dataset_name):
+    if dataset_name == "cifar":
+        dataset = get_cifar_set("test")
+    elif dataset_name == "mini_imagenet":
+        dataset = get_mini_imagenet_set("test")
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+    sampler = OpenQuerySampler(
+        dataset=dataset,
+        n_way=n_way,
+        n_shot=n_shot,
+        n_query=n_query,
+        n_tasks=n_tasks_per_epoch,
+    )
+    return create_dataloader(dataset, sampler, n_workers)
+
+
+def get_train_loader(dataset_name, batch_size=1024):
+    if dataset_name == "cifar":
+        train_set = get_cifar_set("train")
+    elif dataset_name == "mini_imagenet":
+        train_set = get_mini_imagenet_set("train")
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+    return DataLoader(
         train_set,
-        batch_size=1024,
+        batch_size=batch_size,
         num_workers=n_workers,
         pin_memory=True,
     )
 
-    model.eval()
-    with torch.no_grad():
-        all_features = []
-        for images, _ in tqdm(train_loader):
-            all_features.append(model.backbone(images.cuda()).data)
 
-    return torch.cat(all_features, dim=0).mean(0)
+def get_inference_model(backbone, weights_path, train_loader):
+    # We learnt that this custom ProtoNet gives better ROC curve (can be checked again later)
+    inference_model = CustomProtoNet(backbone, train_loader=train_loader).cuda()
+    inference_model.load_state_dict(torch.load(weights_path))
+    inference_model.eval()
+
+    return inference_model
 
 
-train_features_mean = get_train_set_feature_mean(model)
+#%%
+data_loader = get_test_loader(DATASET_CHOICE)
 
+model = get_inference_model(
+    BACKBONES[BACKBONE_CHOICE](),
+    model_weights,
+    get_train_loader(
+        DATASET_CHOICE,
+    ),
+)
+
+#%%
+one_episode = next(iter(data_loader))
+plot_episode(one_episode[0], one_episode[2])
 
 #%% Test DOCTOR strategy
 
@@ -157,19 +132,8 @@ with torch.no_grad():
     for support_images, support_labels, query_images, query_labels, _ in tqdm(
         data_loader
     ):
-        # model.process_support_set(support_images.cuda(), support_labels.cuda())
-        # predictions = model(query_images.cuda())
-
-        # Follow the inference strategy by Bertinetto
-        # (found that it improves the ROC curve and a little bit the accuracy (~+1%))
-        support_features = nn.functional.normalize(
-            model.backbone(support_images.cuda()).data - train_features_mean, dim=1
-        )
-        model.prototypes = compute_prototypes(support_features, support_labels)
-        query_features = nn.functional.normalize(
-            model.backbone(query_images.cuda()).data - train_features_mean, dim=1
-        )
-        predictions = -torch.cdist(query_features, model.prototypes)
+        model.process_support_set(support_images.cuda(), support_labels.cuda())
+        predictions = model(query_images.cuda())
 
         # Accuracies (to get an evaluation of the model along with the ROC)
         accuracy_list.append(

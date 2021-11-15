@@ -1,161 +1,18 @@
-import itertools
 import random
-from functools import partial
 from pathlib import Path
-from statistics import mean, median, stdev
-from typing import List, Optional
+from typing import Optional
 
 import torchvision
-from easyfsl.data_tools import EasySet, TaskSampler
+from easyfsl.data_tools import TaskSampler
 from easyfsl.methods import AbstractMetaLearner
-import networkx as nx
 import numpy as np
-import pandas as pd
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
-from networkx.drawing.nx_agraph import graphviz_layout
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from src.constants import BACKBONES, FEW_SHOT_METHODS
-
-
-def plot_dag(dag: nx.DiGraph):
-    """
-    Utility function to quickly draw a Directed Acyclic Graph.
-    Root is at the top, leaves are on the bottom.
-    Args:
-        dag: input directed acyclic graph
-    """
-    pos = graphviz_layout(dag, prog="dot")
-    nx.draw(dag, pos, with_labels=False, node_size=10, arrows=False)
-    plt.show()
-
-
-def get_median_distance(labels: List[int], distances: np.ndarray) -> float:
-    """
-    From a list of labels and a matrix of pair-wise distances, compute the median
-    distance of all possible pairs from the list.
-    Args:
-        labels: integer labels in range(len(distances))
-        distances: square symmetric matrix
-
-    Returns:
-        median distance
-    """
-    return median(
-        [
-            distances[label_a, label_b]
-            for label_a, label_b in itertools.combinations(labels, 2)
-        ]
-    )
-
-
-def get_distance_std(labels: List[int], distances: np.ndarray):
-    """
-    From a list of labels and a matrix of pair-wise distances, compute the standard deviation
-    of distances of all possible pairs from the list.
-    Args:
-        labels: integer labels in range(len(distances))
-        distances: square symmetric matrix
-
-    Returns:
-        median distance
-    """
-    return stdev(
-        [
-            distances[label_a, label_b]
-            for label_a, label_b in itertools.combinations(labels, 2)
-        ]
-    )
-
-
-def get_pseudo_variance(labels: List[int], distances: np.ndarray) -> float:
-    """
-    From a list of labels and a matrix of pair-wise distances, compute the pseudo-variance
-    distance of all possible pairs from the list, i.e. the mean of all square distances.
-    Args:
-        labels: integer labels in range(len(distances))
-        distances: square symmetric matrix
-
-    Returns:
-        pseudo-variance
-    """
-    return mean(
-        [
-            (distances[label_a, label_b] ** 2)
-            for label_a, label_b in itertools.combinations(labels, 2)
-        ]
-    )
-
-
-def get_intra_class_distances(training_tasks_record: List, distances: np.ndarray):
-    df = pd.DataFrame(training_tasks_record)
-    return df.join(
-        df.true_class_ids.apply(
-            [
-                partial(get_median_distance, distances=distances),
-                partial(get_distance_std, distances=distances),
-            ]
-        ).rename(
-            columns={
-                "get_median_distance": "median_distance",
-                "get_distance_std": "std_distance",
-            }
-        )
-    )
-
-
-def get_training_confusion_for_single_task(row, n_classes):
-    indices = []
-    values = []
-
-    for (local_label1, true_label1) in enumerate(row["true_class_ids"]):
-        for (local_label2, true_label2) in enumerate(row["true_class_ids"]):
-            indices.append([true_label1, true_label2])
-            values.append(row["task_confusion_matrix"][local_label1, local_label2])
-
-    return torch.sparse_coo_tensor(
-        torch.tensor(indices).T, values, (n_classes, n_classes)
-    )
-
-
-def get_training_confusion(df, n_classes):
-    return torch.sparse.sum(
-        torch.stack(
-            [
-                get_training_confusion_for_single_task(row, n_classes)
-                for _, row in df.iterrows()
-            ]
-        ),
-        dim=0,
-    ).to_dense()
-
-
-def get_sampled_together_for_single_task(row, n_classes):
-    indices = []
-    values = []
-
-    for label1, label2 in itertools.combinations(row["true_class_ids"], 2):
-        indices.append([min(label1, label2), max(label1, label2)])
-        values.append(1)
-
-    return torch.sparse_coo_tensor(
-        torch.tensor(indices).T, values, (n_classes, n_classes)
-    )
-
-
-def get_sampled_together(df, n_classes):
-    return torch.sparse.sum(
-        torch.stack(
-            [
-                get_sampled_together_for_single_task(row, n_classes)
-                for _, row in df.iterrows()
-            ]
-        ),
-        dim=0,
-    ).to_dense()
 
 
 def set_random_seed(seed: int):
@@ -212,9 +69,7 @@ def build_model(
     Returns:
         a PrototypicalNetworks
     """
-    convolutional_network = BACKBONES[backbone](
-        num_classes=feature_dimension
-    )
+    convolutional_network = BACKBONES[backbone](num_classes=feature_dimension)
 
     model = FEW_SHOT_METHODS[method](convolutional_network).to(device)
 
@@ -244,3 +99,43 @@ def plot_episode(support_images, query_images):
     plt.title("query images")
     matplotlib_imshow(query_grid)
     plt.show()
+
+
+def plot_roc(outliers_df, title):
+    gamma_range = np.linspace(0.0, 1.0, 1000)
+    precisions = []
+    recall = []
+
+    for gamma in gamma_range:
+        this_gamma_detection_df = outliers_df.assign(
+            outlier_prediction=lambda df: df.outlier_score < gamma
+        )
+        precisions.append(
+            (
+                this_gamma_detection_df.outlier
+                & this_gamma_detection_df.outlier_prediction
+            ).sum()
+            / (this_gamma_detection_df.outlier.sum() + 1)
+        )
+        recall.append(
+            (
+                ~this_gamma_detection_df.outlier
+                & this_gamma_detection_df.outlier_prediction
+            ).sum()
+            / ((~this_gamma_detection_df.outlier).sum() + 1)
+        )
+
+    plt.plot(recall, precisions)
+    plt.xlim(0.0, 1.0)
+    plt.ylim(0.0, 1.0)
+    plt.title(title)
+    plt.show()
+
+
+def get_pseudo_renyi_entropy(predictions: torch.Tensor) -> torch.Tensor:
+    return (
+        torch.pow(nn.functional.softmax(predictions, dim=1), 2)
+        .sum(dim=1)
+        .detach()
+        .cpu()
+    )

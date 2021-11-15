@@ -134,22 +134,22 @@ stages:
       size: 22580
       nfiles: 1
   train_episodic@1:
-    cmd: python -m stages.train_episodic resnet34 cifar --output-model data/models/resnet34_cifar_episodic.tar
+    cmd: python -m stages.train_episodic resnet12 cifar --output-model data/models/resnet12_cifar_episodic.tar
       --n-epochs 240 --n-way 32 --n-query 15 --n-tasks-per-epoch 75 --feature-dimension
-      512 --tb-log-dir data/tb_logs/resnet34_cifar_episodic &> data/logs/train_episodic_resnet34_cifar.out
+      512 --tb-log-dir data/tb_logs/resnet12_cifar_episodic &> data/logs/train_episodic_resnet12_cifar.out
     deps:
     - path: stages/train_episodic.py
       md5: 357cd82f04f176247c65f76e06bd7290
       size: 6240
     outs:
-    - path: data/logs/train_episodic_resnet34_cifar.out
-      md5: 862bbdf5f56909485e0ca2b3f88ab996
-      size: 5417642
-    - path: data/models/resnet34_cifar_episodic.tar
-      md5: b380a89545181089af0c3c4ec25b0a15
-      size: 86331661
-    - path: data/tb_logs/resnet34_cifar_episodic
-      md5: 85cfb828915f63e0538e8f516e4f3dc8.dir
+    - path: data/logs/train_episodic_resnet12_cifar.out
+      md5: e6114ee99af17609968589161dd3321b
+      size: 5508633
+    - path: data/models/resnet12_cifar_episodic.tar
+      md5: a57230dbe6ec08b27ed4e47a8ef1b8af
+      size: 37773289
+    - path: data/tb_logs/resnet12_cifar_episodic
+      md5: 16f8c705d22cd3ba48f07b28d93907aa.dir
       size: 22580
       nfiles: 1
   train_episodic@0:
@@ -162,13 +162,13 @@ stages:
       size: 6240
     outs:
     - path: data/logs/train_episodic_resnet18_cifar.out
-      md5: 39fa4625fd496b58fdf9f1e07413eb9d
-      size: 4619250
+      md5: 5546bd0a5c011b7ad164563faf3e29e8
+      size: 5616596
     - path: data/models/resnet18_cifar_episodic.tar
-      md5: 20249d9c2cfeafeee198dc38fa4da545
-      size: 45836429
+      md5: 84f9f3116e87b38cc26fd1b77ac377c9
+      size: 44754385
     - path: data/tb_logs/resnet18_cifar_episodic
-      md5: 8f19f44cc97cb67b37a19940f387cb93.dir
+      md5: 90656b0751228548664458195ac64531.dir
       size: 22580
       nfiles: 1
   train_episodic@2:
@@ -181,12 +181,12 @@ stages:
       size: 6240
     outs:
     - path: data/logs/train_episodic_resnet18_mini_imagenet.out
-      md5: ec42cd79f4eadba0d267eb106f2f339a
-      size: 6011315
+      md5: 4008cd1445118ce2ae20dbd7758687ca
+      size: 7326272
     - path: data/models/resnet18_mini_imagenet_episodic.tar
-      md5: 0e37e2bc4d63c0cffdc7ad3055933b71
-      size: 45836429
+      md5: dc2a2d4302a3f1254092fb7eba4ad076
+      size: 44754385
     - path: data/tb_logs/resnet18_mini_imagenet_episodic
-      md5: 9f8054254998e53fe8e61cf20f19de9a.dir
+      md5: 834d785d58b879089c15cef5417b42b3.dir
       size: 22580
       nfiles: 1

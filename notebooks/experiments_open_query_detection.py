@@ -4,6 +4,8 @@ from statistics import mean
 
 import pandas as pd
 import torch
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -25,7 +27,9 @@ from src.utils import (
     create_dataloader,
     plot_episode,
     plot_roc,
+    plot_twin_hist,
     get_pseudo_renyi_entropy,
+    get_shannon_entropy,
 )
 
 #%%
@@ -33,11 +37,9 @@ from src.utils import (
 n_way: int = 5
 n_shot: int = 5
 n_query: int = 10
-n_epochs: int = 200
-n_tasks_per_epoch: int = 500
+n_tasks: int = 500
 random_seed: int = 0
 device: str = "cuda"
-n_validation_tasks = 100
 n_workers = 12
 
 set_random_seed(random_seed)
@@ -78,7 +80,7 @@ def get_test_loader(dataset_name):
         n_way=n_way,
         n_shot=n_shot,
         n_query=n_query,
-        n_tasks=n_tasks_per_epoch,
+        n_tasks=n_tasks,
     )
     return create_dataloader(dataset, sampler, n_workers)
 
@@ -123,6 +125,28 @@ model = get_inference_model(
 one_episode = next(iter(data_loader))
 plot_episode(one_episode[0], one_episode[2])
 
+#%%
+
+
+def show_all_metrics_and_plots(outliers_df, title, objective=0.9):
+    roc_auc = plot_roc(outliers_df, title=title)
+    print(f"ROC AUC: {roc_auc}")
+
+    precisions, recalls, _ = precision_recall_curve(
+        outliers_df.outlier, -outliers_df.outlier_score
+    )
+    precision_at_recall_objective = precisions[
+        next(i for i, value in enumerate(recalls) if value < objective)
+    ]
+    recall_at_precision_objective = recalls[
+        next(i for i, value in enumerate(precisions) if value > objective)
+    ]
+    print(f"Precision for recall={objective}: {precision_at_recall_objective}")
+    print(f"Recall for precision={objective}: {recall_at_precision_objective}")
+
+    plot_twin_hist(outlier_detection_df, title=title)
+
+
 #%% Test DOCTOR strategy
 
 accuracy_list = []
@@ -155,14 +179,16 @@ with torch.no_grad():
                 {
                     "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
                     "outlier_score": get_pseudo_renyi_entropy(predictions),
+                    # "outlier_score": get_shannon_entropy(predictions),
                 }
             )
         )
 
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
+#%%
 print(f"Average accuracy: {(100 * mean(accuracy_list)):.2f}%")
-plot_roc(outlier_detection_df, title="DOCTOR")
+show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 
 
 #%% Test LocalOutlierFactor
@@ -172,9 +198,9 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
     support_features = model.backbone(support_images.cuda())
     query_features = model.backbone(query_images.cuda())
 
-    clustering = LocalOutlierFactor(
-        n_neighbors=3, novelty=True, metric="euclidean"
-    ).fit(support_features.detach().cpu())
+    clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
+    # clustering = IsolationForest()
+    # clustering.fit(support_features.detach().cpu())
 
     outlier_detection_df_list.append(
         pd.DataFrame(
@@ -189,6 +215,4 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
 
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
-plot_roc(outlier_detection_df, title="Local Outlier Factor")
-
-# TODO: tester LocalOutlierFactor item par item pour voir si c'est différent
+show_all_metrics_and_plots(outlier_detection_df, title="LOF")

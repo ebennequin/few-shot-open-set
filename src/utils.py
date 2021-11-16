@@ -5,10 +5,12 @@ from typing import Optional
 import torchvision
 from easyfsl.data_tools import TaskSampler
 from easyfsl.methods import AbstractMetaLearner
+import seaborn as sns
 import numpy as np
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
+from sklearn.metrics import auc, roc_curve
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -102,32 +104,19 @@ def plot_episode(support_images, query_images):
 
 
 def plot_roc(outliers_df, title):
-    gamma_range = np.linspace(0.0, 1.0, 1000)
-    precisions = []
-    recall = []
+    fp_rate, tp_rate, _ = roc_curve(outliers_df.outlier, -outliers_df.outlier_score)
 
-    for gamma in gamma_range:
-        this_gamma_detection_df = outliers_df.assign(
-            outlier_prediction=lambda df: df.outlier_score < gamma
-        )
-        precisions.append(
-            (
-                this_gamma_detection_df.outlier
-                & this_gamma_detection_df.outlier_prediction
-            ).sum()
-            / (this_gamma_detection_df.outlier.sum() + 1)
-        )
-        recall.append(
-            (
-                ~this_gamma_detection_df.outlier
-                & this_gamma_detection_df.outlier_prediction
-            ).sum()
-            / ((~this_gamma_detection_df.outlier).sum() + 1)
-        )
-
-    plt.plot(recall, precisions)
+    plt.plot(fp_rate, tp_rate)
     plt.xlim(0.0, 1.0)
     plt.ylim(0.0, 1.0)
+    plt.title(title)
+    plt.show()
+
+    return auc(fp_rate, tp_rate)
+
+
+def plot_twin_hist(outliers_df, title):
+    sns.histplot(data=outliers_df, x="outlier_score", hue="outlier")
     plt.title(title)
     plt.show()
 
@@ -139,3 +128,8 @@ def get_pseudo_renyi_entropy(predictions: torch.Tensor) -> torch.Tensor:
         .detach()
         .cpu()
     )
+
+
+def get_shannon_entropy(predictions: torch.Tensor) -> torch.Tensor:
+    soft_prediction = nn.functional.softmax(predictions, dim=1)
+    return (soft_prediction * torch.log(soft_prediction)).sum(dim=1).detach().cpu()

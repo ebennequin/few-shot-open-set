@@ -3,12 +3,14 @@ from pathlib import Path
 from statistics import mean
 
 import pandas as pd
-import torch
+from pyod.models.iforest import IForest
 from easyfsl.methods import PrototypicalNetworks
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
+import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.constants import (
@@ -32,7 +34,7 @@ from src.utils import (
 n_way: int = 5
 n_shot: int = 5
 n_query: int = 10
-n_tasks: int = 500
+n_tasks: int = 50
 random_seed: int = 0
 device: str = "cuda:2"  # Change to 'cuda' if you have NVidia GPU
 n_workers = 12
@@ -106,7 +108,7 @@ print(f"Average accuracy: {(100 * mean(accuracy_list)):.2f}%")
 show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 
 
-#%% Test LocalOutlierFactor
+#%% Test LocalOutlierFactor/IForest/KNN
 
 outlier_detection_df_list = []
 for support_images, support_labels, query_images, query_labels, _ in tqdm(data_loader):
@@ -117,8 +119,9 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
         model.backbone(query_images.to(device)), dim=1
     )
 
-    clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
-    # clustering = IsolationForest()
+    # clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
+    clustering = IForest(n_estimators=100, n_jobs=-1)
+
     clustering.fit(support_features.detach().cpu())
 
     outlier_detection_df_list.append(

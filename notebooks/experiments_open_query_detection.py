@@ -109,7 +109,35 @@ print(f"Average accuracy: {(100 * mean(accuracy_list)):.2f}%")
 show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 
 
-#%% Test LocalOutlierFactor/IForest/KNN
+#%% Test LocalOutlierFactor
+# Change to pyod LocalOutlierFactor and integrate into next cell
+# See issues here: https://pyod.readthedocs.io/en/latest/issues.html
+
+outlier_detection_df_list = []
+for support_images, support_labels, query_images, query_labels, _ in tqdm(data_loader):
+    support_features = model.backbone(support_images.to(device))
+    query_features = model.backbone(query_images.to(device))
+
+    clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
+    clustering.fit(support_features.detach().cpu())
+
+    outlier_detection_df_list.append(
+        pd.DataFrame(
+            {
+                "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
+                "outlier_score": clustering.decision_function(
+                    query_features.detach().cpu()
+                ),
+            }
+        )
+    )
+
+outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
+
+show_all_metrics_and_plots(outlier_detection_df, title="LOF")
+
+#%% Test IForest/KNN
+# Ajouter la gestion du score pyod en paramètre
 
 outlier_detection_df_list = []
 for support_images, support_labels, query_images, query_labels, _ in tqdm(data_loader):
@@ -120,17 +148,15 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
         model.backbone(query_images.to(device)), dim=1
     )
 
-    # clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
     # clustering = IForest(n_estimators=100, n_jobs=-1)
     clustering = KNN(n_neighbors=3, method='largest', n_jobs=-1)
-
     clustering.fit(support_features.detach().cpu())
 
     outlier_detection_df_list.append(
         pd.DataFrame(
             {
                 "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
-                "outlier_score": clustering.decision_function(
+                "outlier_score": 1.0 - clustering.decision_function(
                     query_features.detach().cpu()
                 ),
             }

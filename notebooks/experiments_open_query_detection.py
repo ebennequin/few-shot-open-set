@@ -4,6 +4,7 @@ from statistics import mean
 
 import pandas as pd
 from pyod.models.iforest import IForest
+from pyod.models.knn import KNN
 from easyfsl.methods import PrototypicalNetworks
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_curve
@@ -120,7 +121,8 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
     )
 
     # clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
-    clustering = IForest(n_estimators=100, n_jobs=-1)
+    # clustering = IForest(n_estimators=100, n_jobs=-1)
+    clustering = KNN(n_neighbors=3, method='largest', n_jobs=-1)
 
     clustering.fit(support_features.detach().cpu())
 

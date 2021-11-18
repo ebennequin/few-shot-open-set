@@ -4,6 +4,8 @@ from statistics import mean
 
 import pandas as pd
 import torch
+from easyfsl.methods import PrototypicalNetworks
+from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
 from torch import nn
@@ -32,7 +34,7 @@ n_shot: int = 5
 n_query: int = 10
 n_tasks: int = 500
 random_seed: int = 0
-device: str = "cuda"
+device: str = "cuda:2"  # Change to 'cuda' if you have NVidia GPU
 n_workers = 12
 
 set_random_seed(random_seed)
@@ -43,9 +45,6 @@ BACKBONE_CHOICE = "resnet18"
 
 # model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_episodic.tar"
 model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_classic.tar"
-
-#%%
-torch.cuda.set_device("cuda:2")
 
 #%%
 data_loader = get_task_loader(DATASET_CHOICE, n_way, n_shot, n_query, n_tasks)
@@ -73,8 +72,8 @@ with torch.no_grad():
     for support_images, support_labels, query_images, query_labels, _ in tqdm(
         data_loader
     ):
-        model.process_support_set(support_images.cuda(), support_labels.cuda())
-        predictions = model(query_images.cuda())
+        model.process_support_set(support_images.to(device), support_labels.to(device))
+        predictions = model(query_images.to(device))
 
         # Accuracies (to get an evaluation of the model along with the ROC)
         accuracy_list.append(
@@ -83,7 +82,7 @@ with torch.no_grad():
                     predictions[: n_way * n_query].detach().data,
                     1,
                 )[1]
-                == query_labels[: n_way * n_query].cuda()
+                == query_labels[: n_way * n_query].to(device)
             )
             .sum()
             .item()
@@ -112,9 +111,11 @@ show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 outlier_detection_df_list = []
 for support_images, support_labels, query_images, query_labels, _ in tqdm(data_loader):
     support_features = nn.functional.normalize(
-        model.backbone(support_images.cuda()), dim=1
+        model.backbone(support_images.to(device)), dim=1
     )
-    query_features = nn.functional.normalize(model.backbone(query_images.cuda()), dim=1)
+    query_features = nn.functional.normalize(
+        model.backbone(query_images.to(device)), dim=1
+    )
 
     clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
     # clustering = IsolationForest()

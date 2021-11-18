@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 class InferenceProtoNet(PrototypicalNetworks):
     def __init__(
-        self, *args, train_loader: DataLoader = None, align_train: bool = True
+        self, *args, train_loader: DataLoader, align_train: bool = True, device="cpu"
     ):
         """
         Following Bertinetto's inference strategy.
@@ -20,10 +20,13 @@ class InferenceProtoNet(PrototypicalNetworks):
         and normalize them.
         """
         super().__init__(*args)
-        self.cuda()
+        self.device = device
+        self.to(device)
+
         self.train_set_feature_mean = 0.0
         if align_train:
             self.get_dataset_feature_mean(train_loader)
+        self.train_set_feature_mean = self.get_dataset_feature_mean(train_loader)
 
     def process_support_set(
         self,
@@ -42,7 +45,9 @@ class InferenceProtoNet(PrototypicalNetworks):
         query_images: torch.Tensor,
     ) -> torch.Tensor:
         query_features = nn.functional.normalize(
-            self.backbone(query_images.cuda()).data - self.train_set_feature_mean, dim=1
+            self.backbone(query_images.to(self.device)).data
+            - self.train_set_feature_mean,
+            dim=1,
         )
         return -torch.cdist(query_features, self.prototypes)
 
@@ -58,7 +63,7 @@ class InferenceProtoNet(PrototypicalNetworks):
         with torch.no_grad():
             all_features = []
             for images, _ in tqdm(data_loader, unit="batch"):
-                all_features.append(self.backbone(images.cuda()).data)
+                all_features.append(self.backbone(images.to(self.device)).data)
 
         logger.info("Storing the average feature vector...")
         self.train_set_feature_mean = torch.cat(all_features, dim=0).mean(0)

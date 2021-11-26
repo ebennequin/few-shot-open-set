@@ -30,19 +30,26 @@ stages:
 
   train_classic:
     foreach:
-      - resnet18
-      - resnet34
+      - backbone: resnet18
+        dataset: cifar
+      - backbone: resnet12
+        dataset: cifar
+      - backbone: resnet18
+        dataset: mini_imagenet
+      - backbone: resnet12
+        dataset: mini_imagenet
     do:
       cmd: python -m stages.train_classic
-        ${item}
-        --output-model ${models_dir}/${item}_classic.tar
+        ${item.backbone}
+        ${item.dataset}
+        --output-model ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
         --n-epochs 200
         --batch-size 512
-        --tb-log-dir ${tb_logs_dir}/${item}_classic
-        &> ${logs_dir}/train_classic_${item}.out
+        --tb-log-dir ${tb_logs_dir}/${item.backbone}_${item.dataset}_classic
+        &> ${logs_dir}/train_classic_${item.backbone}_${item.dataset}.out
       deps:
         - stages/train_classic.py
       outs:
-        - ${models_dir}/${item}_classic.tar
-        - ${tb_logs_dir}/${item}_classic
-        - ${logs_dir}/train_classic_${item}.out
+        - ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
+        - ${tb_logs_dir}/${item.backbone}_${item.dataset}_classic
+        - ${logs_dir}/train_classic_${item.backbone}_${item.dataset}.out

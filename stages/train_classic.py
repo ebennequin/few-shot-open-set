@@ -10,16 +10,26 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 import typer
+from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
 from src.cifar import FewShotCIFAR100
-from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR, BACKBONES
+from src.constants import (
+    CIFAR_SPECS_DIR,
+    TRAINED_MODELS_DIR,
+    TB_LOGS_DIR,
+    BACKBONES,
+    CIFAR_ROOT_DIR,
+    MINI_IMAGENET_ROOT_DIR,
+    MINI_IMAGENET_SPECS_DIR,
+)
+from src.mini_imagenet import MiniImageNet
 from src.utils import set_random_seed
 
 
 def main(
     backbone: str,
-    specs_dir: Path = CIFAR_SPECS_DIR,
+    dataset: str,
     output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
     n_epochs: int = 200,
     batch_size: int = 512,
@@ -31,7 +41,7 @@ def main(
 
     Args:
         backbone: what model to train. Must be a key of constants.BACKBONES.
-        specs_dir: where to find the dataset specs files
+        dataset: what dataset to train the model on.
         output_model: where to dump the archive containing trained model weights
         n_epochs: number of training epochs
         batch_size: the batch size
@@ -44,20 +54,14 @@ def main(
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
-    whole_set = FewShotCIFAR100(
-        root=Path("data/cifar100/data"),
-        specs_file=specs_dir / "train-val.json",
-        training=True,
-    )
+    whole_set = get_dataset(dataset)
 
     train_loader, val_loader = get_loaders(
         whole_set, batch_size, n_workers, random_seed
     )
 
     logger.info("Building model...")
-    model = BACKBONES[backbone](
-        pretrained=False, num_classes=len(set(whole_set.labels))
-    ).to(device)
+    model = BACKBONES[backbone](num_classes=len(set(whole_set.labels))).to(device)
     model.device = device
 
     logger.info("Starting training...")
@@ -65,6 +69,23 @@ def main(
 
     torch.save(model.state_dict(prefix="backbone."), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")
+
+
+def get_dataset(dataset_name: str) -> VisionDataset:
+    if dataset_name == "cifar":
+        return FewShotCIFAR100(
+            root=CIFAR_ROOT_DIR,
+            specs_file=CIFAR_SPECS_DIR / "train-val.json",
+            training=True,
+        )
+    elif dataset_name == "mini_imagenet":
+        return MiniImageNet(
+            root=MINI_IMAGENET_ROOT_DIR,
+            specs_file=MINI_IMAGENET_SPECS_DIR / "train_val_images.csv",
+            training=True,
+        )
+    else:
+        raise NotImplementedError("I don't know this dataset.")
 
 
 def get_loaders(whole_set, batch_size, n_workers, random_seed):

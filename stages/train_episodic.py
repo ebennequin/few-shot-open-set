@@ -13,8 +13,14 @@ from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
 from src.cifar import FewShotCIFAR100
-from src.constants import CIFAR_SPECS_DIR, TRAINED_MODELS_DIR, TB_LOGS_DIR, CIFAR_ROOT_DIR, \
-    MINI_IMAGENET_SPECS_DIR, MINI_IMAGENET_ROOT_DIR
+from src.constants import (
+    CIFAR_SPECS_DIR,
+    TRAINED_MODELS_DIR,
+    TB_LOGS_DIR,
+    CIFAR_ROOT_DIR,
+    MINI_IMAGENET_SPECS_DIR,
+    MINI_IMAGENET_ROOT_DIR,
+)
 from src.mini_imagenet import MiniImageNet
 from src.utils import build_model, create_dataloader, set_random_seed
 
@@ -97,7 +103,9 @@ def main(
         pretrained_weights=pretrained_weights,
     )
 
-    optimizer = SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
+    optimizer = SGD(
+        model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
+    )
     train_scheduler = MultiStepLR(
         optimizer,
         milestones=list(map(int, scheduler_milestones.split(","))),
@@ -177,6 +185,7 @@ def get_datasets(dataset_name: str) -> Tuple[VisionDataset, VisionDataset]:
         raise NotImplementedError("I don't know this dataset.")
 
     return train_set, val_set
+
 
 if __name__ == "__main__":
     typer.run(main)

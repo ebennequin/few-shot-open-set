@@ -190,3 +190,79 @@ stages:
       md5: 834d785d58b879089c15cef5417b42b3.dir
       size: 22580
       nfiles: 1
+  train_classic@0:
+    cmd: python -m stages.train_classic resnet18 cifar --output-model data/models/resnet18_cifar_classic.tar
+      --n-epochs 200 --batch-size 512 --tb-log-dir data/tb_logs/resnet18_cifar_classic
+      &> data/logs/train_classic_resnet18_cifar.out
+    deps:
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/logs/train_classic_resnet18_cifar.out
+      md5: 17aa38b769b0325ef78d02e78e19575e
+      size: 2679460
+    - path: data/models/resnet18_cifar_classic.tar
+      md5: 089d432b6e0c86f989a70a7988c93f82
+      size: 44754321
+    - path: data/tb_logs/resnet18_cifar_classic
+      md5: d39013566a2011a2a042ec2fb616d59d.dir
+      size: 18780
+      nfiles: 1
+  train_classic@3:
+    cmd: python -m stages.train_classic resnet12 mini_imagenet --output-model data/models/resnet12_mini_imagenet_classic.tar
+      --n-epochs 200 --batch-size 512 --tb-log-dir data/tb_logs/resnet12_mini_imagenet_classic
+      &> data/logs/train_classic_resnet12_mini_imagenet.out
+    deps:
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/logs/train_classic_resnet12_mini_imagenet.out
+      md5: f0b9a40cb434a392d82b3331b0f372a6
+      size: 2817428
+    - path: data/models/resnet12_mini_imagenet_classic.tar
+      md5: ce8b54ef1b7b110bd14c07b9c7a39e7a
+      size: 37773225
+    - path: data/tb_logs/resnet12_mini_imagenet_classic
+      md5: 40537d9ce3928c1ff0dbb282d5a24252.dir
+      size: 18780
+      nfiles: 1
+  train_classic@1:
+    cmd: python -m stages.train_classic resnet12 cifar --output-model data/models/resnet12_cifar_classic.tar
+      --n-epochs 200 --batch-size 512 --tb-log-dir data/tb_logs/resnet12_cifar_classic
+      &> data/logs/train_classic_resnet12_cifar.out
+    deps:
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/logs/train_classic_resnet12_cifar.out
+      md5: 77c8eba2e88b5093f778014f0b290f14
+      size: 2679230
+    - path: data/models/resnet12_cifar_classic.tar
+      md5: a6c6e653f447b32e4fb2e92cf412b08c
+      size: 37773225
+    - path: data/tb_logs/resnet12_cifar_classic
+      md5: 939553aced9076e2034b85cc5bda5bb7.dir
+      size: 18780
+      nfiles: 1
+  train_classic@2:
+    cmd: python -m stages.train_classic resnet18 mini_imagenet --output-model data/models/resnet18_mini_imagenet_classic.tar
+      --n-epochs 200 --batch-size 512 --tb-log-dir data/tb_logs/resnet18_mini_imagenet_classic
+      &> data/logs/train_classic_resnet18_mini_imagenet.out
+    deps:
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/logs/train_classic_resnet18_mini_imagenet.out
+      md5: e74cd2a12642b1bec4b75a3011e688a5
+      size: 2817035
+    - path: data/models/resnet18_mini_imagenet_classic.tar
+      md5: 63fc9e73ad5406f0d9cd32ff2560488a
+      size: 44754321
+    - path: data/tb_logs/resnet18_mini_imagenet_classic
+      md5: e3d55e66ccc579993e019731bcd42298.dir
+      size: 18780
+      nfiles: 1

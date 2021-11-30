@@ -1,3 +1,4 @@
 models_dir: data/models
+features_dir: data/features
 tb_logs_dir: data/tb_logs
 logs_dir: data/logs

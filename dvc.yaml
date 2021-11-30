@@ -53,3 +53,83 @@ stages:
         - ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
         - ${tb_logs_dir}/${item.backbone}_${item.dataset}_classic
         - ${logs_dir}/train_classic_${item.backbone}_${item.dataset}.out
+
+  compute_features:
+    foreach:
+      - backbone: resnet18
+        dataset: cifar
+        training: classic
+        split: train
+      - backbone: resnet12
+        dataset: cifar
+        training: classic
+        split: train
+      - backbone: resnet18
+        dataset: mini_imagenet
+        training: classic
+        split: train
+      - backbone: resnet12
+        dataset: mini_imagenet
+        training: classic
+        split: train
+      - backbone: resnet18
+        dataset: cifar
+        training: episodic
+        split: train
+      - backbone: resnet12
+        dataset: cifar
+        training: episodic
+        split: train
+      - backbone: resnet18
+        dataset: mini_imagenet
+        training: episodic
+        split: train
+      - backbone: resnet12
+        dataset: mini_imagenet
+        training: episodic
+        split: train
+      - backbone: resnet18
+        dataset: cifar
+        training: classic
+        split: test
+      - backbone: resnet12
+        dataset: cifar
+        training: classic
+        split: test
+      - backbone: resnet18
+        dataset: mini_imagenet
+        training: classic
+        split: test
+      - backbone: resnet12
+        dataset: mini_imagenet
+        training: classic
+        split: test
+      - backbone: resnet18
+        dataset: cifar
+        training: episodic
+        split: test
+      - backbone: resnet12
+        dataset: cifar
+        training: episodic
+        split: test
+      - backbone: resnet18
+        dataset: mini_imagenet
+        training: episodic
+        split: test
+      - backbone: resnet12
+        dataset: mini_imagenet
+        training: episodic
+        split: test
+    do:
+      cmd: python -m stages.compute_features
+        ${item.backbone}
+        ${item.dataset}
+        ${models_dir}/${item.backbone}_${item.dataset}_${item.training}.tar
+        --split ${item.split}
+        &> ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_${item.training}.out
+      deps:
+        - stages/train_classic.py
+        - ${models_dir}/${item.backbone}_${item.dataset}_${item.training}.tar
+      outs:
+        - ${features_dir}/${item.dataset}/${item.split}/${item.backbone}_${item.dataset}_${item.training}.pickle
+        - ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_${item.training}.out

@@ -4,32 +4,21 @@ from statistics import mean
 
 import pandas as pd
 import torch
-from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.cifar import FewShotCIFAR100
 from src.constants import (
-    MINI_IMAGENET_ROOT_DIR,
-    MINI_IMAGENET_SPECS_DIR,
-    CIFAR_SPECS_DIR,
-    CIFAR_ROOT_DIR,
     BACKBONES,
 )
-from src.inference_protonet import InferenceProtoNet
-from src.mini_imagenet import MiniImageNet
-from src.open_query_sampler import OpenQuerySampler
 
 from src.utils import (
     set_random_seed,
-    create_dataloader,
     plot_episode,
     plot_roc,
     plot_twin_hist,
     get_pseudo_renyi_entropy,
-    get_shannon_entropy,
+    get_task_loader, get_classic_loader, get_inference_model,
 )
 
 #%%
@@ -46,77 +35,22 @@ set_random_seed(random_seed)
 
 DATASET_CHOICE = "cifar"
 # DATASET_CHOICE = "mini_imagenet"
-BACKBONE_CHOICE = "resnet12"
+BACKBONE_CHOICE = "resnet18"
 
-model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_episodic.tar"
+# model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_episodic.tar"
+model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_classic.tar"
 
 #%%
-def get_cifar_set(split):
-    return FewShotCIFAR100(
-        root=CIFAR_ROOT_DIR,
-        specs_file=CIFAR_SPECS_DIR / f"{split}.json",
-        training=False,
-    )
-
-
-def get_mini_imagenet_set(split):
-    return MiniImageNet(
-        root=MINI_IMAGENET_ROOT_DIR,
-        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}_images.csv",
-        training=False,
-    )
-
-
-def get_test_loader(dataset_name):
-    if dataset_name == "cifar":
-        dataset = get_cifar_set("test")
-    elif dataset_name == "mini_imagenet":
-        dataset = get_mini_imagenet_set("test")
-    else:
-        raise NotImplementedError("I don't know this dataset.")
-
-    sampler = OpenQuerySampler(
-        dataset=dataset,
-        n_way=n_way,
-        n_shot=n_shot,
-        n_query=n_query,
-        n_tasks=n_tasks,
-    )
-    return create_dataloader(dataset, sampler, n_workers)
-
-
-def get_train_loader(dataset_name, batch_size=1024):
-    if dataset_name == "cifar":
-        train_set = get_cifar_set("train")
-    elif dataset_name == "mini_imagenet":
-        train_set = get_mini_imagenet_set("train")
-    else:
-        raise NotImplementedError("I don't know this dataset.")
-
-    return DataLoader(
-        train_set,
-        batch_size=batch_size,
-        num_workers=n_workers,
-        pin_memory=True,
-    )
-
-
-def get_inference_model(backbone, weights_path, train_loader):
-    # We learnt that this custom ProtoNet gives better ROC curve (can be checked again later)
-    inference_model = InferenceProtoNet(backbone, train_loader=train_loader).cuda()
-    inference_model.load_state_dict(torch.load(weights_path))
-    inference_model.eval()
-
-    return inference_model
 
 
 #%%
-data_loader = get_test_loader(DATASET_CHOICE)
+data_loader = get_task_loader(DATASET_CHOICE, n_way, n_shot, n_query, n_tasks)
 
+# TODO: tester 
 model = get_inference_model(
     BACKBONES[BACKBONE_CHOICE](),
     model_weights,
-    get_train_loader(
+    get_classic_loader(
         DATASET_CHOICE,
     ),
 )
@@ -186,7 +120,6 @@ with torch.no_grad():
 
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
-#%%
 print(f"Average accuracy: {(100 * mean(accuracy_list)):.2f}%")
 show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 
@@ -200,7 +133,7 @@ for support_images, support_labels, query_images, query_labels, _ in tqdm(data_l
 
     clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
     # clustering = IsolationForest()
-    # clustering.fit(support_features.detach().cpu())
+    clustering.fit(support_features.detach().cpu())
 
     outlier_detection_df_list.append(
         pd.DataFrame(

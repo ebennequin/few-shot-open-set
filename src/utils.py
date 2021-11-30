@@ -13,8 +13,21 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import auc, roc_curve
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
-from src.constants import BACKBONES, FEW_SHOT_METHODS
+from src.cifar import FewShotCIFAR100
+
+from src.constants import (
+    BACKBONES,
+    FEW_SHOT_METHODS,
+    CIFAR_ROOT_DIR,
+    CIFAR_SPECS_DIR,
+    MINI_IMAGENET_ROOT_DIR,
+    MINI_IMAGENET_SPECS_DIR,
+)
+from src.inference_protonet import InferenceProtoNet
+from src.mini_imagenet import MiniImageNet
+from src.open_query_sampler import OpenQuerySampler
 
 
 def set_random_seed(seed: int):
@@ -133,3 +146,82 @@ def get_pseudo_renyi_entropy(predictions: torch.Tensor) -> torch.Tensor:
 def get_shannon_entropy(predictions: torch.Tensor) -> torch.Tensor:
     soft_prediction = nn.functional.softmax(predictions, dim=1)
     return (soft_prediction * torch.log(soft_prediction)).sum(dim=1).detach().cpu()
+
+
+def get_cifar_set(split):
+    return FewShotCIFAR100(
+        root=CIFAR_ROOT_DIR,
+        specs_file=CIFAR_SPECS_DIR / f"{split}.json",
+        training=False,
+    )
+
+
+def get_mini_imagenet_set(split):
+    return MiniImageNet(
+        root=MINI_IMAGENET_ROOT_DIR,
+        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}_images.csv",
+        training=False,
+    )
+
+
+def get_task_loader(
+    dataset_name, n_way, n_shot, n_query, n_tasks, split="test", n_workers=12
+):
+    if dataset_name == "cifar":
+        dataset = get_cifar_set(split)
+    elif dataset_name == "mini_imagenet":
+        dataset = get_mini_imagenet_set(split)
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+    sampler = OpenQuerySampler(
+        dataset=dataset,
+        n_way=n_way,
+        n_shot=n_shot,
+        n_query=n_query,
+        n_tasks=n_tasks,
+    )
+    return create_dataloader(dataset, sampler, n_workers)
+
+
+def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=12):
+    if dataset_name == "cifar":
+        train_set = get_cifar_set(split)
+    elif dataset_name == "mini_imagenet":
+        train_set = get_mini_imagenet_set(split)
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+    return DataLoader(
+        train_set,
+        batch_size=batch_size,
+        num_workers=n_workers,
+        pin_memory=True,
+    )
+
+
+def get_inference_model(
+    backbone, weights_path, align_train=True, train_loader=None, device="cuda"
+):
+    # We learnt that this custom ProtoNet gives better ROC curve (can be checked again later)
+    inference_model = InferenceProtoNet(
+        backbone, align_train=align_train, train_loader=train_loader
+    ).to(device)
+    inference_model.load_state_dict(torch.load(weights_path))
+    inference_model.eval()
+
+    return inference_model
+
+
+def compute_features(feature_extractor: nn.Module, loader: DataLoader, device="cuda"):
+    with torch.no_grad():
+        all_features = []
+        all_labels = []
+        for images, labels in tqdm(loader, unit="batch"):
+            all_features.append(feature_extractor(images.to(device)).data)
+            all_labels.append(labels)
+
+    return (
+        torch.cat(all_features, dim=0).cpu().numpy(),
+        torch.cat(all_labels, dim=0).cpu().numpy(),
+    )

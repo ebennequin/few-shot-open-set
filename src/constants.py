@@ -1,11 +1,10 @@
 from pathlib import Path
 
-# Directories
 from easyfsl.methods import PrototypicalNetworks
 
-# Data
 from src.resnet import resnet12, resnet18, resnet34
 
+# Data
 CIFAR_SPECS_DIR = Path("data") / "cifar100" / "specs"
 MINI_IMAGENET_SPECS_DIR = Path("data") / "mini_imagenet" / "specs"
 
@@ -15,6 +14,7 @@ MINI_IMAGENET_ROOT_DIR = Path("data") / "mini_imagenet" / "images"
 
 # Stage outputs
 TRAINED_MODELS_DIR = Path("data") / "models"
+FEATURES_DIR = Path("data") / "features"
 TB_LOGS_DIR = Path("data") / "tb_logs"
 
 

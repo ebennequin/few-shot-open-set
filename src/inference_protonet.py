@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from easyfsl.methods import PrototypicalNetworks
 from easyfsl.utils import compute_prototypes
@@ -8,7 +10,9 @@ from tqdm import tqdm
 
 
 class InferenceProtoNet(PrototypicalNetworks):
-    def __init__(self, *args, train_loader: DataLoader):
+    def __init__(
+        self, *args, train_loader: DataLoader = None, align_train: bool = True
+    ):
         """
         Following Bertinetto's inference strategy.
         Compute the whole train set's mean feature vector.
@@ -17,7 +21,9 @@ class InferenceProtoNet(PrototypicalNetworks):
         """
         super().__init__(*args)
         self.cuda()
-        self.train_set_feature_mean = self.get_dataset_feature_mean(train_loader)
+        self.train_set_feature_mean = 0.0
+        if align_train:
+            self.get_dataset_feature_mean(train_loader)
 
     def process_support_set(
         self,
@@ -41,6 +47,12 @@ class InferenceProtoNet(PrototypicalNetworks):
         return -torch.cdist(query_features, self.prototypes)
 
     def get_dataset_feature_mean(self, data_loader: DataLoader):
+        if data_loader is None:
+            raise ValueError(
+                "You forgot to provide a data loader for the train set. "
+                "If you don't want to align on the train set average feature vector, "
+                "specify align_train=False."
+            )
         logger.info("Extracting features from all training set images...")
         self.eval()
         with torch.no_grad():
@@ -49,4 +61,4 @@ class InferenceProtoNet(PrototypicalNetworks):
                 all_features.append(self.backbone(images.cuda()).data)
 
         logger.info("Storing the average feature vector...")
-        return torch.cat(all_features, dim=0).mean(0)
+        self.train_set_feature_mean = torch.cat(all_features, dim=0).mean(0)

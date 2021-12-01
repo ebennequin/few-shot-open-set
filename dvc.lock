@@ -158,17 +158,17 @@ stages:
       512 --tb-log-dir data/tb_logs/resnet18_cifar_episodic &> data/logs/train_episodic_resnet18_cifar.out
     deps:
     - path: stages/train_episodic.py
-      md5: 357cd82f04f176247c65f76e06bd7290
-      size: 6240
+      md5: 6a731a85af013719fa880e9bf6f87f34
+      size: 6278
     outs:
     - path: data/logs/train_episodic_resnet18_cifar.out
-      md5: 5546bd0a5c011b7ad164563faf3e29e8
-      size: 5616596
+      md5: 0f8a837de7e9b16f0658bb27110a125c
+      size: 5619695
     - path: data/models/resnet18_cifar_episodic.tar
       md5: 84f9f3116e87b38cc26fd1b77ac377c9
       size: 44754385
     - path: data/tb_logs/resnet18_cifar_episodic
-      md5: 90656b0751228548664458195ac64531.dir
+      md5: d43fedac11426d2e1e61ed0413a33e27.dir
       size: 22580
       nfiles: 1
   train_episodic@2:
@@ -177,17 +177,17 @@ stages:
       512 --tb-log-dir data/tb_logs/resnet18_mini_imagenet_episodic &> data/logs/train_episodic_resnet18_mini_imagenet.out
     deps:
     - path: stages/train_episodic.py
-      md5: 357cd82f04f176247c65f76e06bd7290
-      size: 6240
+      md5: 6a731a85af013719fa880e9bf6f87f34
+      size: 6278
     outs:
     - path: data/logs/train_episodic_resnet18_mini_imagenet.out
-      md5: 4008cd1445118ce2ae20dbd7758687ca
-      size: 7326272
+      md5: e3e35e80cec197e9feee99fa7a54f4d4
+      size: 7325587
     - path: data/models/resnet18_mini_imagenet_episodic.tar
       md5: dc2a2d4302a3f1254092fb7eba4ad076
       size: 44754385
     - path: data/tb_logs/resnet18_mini_imagenet_episodic
-      md5: 834d785d58b879089c15cef5417b42b3.dir
+      md5: a3faeb4e1d27f1d09884222174734bbb.dir
       size: 22580
       nfiles: 1
   train_classic@0:
@@ -266,3 +266,105 @@ stages:
       md5: e3d55e66ccc579993e019731bcd42298.dir
       size: 18780
       nfiles: 1
+  compute_features@10:
+    cmd: python -m stages.compute_features resnet18 mini_imagenet data/models/resnet18_mini_imagenet_classic.tar
+      --split test &> data/logs/compute_features_mini_imagenet_test_resnet18_classic.out
+    deps:
+    - path: data/models/resnet18_mini_imagenet_classic.tar
+      md5: 63fc9e73ad5406f0d9cd32ff2560488a
+      size: 44754321
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/test/resnet18_mini_imagenet_classic.pickle
+      md5: ef950a090d78b5cf52b470e473019374
+      size: 24577312
+    - path: data/logs/compute_features_mini_imagenet_test_resnet18_classic.out
+      md5: 9c139a48e3b03a9ed2c5920317bd9f7d
+      size: 34530
+  compute_features@11:
+    cmd: python -m stages.compute_features resnet12 mini_imagenet data/models/resnet12_mini_imagenet_classic.tar
+      --split test &> data/logs/compute_features_mini_imagenet_test_resnet12_classic.out
+    deps:
+    - path: data/models/resnet12_mini_imagenet_classic.tar
+      md5: ce8b54ef1b7b110bd14c07b9c7a39e7a
+      size: 37773225
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/test/resnet12_mini_imagenet_classic.pickle
+      md5: b80a5df8a3aae9b9feb0175daaad512a
+      size: 30721312
+    - path: data/logs/compute_features_mini_imagenet_test_resnet12_classic.out
+      md5: ea5138100c9a89b066d9c9e3c9a964a3
+      size: 34376
+  compute_features@12:
+    cmd: python -m stages.compute_features resnet18 cifar data/models/resnet18_cifar_episodic.tar
+      --split test &> data/logs/compute_features_cifar_test_resnet18_episodic.out
+    deps:
+    - path: data/models/resnet18_cifar_episodic.tar
+      md5: 84f9f3116e87b38cc26fd1b77ac377c9
+      size: 44754385
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/test/resnet18_cifar_episodic.pickle
+      md5: 2286e78b5ed5c5011fe46094cec91bd8
+      size: 24577312
+    - path: data/logs/compute_features_cifar_test_resnet18_episodic.out
+      md5: 75e62c963e4320c859b2ba4da0ebbfe7
+      size: 913
+  compute_features@3:
+    cmd: python -m stages.compute_features resnet12 mini_imagenet data/models/resnet12_mini_imagenet_classic.tar
+      --split train &> data/logs/compute_features_mini_imagenet_train_resnet12_classic.out
+    deps:
+    - path: data/models/resnet12_mini_imagenet_classic.tar
+      md5: ce8b54ef1b7b110bd14c07b9c7a39e7a
+      size: 37773225
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/train/resnet12_mini_imagenet_classic.pickle
+      md5: 4bf604a139bcc4ad226842d1dfbd9883
+      size: 98307820
+    - path: data/logs/compute_features_mini_imagenet_train_resnet12_classic.out
+      md5: e86521636a0baead43be8fe904746f27
+      size: 110597
+  compute_features@2:
+    cmd: python -m stages.compute_features resnet18 mini_imagenet data/models/resnet18_mini_imagenet_classic.tar
+      --split train &> data/logs/compute_features_mini_imagenet_train_resnet18_classic.out
+    deps:
+    - path: data/models/resnet18_mini_imagenet_classic.tar
+      md5: 63fc9e73ad5406f0d9cd32ff2560488a
+      size: 44754321
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/train/resnet18_mini_imagenet_classic.pickle
+      md5: 04da96b11c709dd631d86ae8d96e50d3
+      size: 78647020
+    - path: data/logs/compute_features_mini_imagenet_train_resnet18_classic.out
+      md5: a13cf130f03fd6c5ca5dd4c080ece7cb
+      size: 110673
+  compute_features@6:
+    cmd: python -m stages.compute_features resnet18 mini_imagenet data/models/resnet18_mini_imagenet_episodic.tar
+      --split train &> data/logs/compute_features_mini_imagenet_train_resnet18_episodic.out
+    deps:
+    - path: data/models/resnet18_mini_imagenet_episodic.tar
+      md5: dc2a2d4302a3f1254092fb7eba4ad076
+      size: 44754385
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/train/resnet18_mini_imagenet_episodic.pickle
+      md5: 022126409b661323ac7981895ad31cdd
+      size: 78647020
+    - path: data/logs/compute_features_mini_imagenet_train_resnet18_episodic.out
+      md5: 9b70a168333a547494f29a9017b2990b
+      size: 110910

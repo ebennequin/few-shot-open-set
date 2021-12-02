@@ -120,17 +120,17 @@ stages:
       512 --tb-log-dir data/tb_logs/resnet12_mini_imagenet_episodic &> data/logs/train_episodic_resnet12_mini_imagenet.out
     deps:
     - path: stages/train_episodic.py
-      md5: 357cd82f04f176247c65f76e06bd7290
-      size: 6240
+      md5: 6a731a85af013719fa880e9bf6f87f34
+      size: 6278
     outs:
     - path: data/logs/train_episodic_resnet12_mini_imagenet.out
-      md5: 2aaa177aba97323da6b37af4927813cc
-      size: 7321583
+      md5: 2e3124b58bc5acebe1364813df674e12
+      size: 7320799
     - path: data/models/resnet12_mini_imagenet_episodic.tar
       md5: e8030951f579cb48fad1f4dcdbe22b0f
       size: 37773289
     - path: data/tb_logs/resnet12_mini_imagenet_episodic
-      md5: 99bd599bdc645aa8664cf1696b03dd7c.dir
+      md5: 935cb079b30f6533748311fd166001b6.dir
       size: 22580
       nfiles: 1
   train_episodic@1:
@@ -139,17 +139,17 @@ stages:
       512 --tb-log-dir data/tb_logs/resnet12_cifar_episodic &> data/logs/train_episodic_resnet12_cifar.out
     deps:
     - path: stages/train_episodic.py
-      md5: 357cd82f04f176247c65f76e06bd7290
-      size: 6240
+      md5: 6a731a85af013719fa880e9bf6f87f34
+      size: 6278
     outs:
     - path: data/logs/train_episodic_resnet12_cifar.out
-      md5: e6114ee99af17609968589161dd3321b
-      size: 5508633
+      md5: 1b148af628185582955453be4f797888
+      size: 5531975
     - path: data/models/resnet12_cifar_episodic.tar
       md5: a57230dbe6ec08b27ed4e47a8ef1b8af
       size: 37773289
     - path: data/tb_logs/resnet12_cifar_episodic
-      md5: 16f8c705d22cd3ba48f07b28d93907aa.dir
+      md5: c97324e2ab3c0a2558304188fabbe1ed.dir
       size: 22580
       nfiles: 1
   train_episodic@0:
@@ -368,3 +368,173 @@ stages:
     - path: data/logs/compute_features_mini_imagenet_train_resnet18_episodic.out
       md5: 9b70a168333a547494f29a9017b2990b
       size: 110910
+  compute_features@15:
+    cmd: python -m stages.compute_features resnet12 mini_imagenet data/models/resnet12_mini_imagenet_episodic.tar
+      --split test &> data/logs/compute_features_mini_imagenet_test_resnet12_episodic.out
+    deps:
+    - path: data/models/resnet12_mini_imagenet_episodic.tar
+      md5: e8030951f579cb48fad1f4dcdbe22b0f
+      size: 37773289
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/test/resnet12_mini_imagenet_episodic.pickle
+      md5: 75efe8b22d198bb31c841ef5bc89acf6
+      size: 30721312
+    - path: data/logs/compute_features_mini_imagenet_test_resnet12_episodic.out
+      md5: d57a274ecd4ec8d4884b7a5a55e4ca2f
+      size: 40079
+  compute_features@9:
+    cmd: python -m stages.compute_features resnet12 cifar data/models/resnet12_cifar_classic.tar
+      --split test &> data/logs/compute_features_cifar_test_resnet12_classic.out
+    deps:
+    - path: data/models/resnet12_cifar_classic.tar
+      md5: a6c6e653f447b32e4fb2e92cf412b08c
+      size: 37773225
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/test/resnet12_cifar_classic.pickle
+      md5: e63149919e9b56caefcdf881327b27c5
+      size: 30721312
+    - path: data/logs/compute_features_cifar_test_resnet12_classic.out
+      md5: 38ad87b9790d7d5378f08847f2d5539e
+      size: 951
+  compute_features@4:
+    cmd: python -m stages.compute_features resnet18 cifar data/models/resnet18_cifar_episodic.tar
+      --split train &> data/logs/compute_features_cifar_train_resnet18_episodic.out
+    deps:
+    - path: data/models/resnet18_cifar_episodic.tar
+      md5: 84f9f3116e87b38cc26fd1b77ac377c9
+      size: 44754385
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/train/resnet18_cifar_episodic.pickle
+      md5: bab523e8e69abb9502795881b14ee72a
+      size: 78647020
+    - path: data/logs/compute_features_cifar_train_resnet18_episodic.out
+      md5: 87f445153fa8f27a5623dd2738aa9d29
+      size: 1715
+  compute_features@13:
+    cmd: python -m stages.compute_features resnet12 cifar data/models/resnet12_cifar_episodic.tar
+      --split test &> data/logs/compute_features_cifar_test_resnet12_episodic.out
+    deps:
+    - path: data/models/resnet12_cifar_episodic.tar
+      md5: a57230dbe6ec08b27ed4e47a8ef1b8af
+      size: 37773289
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/test/resnet12_cifar_episodic.pickle
+      md5: 8333b2511b46cc7c472e22d3f4213e91
+      size: 30721312
+    - path: data/logs/compute_features_cifar_test_resnet12_episodic.out
+      md5: 0e2e8812cb4cf13620d89031620b696d
+      size: 952
+  compute_features@1:
+    cmd: python -m stages.compute_features resnet12 cifar data/models/resnet12_cifar_classic.tar
+      --split train &> data/logs/compute_features_cifar_train_resnet12_classic.out
+    deps:
+    - path: data/models/resnet12_cifar_classic.tar
+      md5: a6c6e653f447b32e4fb2e92cf412b08c
+      size: 37773225
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/train/resnet12_cifar_classic.pickle
+      md5: f1e9f9f208c02a5cdb408cbcd1d60142
+      size: 98307820
+    - path: data/logs/compute_features_cifar_train_resnet12_classic.out
+      md5: 93bddeb51af71ea41fabc080a81b6f31
+      size: 1816
+  compute_features@8:
+    cmd: python -m stages.compute_features resnet18 cifar data/models/resnet18_cifar_classic.tar
+      --split test &> data/logs/compute_features_cifar_test_resnet18_classic.out
+    deps:
+    - path: data/models/resnet18_cifar_classic.tar
+      md5: 089d432b6e0c86f989a70a7988c93f82
+      size: 44754321
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/test/resnet18_cifar_classic.pickle
+      md5: 399d944d636a059502baf3635bcdf17e
+      size: 24577312
+    - path: data/logs/compute_features_cifar_test_resnet18_classic.out
+      md5: f685f0e45d5b2183f5efb6690e598940
+      size: 912
+  compute_features@14:
+    cmd: python -m stages.compute_features resnet18 mini_imagenet data/models/resnet18_mini_imagenet_episodic.tar
+      --split test &> data/logs/compute_features_mini_imagenet_test_resnet18_episodic.out
+    deps:
+    - path: data/models/resnet18_mini_imagenet_episodic.tar
+      md5: dc2a2d4302a3f1254092fb7eba4ad076
+      size: 44754385
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/test/resnet18_mini_imagenet_episodic.pickle
+      md5: 0efb8a0a68164ead84a7276997330541
+      size: 24577312
+    - path: data/logs/compute_features_mini_imagenet_test_resnet18_episodic.out
+      md5: b134b80dfd8aa7d28a83d2ff9304818a
+      size: 36096
+  compute_features@7:
+    cmd: python -m stages.compute_features resnet12 mini_imagenet data/models/resnet12_mini_imagenet_episodic.tar
+      --split train &> data/logs/compute_features_mini_imagenet_train_resnet12_episodic.out
+    deps:
+    - path: data/models/resnet12_mini_imagenet_episodic.tar
+      md5: e8030951f579cb48fad1f4dcdbe22b0f
+      size: 37773289
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/mini_imagenet/train/resnet12_mini_imagenet_episodic.pickle
+      md5: c1b40611aa4451143d76f651412ce933
+      size: 98307820
+    - path: data/logs/compute_features_mini_imagenet_train_resnet12_episodic.out
+      md5: de723b6dbb67ad3283e2bf8af0187ebe
+      size: 130245
+  compute_features@5:
+    cmd: python -m stages.compute_features resnet12 cifar data/models/resnet12_cifar_episodic.tar
+      --split train &> data/logs/compute_features_cifar_train_resnet12_episodic.out
+    deps:
+    - path: data/models/resnet12_cifar_episodic.tar
+      md5: a57230dbe6ec08b27ed4e47a8ef1b8af
+      size: 37773289
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/train/resnet12_cifar_episodic.pickle
+      md5: 2e84719a2482836c5832a01ced97341c
+      size: 98307820
+    - path: data/logs/compute_features_cifar_train_resnet12_episodic.out
+      md5: 5a32a29029ecc7340ae68341a36ce5b3
+      size: 1754
+  compute_features@0:
+    cmd: python -m stages.compute_features resnet18 cifar data/models/resnet18_cifar_classic.tar
+      --split train &> data/logs/compute_features_cifar_train_resnet18_classic.out
+    deps:
+    - path: data/models/resnet18_cifar_classic.tar
+      md5: 089d432b6e0c86f989a70a7988c93f82
+      size: 44754321
+    - path: stages/train_classic.py
+      md5: bfc30fde5b958a57ac4639f4d90d31e9
+      size: 5176
+    outs:
+    - path: data/features/cifar/train/resnet18_cifar_classic.pickle
+      md5: 133a8788582c04815397ac5959401fa6
+      size: 78647020
+    - path: data/logs/compute_features_cifar_train_resnet18_classic.out
+      md5: 2cc5a9dac0fc98ecbfc6b9708b334aee
+      size: 1714

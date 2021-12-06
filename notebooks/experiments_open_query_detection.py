@@ -18,7 +18,9 @@ from src.utils import (
     plot_roc,
     plot_twin_hist,
     get_pseudo_renyi_entropy,
-    get_task_loader, get_classic_loader, get_inference_model,
+    get_task_loader,
+    get_classic_loader,
+    get_inference_model,
 )
 
 #%%
@@ -41,16 +43,17 @@ BACKBONE_CHOICE = "resnet18"
 model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_classic.tar"
 
 #%%
-
+torch.cuda.set_device("cuda:2")
 
 #%%
 data_loader = get_task_loader(DATASET_CHOICE, n_way, n_shot, n_query, n_tasks)
 
-# TODO: tester 
+#%%
+# TODO: tester
 model = get_inference_model(
-    BACKBONES[BACKBONE_CHOICE](),
-    model_weights,
-    get_classic_loader(
+    backbone=BACKBONES[BACKBONE_CHOICE](),
+    weights_path=model_weights,
+    train_loader=get_classic_loader(
         DATASET_CHOICE,
     ),
 )

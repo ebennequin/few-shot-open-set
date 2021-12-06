@@ -2,17 +2,16 @@ from pathlib import Path
 from statistics import mean
 from typing import Optional, Tuple
 
-from easyfsl.data_tools import EasySet, TaskSampler
+from easyfsl.data_tools import TaskSampler
 from loguru import logger
 import torch
-from torch.optim import Adam, SGD
+from torch.optim import SGD
 import typer
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
-from src.cifar import FewShotCIFAR100
 from src.constants import (
     CIFAR_SPECS_DIR,
     TRAINED_MODELS_DIR,
@@ -21,7 +20,7 @@ from src.constants import (
     MINI_IMAGENET_SPECS_DIR,
     MINI_IMAGENET_ROOT_DIR,
 )
-from src.mini_imagenet import MiniImageNet
+from src.datasets import FewShotCIFAR100, MiniImageNet
 from src.utils import build_model, create_dataloader, set_random_seed
 
 

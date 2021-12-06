@@ -5,7 +5,7 @@ from statistics import mean
 from loguru import logger
 import torch
 from torch import nn
-from torch.optim import Adam, SGD
+from torch.optim import SGD
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
@@ -13,7 +13,6 @@ import typer
 from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
-from src.cifar import FewShotCIFAR100
 from src.constants import (
     CIFAR_SPECS_DIR,
     TRAINED_MODELS_DIR,
@@ -23,7 +22,7 @@ from src.constants import (
     MINI_IMAGENET_ROOT_DIR,
     MINI_IMAGENET_SPECS_DIR,
 )
-from src.mini_imagenet import MiniImageNet
+from src.datasets import FewShotCIFAR100, MiniImageNet
 from src.utils import set_random_seed
 
 

@@ -15,7 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from src.cifar import FewShotCIFAR100
+from src.datasets import FewShotCIFAR100, MiniImageNet
 
 from src.constants import (
     BACKBONES,
@@ -26,7 +26,6 @@ from src.constants import (
     MINI_IMAGENET_SPECS_DIR,
 )
 from src.inference_protonet import InferenceProtoNet
-from src.mini_imagenet import MiniImageNet
 from src.open_query_sampler import OpenQuerySampler
 
 

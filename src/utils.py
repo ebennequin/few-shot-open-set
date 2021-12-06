@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
-from sklearn.metrics import auc, roc_curve
+from sklearn.metrics import auc, roc_curve, precision_recall_curve
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -224,3 +224,22 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, device="c
         torch.cat(all_features, dim=0).cpu().numpy(),
         torch.cat(all_labels, dim=0).cpu().numpy(),
     )
+
+
+def show_all_metrics_and_plots(outliers_df, title, objective=0.9):
+    roc_auc = plot_roc(outliers_df, title=title)
+    print(f"ROC AUC: {roc_auc}")
+
+    precisions, recalls, _ = precision_recall_curve(
+        outliers_df.outlier, -outliers_df.outlier_score
+    )
+    precision_at_recall_objective = precisions[
+        next(i for i, value in enumerate(recalls) if value < objective)
+    ]
+    recall_at_precision_objective = recalls[
+        next(i for i, value in enumerate(precisions) if value > objective)
+    ]
+    print(f"Precision for recall={objective}: {precision_at_recall_objective}")
+    print(f"Recall for precision={objective}: {recall_at_precision_objective}")
+
+    plot_twin_hist(outliers_df, title=title)

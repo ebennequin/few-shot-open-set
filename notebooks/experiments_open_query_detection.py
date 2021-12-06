@@ -13,14 +13,15 @@ from src.constants import (
 )
 
 from src.utils import (
-    set_random_seed,
+    get_classic_loader,
+    get_inference_model,
+    get_pseudo_renyi_entropy,
+    get_task_loader,
     plot_episode,
     plot_roc,
     plot_twin_hist,
-    get_pseudo_renyi_entropy,
-    get_task_loader,
-    get_classic_loader,
-    get_inference_model,
+    set_random_seed,
+    show_all_metrics_and_plots,
 )
 
 #%%
@@ -61,28 +62,6 @@ model = get_inference_model(
 #%%
 one_episode = next(iter(data_loader))
 plot_episode(one_episode[0], one_episode[2])
-
-#%%
-
-
-def show_all_metrics_and_plots(outliers_df, title, objective=0.9):
-    roc_auc = plot_roc(outliers_df, title=title)
-    print(f"ROC AUC: {roc_auc}")
-
-    precisions, recalls, _ = precision_recall_curve(
-        outliers_df.outlier, -outliers_df.outlier_score
-    )
-    precision_at_recall_objective = precisions[
-        next(i for i, value in enumerate(recalls) if value < objective)
-    ]
-    recall_at_precision_objective = recalls[
-        next(i for i, value in enumerate(precisions) if value > objective)
-    ]
-    print(f"Precision for recall={objective}: {precision_at_recall_objective}")
-    print(f"Recall for precision={objective}: {recall_at_precision_objective}")
-
-    plot_twin_hist(outlier_detection_df, title=title)
-
 
 #%% Test DOCTOR strategy
 

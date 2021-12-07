@@ -25,24 +25,18 @@ n_shot: int = 5
 n_query: int = 10
 n_tasks: int = 500
 random_seed: int = 0
-device: str = "cuda"
 n_workers = 12
 
 set_random_seed(random_seed)
 
-DATASET_CHOICE = "cifar"
-# DATASET_CHOICE = "mini_imagenet"
+# DATASET_CHOICE = "cifar"
+DATASET_CHOICE = "mini_imagenet"
 BACKBONE_CHOICE = "resnet18"
+TRAINING_METHOD_CHOICE = "classic"
 
-# model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_episodic.tar"
-model_weights = Path("data/models") / f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_classic.tar"
-
-features_path = (
-    Path("data/features") / "cifar" / "test" / "resnet18_cifar_classic.pickle"
-)
-train_features_path = (
-    Path("data/features") / "cifar" / "train" / "resnet18_cifar_classic.pickle"
-)
+pickle_basename = f"{BACKBONE_CHOICE}_{DATASET_CHOICE}_{TRAINING_METHOD_CHOICE}.pickle"
+features_path = Path("data/features") / DATASET_CHOICE / "test" / pickle_basename
+train_features_path = Path("data/features") / DATASET_CHOICE / "train" / pickle_basename
 
 #%%
 with open(features_path, "rb") as stream:
@@ -50,7 +44,6 @@ with open(features_path, "rb") as stream:
 
 with open(train_features_path, "rb") as stream:
     train_features = pickle.load(stream)
-    # TODO: doesn't seem do give the same features as with InferenceProtonet.get_dataset_feature_mean
     average_train_features = torch.cat(
         [
             torch.from_numpy(features_per_label)
@@ -61,7 +54,8 @@ with open(train_features_path, "rb") as stream:
 
 
 #%%
-dataset = FeaturesDataset(features, features_to_center_on=average_train_features)
+# dataset = FeaturesDataset(features, features_to_center_on=average_train_features)
+dataset = FeaturesDataset(features)
 sampler = OpenQuerySampler(
     dataset=dataset,
     n_way=n_way,

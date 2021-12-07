@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
+from torch import nn
 from tqdm import tqdm
 
 from src.constants import (
@@ -110,8 +111,10 @@ show_all_metrics_and_plots(outlier_detection_df, title="DOCTOR")
 
 outlier_detection_df_list = []
 for support_images, support_labels, query_images, query_labels, _ in tqdm(data_loader):
-    support_features = model.backbone(support_images.cuda())
-    query_features = model.backbone(query_images.cuda())
+    support_features = nn.functional.normalize(
+        model.backbone(support_images.cuda()), dim=1
+    )
+    query_features = nn.functional.normalize(model.backbone(query_images.cuda()), dim=1)
 
     clustering = LocalOutlierFactor(n_neighbors=3, novelty=True, metric="euclidean")
     # clustering = IsolationForest()

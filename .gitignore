@@ -136,7 +136,7 @@ data/CUB/images
 data/tiered_imagenet/images
 data/mini_imagenet/images
 data/tiered_imagenet/tb_logs
-data/cifar100/data
+data/cifar/data
 data/features
 
 # streamlit

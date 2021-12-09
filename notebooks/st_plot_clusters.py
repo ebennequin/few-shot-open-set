@@ -1,22 +1,19 @@
 import json
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
 import pickle
-from pathlib import Path
 from typing import Dict, Tuple, List
 
-import sklearn
-from matplotlib import pyplot as plt
-import streamlit as st
+import numpy as np
 from numpy import ndarray
+from matplotlib import pyplot as plt
+import pandas as pd
+from pathlib import Path
+import sklearn
 from sklearn.manifold import TSNE
-
-st.set_page_config(page_title="Look at clusters", layout="wide")
+import streamlit as st
 
 
 FEATURES_ROOT = Path("data/features")
+IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
 
 
 def get_class_names(dataset, key):
@@ -36,7 +33,7 @@ def get_class_names(dataset, key):
     elif selected_specs_file.suffix == ".csv":
         synset_codes = pd.read_csv(selected_specs_file).class_name.unique()
         words = {}
-        with open("data/mini_imagenet/specs/words.txt", "r") as file:
+        with open(IMAGENET_WORDS_PATH, "r") as file:
             for line in file:
                 synset, word = line.rstrip().split("\t")
                 words[synset] = word.split(",")[0]
@@ -47,7 +44,7 @@ def get_class_names(dataset, key):
 
 def select_classes(class_names, key):
     container = st.container()
-    select_all = st.checkbox("All classes")
+    select_all = st.checkbox("All classes", value=True)
 
     if select_all:
         selected_options = container.multiselect(
@@ -158,21 +155,21 @@ def plot_clusters(key):
         selected_features_path = st.selectbox(
             "Features",
             feature_paths_for_selected_dataset,
-            # format_func=lambda path: f"{path.parent.name}/{path.name}",
+            format_func=lambda path: f"{path.parent.name}/{path.name}",
             key=key,
         )
 
         class_names = get_class_names(selected_dataset.name, key)
         selected_classes = select_classes(class_names, key)
 
-        reduced_features = compute_or_retrieve_2d_features(selected_features_path)
-        reduced_features = map_label(reduced_features, class_names)
-
         print_clustering_statistics_for_all_features(feature_paths_for_selected_dataset)
 
     with plot_col:
+        reduced_features = compute_or_retrieve_2d_features(selected_features_path)
+        reduced_features = map_label(reduced_features, class_names)
         st.title("Look at all those clusters")
         plot_2d_features(reduced_features, selected_classes)
 
 
+st.set_page_config(page_title="Look at clusters", layout="wide")
 plot_clusters(1)

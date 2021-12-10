@@ -21,7 +21,9 @@ from src.constants import (
     MINI_IMAGENET_ROOT_DIR,
 )
 from src.datasets import FewShotCIFAR100, MiniImageNet
-from src.utils import build_model, create_dataloader, set_random_seed
+from src.utils.utils import set_random_seed
+from src.utils.model_fetchers import build_model
+from src.utils.data_fetchers import create_dataloader
 
 
 def main(

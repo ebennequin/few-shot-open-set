@@ -3,32 +3,23 @@ from pathlib import Path
 from statistics import mean
 
 import pandas as pd
-from pyod.models.iforest import IForest
 from pyod.models.knn import KNN
-from easyfsl.methods import PrototypicalNetworks
-from sklearn.ensemble import IsolationForest
-from sklearn.metrics import precision_recall_curve
 from sklearn.neighbors import LocalOutlierFactor
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.constants import (
     BACKBONES,
 )
 
-from src.utils import (
-    get_classic_loader,
-    get_inference_model,
-    get_pseudo_renyi_entropy,
-    get_task_loader,
-    plot_episode,
-    plot_roc,
-    plot_twin_hist,
+from src.utils.utils import (
     set_random_seed,
-    show_all_metrics_and_plots,
 )
+from src.utils.outlier_detectors import get_pseudo_renyi_entropy
+from src.utils.plots_and_metrics import plot_episode, show_all_metrics_and_plots
+from src.utils.model_fetchers import get_inference_model
+from src.utils.data_fetchers import get_task_loader, get_classic_loader
 
 #%%
 

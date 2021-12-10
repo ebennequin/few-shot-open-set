@@ -12,7 +12,8 @@ from src.constants import (
     BACKBONES,
     FEATURES_DIR,
 )
-from src.utils import get_classic_loader, compute_features
+from src.utils.data_fetchers import get_classic_loader
+from src.utils.utils import compute_features
 
 
 def main(

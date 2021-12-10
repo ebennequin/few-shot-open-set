@@ -11,21 +11,16 @@ from statistics import mean
 import pandas as pd
 import torch
 from easyfsl.utils import compute_prototypes
-from pyod.models.iforest import IForest
 from pyod.models.knn import KNN
-from pyod.models.lof import LocalOutlierFactor
-from torch import nn
 from tqdm import tqdm
 
 from src.datasets import FeaturesDataset
-from src.utils import (
-    compute_outlier_scores_with_renyi_divergence,
+from src.utils.utils import (
     set_random_seed,
-    get_pseudo_renyi_entropy,
-    get_shannon_entropy,
-    create_dataloader,
-    show_all_metrics_and_plots,
 )
+from src.utils.outlier_detectors import compute_outlier_scores_with_renyi_divergence
+from src.utils.plots_and_metrics import show_all_metrics_and_plots
+from src.utils.data_fetchers import create_dataloader
 from src.open_query_sampler import OpenQuerySampler
 
 #%% Constants
@@ -106,17 +101,19 @@ for support_features, support_labels, query_features, query_labels, _ in tqdm(
         / (n_way * n_query)
     )
 
-    #TODO: play with softmax's temperature
+    # TODO: play with softmax's temperature
     # Build outlier detection dataframe
     outlier_detection_df_list.append(
         pd.DataFrame(
             {
                 "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
-                # "outlier_score": compute_outlier_scores_with_renyi_divergence(
-                #     predictions, -torch.cdist(support_features, support_prototypes), alpha=-5
-                # )
+                "outlier_score": compute_outlier_scores_with_renyi_divergence(
+                    predictions,
+                    -torch.cdist(support_features, support_prototypes),
+                    alpha=-5,
+                )
                 # "outlier_score": get_pseudo_renyi_entropy(predictions),
-                "outlier_score": get_shannon_entropy(predictions),
+                # "outlier_score": get_shannon_entropy(predictions),
             }
         )
     )
@@ -124,7 +121,9 @@ for support_features, support_labels, query_features, query_labels, _ in tqdm(
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
 print(f"Average accuracy: {(100 * mean(accuracy_list)):.2f}%")
-show_all_metrics_and_plots(outlier_detection_df, title="Outlier Detection on Classification Scores")
+show_all_metrics_and_plots(
+    outlier_detection_df, title="Outlier Detection on Classification Scores"
+)
 
 
 #%% Outlier detection strategies using feature vectors
@@ -152,4 +151,3 @@ for support_features, support_labels, query_features, query_labels, _ in tqdm(
 outlier_detection_df = pd.concat(outlier_detection_df_list, ignore_index=True)
 
 show_all_metrics_and_plots(outlier_detection_df, title="Outlier Detection on Features")
-

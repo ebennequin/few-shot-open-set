@@ -1,3 +1,9 @@
+"""
+Sample Open Set Few-Shot Classification Tasks from images and infer various outlier detection
+methods on them.
+NOT UP TO DATE -> look at experiments_open_query_detection_on_features.py
+"""
+
 #%%
 from pathlib import Path
 from statistics import mean
@@ -28,7 +34,7 @@ n_shot: int = 5
 n_query: int = 10
 n_tasks: int = 50
 random_seed: int = 0
-device: str = "cuda:2"  # Change to 'cuda' if you have NVidia GPU
+device: str = "cuda:2"
 n_workers = 12
 
 set_random_seed(random_seed)

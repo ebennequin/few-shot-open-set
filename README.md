@@ -4,31 +4,44 @@
 
 Research code for experiments on open query set
 
+# Get started
+
 ## Installation
 
 1. Create a virtualenv with Python 3.8
 2. `pip install -r dev_requirements.txt`
 
-### Paths to datasets with EasySet
-Paths to images are defined in specification files such as [this one](data/tiered_imagenet/specs/train.json).
-All images are expected to be found in `data/{dataset_name}/images`. For instance,
-for tieredImageNet we expect a structure like this one:
+## Get outputs of DVC pipeline
+Trained models and feature vectors computed with these models have been computed with the DVC
+pipeline `dvc.yaml`.
+They can be retrieved from the DVC remote without running the pipeline yourself.
+
+1. Install AWS CLI
+2. Ask Etienne for credentials.
+3. Put your credentials in `~/.aws/credentials`
+    ```
+    [default]
+    aws_access_key_id = {YOUR_ID}
+    aws_secret_access_key = {YOUR_SECRET_KEY}
+   ```
+4. Run `dvc pull`
+
+# Experiment
+The main experiment file at this time is `notebooks/experiments_open_query_detection_on_features.py`.
+
+It's made to infer outlier detection methods on feature vectors. Feature vectors are stored in pickle files
+and follow this structure:
+
+```json
+{
+  "label0": np.array((n_instances_for_this_label, feature_dimension)),
+  "label1": np.array((n_instances_for_this_label, feature_dimension)),
+  ...
+}
 ```
-data
-|
-|----tiered_imagenet
-|    |
-|    |----images
-|    |    |
-|    |    |----n04542943
-|    |    |----n04554684
-|    |    |----...
-```
-If you can't host the data there for any reason, you can create a symlink:
+
+## Plot clusters with streamlit
+To look at clusters run 
 ```bash
-ln -s path/to/where/your/data/really/is data/tiered_imagenet/images
+PYTHONPATH=. streamlit run notebooks/st_plot_clusters.py
 ```
-
-### Retrieving trained models
-
-Run `dvc pull` to retrieve experiment outputs from the DVC remote.

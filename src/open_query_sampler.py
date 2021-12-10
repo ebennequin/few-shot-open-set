@@ -3,33 +3,28 @@ from typing import List, Tuple
 
 import torch
 from easyfsl.data_tools import TaskSampler
-from torch.utils.data import Sampler, Dataset
 
-# TODO: This is a v0 of an OpenQuerySampler, for fast iteration.
+
 class OpenQuerySampler(TaskSampler):
     def __iter__(self):
         for _ in range(self.n_tasks):
-            # TODO: make it customizable
+            # TODO: allow customizable shape of the open query task
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
             open_set_labels = all_labels[self.n_way :]
             yield torch.cat(
                 [
-                    # pylint: disable=not-callable
                     torch.tensor(
                         random.sample(
                             self.items_per_label[label], self.n_shot + self.n_query
                         )
                     )
-                    # pylint: enable=not-callable
                     for label in support_labels
                 ]
                 + [
-                    # pylint: disable=not-callable
                     torch.tensor(
                         random.sample(self.items_per_label[label], self.n_query)
                     )
-                    # pylint: enable=not-callable
                     for label in open_set_labels
                 ]
             )
@@ -38,11 +33,10 @@ class OpenQuerySampler(TaskSampler):
         self, input_data: List[Tuple[torch.Tensor, int]]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, List[int]]:
         """
-        Collate function to be used as argument for the collate_fn parameter of episodic
-            data loaders.
+        Overwrite episodic_collate_fn from TaskSampler.
         Args:
             input_data: each element is a tuple containing:
-                - an image as a torch Tensor
+                - an image (or feature vector) as a torch Tensor
                 - the label of this image
         Returns:
             tuple(Tensor, Tensor, Tensor, Tensor, list[int]): respectively:
@@ -65,14 +59,12 @@ class OpenQuerySampler(TaskSampler):
         )
         open_set_images = torch.cat([x[0].unsqueeze(0) for x in open_set_data])
 
-        # pylint: disable=not-callable
         in_set_labels = torch.tensor(
             [true_class_ids.index(x[1]) for x in in_set_data]
         ).reshape((self.n_way, self.n_shot + self.n_query))
         open_set_labels = torch.tensor(
             [true_class_ids.index(x[1]) for x in open_set_data]
         )
-        # pylint: enable=not-callable
 
         support_images = in_set_images[:, : self.n_shot].reshape(
             (-1, *in_set_images.shape[2:])

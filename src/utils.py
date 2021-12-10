@@ -1,6 +1,7 @@
+import pandas as pd
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import torchvision
 from easyfsl.data_tools import TaskSampler
@@ -10,6 +11,7 @@ import numpy as np
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
+from numpy import ndarray
 from sklearn.metrics import auc, roc_curve, precision_recall_curve
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
@@ -115,7 +117,15 @@ def plot_episode(support_images, query_images):
     plt.show()
 
 
-def plot_roc(outliers_df, title):
+def plot_roc(outliers_df: pd.DataFrame, title: str) -> float:
+    """
+    Plot the ROC curve from outlier prediction scores and ground truth, and returns
+    Args:
+        outliers_df: contains a column "outlier" of booleans, and a column "outlier_score" of floats
+        title: title of the plot
+    Returns:
+        the area under the ROC curve.
+    """
     fp_rate, tp_rate, _ = roc_curve(outliers_df.outlier, -outliers_df.outlier_score)
 
     plt.plot(fp_rate, tp_rate)
@@ -127,13 +137,28 @@ def plot_roc(outliers_df, title):
     return auc(fp_rate, tp_rate)
 
 
-def plot_twin_hist(outliers_df, title):
+def plot_twin_hist(outliers_df: pd.DataFrame, title: str):
+    """
+    Plot a bi-color histogram showing the predicted outlier score for ground truth outliers and
+    ground truth inliers.
+    Args:
+        outliers_df: contains a column "outlier" of booleans, and a column "outlier_score" of floats
+        title: title of the plot
+    """
     sns.histplot(data=outliers_df, x="outlier_score", hue="outlier")
     plt.title(title)
     plt.show()
 
 
 def get_pseudo_renyi_entropy(predictions: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the pseudo-Renyi entropy of the prediction for each query, i.e. the sum of the
+        squares of each class' classification score.
+    Args:
+        predictions: predictions before softmax, shape (n_query*n_way, feature_dimension)
+    Returns:
+        1-dim tensor of length (n_query*n_way) giving the prediction entropy for each query
+    """
     return (
         torch.pow(nn.functional.softmax(predictions, dim=1), 2)
         .sum(dim=1)
@@ -143,8 +168,61 @@ def get_pseudo_renyi_entropy(predictions: torch.Tensor) -> torch.Tensor:
 
 
 def get_shannon_entropy(predictions: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the Shannon entropy of the prediction for each query.
+    Args:
+        predictions: predictions before softmax, shape (n_query*n_way, feature_dimension)
+    Returns:
+        1-dim tensor of length (n_query*n_way) giving the prediction entropy for each query
+    """
     soft_prediction = nn.functional.softmax(predictions, dim=1)
     return (soft_prediction * torch.log(soft_prediction)).sum(dim=1).detach().cpu()
+
+
+def compute_outlier_scores_with_renyi_divergence(predictions: torch.Tensor, support_predictions: torch.Tensor, alpha: int=2, method: str="topk", k: int =3) -> torch.Tensor:
+    """
+    Compute all Renyi divergences from query instances to support instances, and assign an outlier
+    score to each query from its divergence with it's "neighbouring" supports w.r.t. to this
+    divergence.
+    Args:
+        predictions: predictions before softmax, shape (n_query*n_way, feature_dimension)
+        support_predictions: predictions for support examples before softmax,
+            shape (n_shot*n_way, feature_dimension)
+        alpha: parameter alpha for Renyi divergence
+        method: min or topk. min returns for each query its divergence with the "nearest" support
+            example. topk returns for each query with divergence with the k-th "nearest" support
+            example.
+        k: only used if method=topk. Defines the k.
+
+    Returns:
+        1-dim tensor of length (n_query*n_way) containing the outlier score of each query
+    """
+    pairwise_divergences = (1 / (alpha - 1)) * torch.log(
+        torch.pow(nn.functional.softmax(predictions, dim=1), alpha).matmul(
+            torch.pow(nn.functional.softmax(support_predictions, dim=1), 1 - alpha).T
+        )
+    )
+
+    if method == "min":
+        return 1 - pairwise_divergences.min(dim=1)[0]
+    elif method == "topk":
+        return 1 - pairwise_divergences.topk(k, dim=1, largest=False)[0][:, -1]
+    else:
+        raise ValueError("Don't know this method.")
+
+def tensor_product(left_tensor: torch.Tensor, right_tensor: torch.Tensor):
+    """
+    Args:
+        left_tensor: shape (n, l)
+        right_tensor: shape (m, l)
+
+    Returns:
+        their tensor product of shape (n, m, l).
+        result[i,j,k] = left_tensor[i, k] * right_tensor[j, k]
+    """
+    return torch.matmul(
+        left_tensor.T.unsqueeze(2), right_tensor.T.unsqueeze(1)
+    ).permute((1, 2, 0))
 
 
 def get_cifar_set(split):
@@ -212,7 +290,7 @@ def get_inference_model(
     return inference_model
 
 
-def compute_features(feature_extractor: nn.Module, loader: DataLoader, device="cuda"):
+def compute_features(feature_extractor: nn.Module, loader: DataLoader, device="cuda") -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
         all_features = []
         all_labels = []
@@ -226,7 +304,15 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, device="c
     )
 
 
-def show_all_metrics_and_plots(outliers_df, title, objective=0.9):
+def show_all_metrics_and_plots(outliers_df: pd.DataFrame, title: str, objective=0.9):
+    """
+    Print all metrics and plot all plots for a given set of outlier predictions.
+    Args:
+        outliers_df: contains a column "outlier" of booleans, and a column "outlier_score" of floats
+        title: title of the plots
+        objective: two of the metrics are the maximum precision (resp. recall) possible for a fixed
+            recall (resp. precision) threshold
+    """
     roc_auc = plot_roc(outliers_df, title=title)
     print(f"ROC AUC: {roc_auc}")
 

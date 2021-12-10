@@ -32,7 +32,7 @@ The main experiment file at this time is `notebooks/experiments_open_query_detec
 It's made to infer outlier detection methods on feature vectors. Feature vectors are stored in pickle files
 and follow this structure:
 
-```json
+```python
 {
   "label0": np.array((n_instances_for_this_label, feature_dimension)),
   "label1": np.array((n_instances_for_this_label, feature_dimension)),

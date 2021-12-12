@@ -13,16 +13,30 @@ class Finetune(FSmethod):
     """
     def __init__(self,
                  args: argparse.Namespace):
+        super().__init__(args)
         self.softmax_temp = args.softmax_temp
-        self.iter = args.iter
+        self.inference_steps = args.inference_steps
         self.lr = args.inference_lr
+
+    def get_logits(self, samples: Tensor) -> Tensor:
+        """
+        inputs:
+            samples : tensor of shape [shot, feature_dim]
+
+        returns :
+            logits : tensor of shape [shot, num_class]
+        """
+        logits = (samples.matmul(self.prototypes.t())
+                  - 1 / 2 * (self.prototypes**2).sum(1).view(1, -1)
+                  - 1 / 2 * (samples**2).sum(1).view(-1, 1))
+
+        return self.softmax_temp * logits
 
     def forward(self,
                 feat_s: Tensor,
                 feat_q: Tensor,
                 y_s: Tensor,) -> Tensor:
 
-        # Metric dic
         num_classes = y_s.unique().size(0)
         y_s_one_hot = F.one_hot(y_s, num_classes)
 
@@ -30,13 +44,13 @@ class Finetune(FSmethod):
         feat_s = F.normalize(feat_s, dim=-1)
         feat_q = F.normalize(feat_q, dim=-1)
 
-        # Initialize weights
+        # Initialize prototypes
         self.prototypes = compute_prototypes(feat_s, y_s)
 
         # Run adaptation
         self.prototypes.requires_grad_()
         optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
-        for i in range(self.iter):
+        for i in range(self.inference_steps):
 
             logits_s = self.get_logits(feat_s)
             ce = - (y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
@@ -47,4 +61,4 @@ class Finetune(FSmethod):
         probs_q = self.get_logits(feat_q).softmax(-1)
         probs_s = self.get_logits(feat_s).softmax(-1)
 
-        return probs_s.detac(), probs_q.detach()
+        return probs_s.detach(), probs_q.detach()

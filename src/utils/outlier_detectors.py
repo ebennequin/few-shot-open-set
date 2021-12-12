@@ -36,8 +36,8 @@ def get_shannon_entropy(predictions: torch.Tensor) -> torch.Tensor:
 
 
 def compute_outlier_scores_with_renyi_divergence(
-    predictions: torch.Tensor,
-    support_predictions: torch.Tensor,
+    soft_predictions: torch.Tensor,
+    soft_support_predictions: torch.Tensor,
     alpha: int = 2,
     method: str = "topk",
     k: int = 3,
@@ -60,8 +60,8 @@ def compute_outlier_scores_with_renyi_divergence(
         1-dim tensor of length (n_query*n_way) containing the outlier score of each query
     """
     pairwise_divergences = (1 / (alpha - 1)) * torch.log(
-        torch.pow(nn.functional.softmax(predictions, dim=1), alpha).matmul(
-            torch.pow(nn.functional.softmax(support_predictions, dim=1), 1 - alpha).T
+        torch.pow(soft_predictions, alpha).matmul(
+            torch.pow(soft_support_predictions, 1 - alpha).T
         )
     )
 

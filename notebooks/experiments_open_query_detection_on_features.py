@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
 
     # Method
     parser.add_argument('--inference_method', type=str, default='SimpleShot')
-    parser.add_argument('--softmax_temp', type=float, default=1.0)
+    parser.add_argument('--softmax_temperature', type=float, default=1.0)
     parser.add_argument('--inference_lr', type=float, default=1e-3,
                         help='Learning rate used for methods that perform \
                         gradient-based inference.')

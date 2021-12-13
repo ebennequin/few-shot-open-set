@@ -16,7 +16,6 @@ class Finetune(AbstractFewShotMethod):
 
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-        self.softmax_temp = args.softmax_temp
         self.inference_steps = args.inference_steps
         self.lr = args.inference_lr
 
@@ -34,7 +33,7 @@ class Finetune(AbstractFewShotMethod):
             - 1 / 2 * (samples ** 2).sum(1).view(-1, 1)
         )
 
-        return self.softmax_temp * logits
+        return self.softmax_temperature * logits
 
     def forward(
         self,

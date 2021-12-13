@@ -15,10 +15,6 @@ class BDCSPN(AbstractFewShotMethod):
     Implementation of BD-CSPN (ECCV 2020) https://arxiv.org/abs/1911.10713
     """
 
-    def __init__(self, args: argparse.Namespace):
-        super().__init__(args)
-        self.temp = args.softmax_temp
-
     def rectify_prototypes(self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor) -> None:
         Kes = y_s.unique().size(0)
         one_hot_s = F.one_hot(y_s, Kes)  # [shot_s, K]

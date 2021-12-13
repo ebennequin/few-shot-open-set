@@ -10,7 +10,8 @@ class AbstractFewShotMethod(nn.Module):
     """
 
     def __init__(self, args: argparse.Namespace):
-        super(AbstractFewShotMethod, self).__init__()
+        super().__init__()
+        self.softmax_temperature = args.softmax_temperature
 
     def forward(
         self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor

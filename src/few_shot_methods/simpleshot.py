@@ -13,10 +13,6 @@ class SimpleShot(AbstractFewShotMethod):
     Implementation of SimpleShot method https://arxiv.org/abs/1911.04623
     """
 
-    def __init__(self, args: argparse.Namespace):
-        super().__init__(args)
-        self.softmax_temp = args.softmax_temp
-
     def get_logits(self, samples: Tensor) -> Tensor:
         """
         inputs:
@@ -31,7 +27,7 @@ class SimpleShot(AbstractFewShotMethod):
             - 1 / 2 * (samples ** 2).sum(1).view(-1, 1)
         )
 
-        return self.softmax_temp * logits
+        return self.softmax_temperature * logits
 
     def forward(
         self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor, **kwargs

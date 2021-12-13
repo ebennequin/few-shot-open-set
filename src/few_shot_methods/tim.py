@@ -14,7 +14,7 @@ class TIM(AbstractFewShotMethod):
 
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-        self.temp = args.softmax_temp
+        self.softmax_temperature = args.softmax_temperature
         self.loss_weights = [1.0, 1.0, 0.1]
         self.inference_steps = args.inference_steps
         self.prototypes: Tensor  # Will be init at the first forward
@@ -27,7 +27,7 @@ class TIM(AbstractFewShotMethod):
         returns :
             logits : Tensor of shape [shot, num_class]
         """
-        logits = self.temp * (
+        logits = self.softmax_temperature * (
             feats.matmul(self.prototypes.t())
             - 1 / 2 * (self.prototypes ** 2).sum(1).view(1, -1)
             - 1 / 2 * (feats ** 2).sum(1).view(-1, 1)

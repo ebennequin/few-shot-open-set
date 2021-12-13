@@ -12,6 +12,7 @@ from easyfsl.utils import compute_prototypes
 class Finetune(AbstractFewShotMethod):
     """
     Implementation of Finetune (or Baseline method) (ICLR 2019) https://arxiv.org/abs/1904.04232
+    This is an inductive method.
     """
 
     def __init__(self, args: argparse.Namespace):

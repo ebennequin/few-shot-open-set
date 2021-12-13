@@ -13,6 +13,7 @@ class BDCSPN(AbstractFewShotMethod):
 
     """
     Implementation of BD-CSPN (ECCV 2020) https://arxiv.org/abs/1911.10713
+    This is a transductive method.
     """
 
     def rectify_prototypes(self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor) -> None:

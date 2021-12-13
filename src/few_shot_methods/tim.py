@@ -13,6 +13,7 @@ class AbstractTIM(AbstractFewShotMethod):
     """
     Implementation of TIM method (NeurIPS 2020) https://arxiv.org/abs/2008.11297
     This is an abstract class.
+    TIM is a transductive method.
     """
 
     def __init__(self, args: argparse.Namespace):

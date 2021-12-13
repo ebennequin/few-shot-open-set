@@ -11,21 +11,16 @@ from statistics import mean
 import argparse
 import pandas as pd
 import torch
-from easyfsl.utils import compute_prototypes
-from pyod.models.iforest import IForest
 from pyod.models.knn import KNN
-from sklearn.neighbors import LocalOutlierFactor
 from tqdm import tqdm
 
 from src.datasets import FeaturesDataset
 from src.utils.utils import (
     set_random_seed,
 )
-from .methods import __dict__ as all_methods
+from src.few_shot_methods import __dict__ as all_methods
 from src.utils.outlier_detectors import (
     compute_outlier_scores_with_renyi_divergence,
-    get_shannon_entropy,
-    get_pseudo_renyi_entropy,
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots
 from src.utils.data_fetchers import create_dataloader

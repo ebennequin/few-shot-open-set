@@ -71,13 +71,13 @@ class OpenQuerySampler(TaskSampler):
         )
         query_images = torch.cat(
             [
-                in_set_images[:, self.n_shot:].reshape((-1, *in_set_images.shape[2:])),
+                in_set_images[:, self.n_shot :].reshape((-1, *in_set_images.shape[2:])),
                 open_set_images,
             ]
         )
         support_labels = in_set_labels[:, : self.n_shot].flatten()
         query_labels = torch.cat(
-            [in_set_labels[:, self.n_shot:].flatten(), open_set_labels]
+            [in_set_labels[:, self.n_shot :].flatten(), open_set_labels]
         )
 
         return (

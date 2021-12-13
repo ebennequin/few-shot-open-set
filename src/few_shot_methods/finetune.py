@@ -1,18 +1,20 @@
 import argparse
+from typing import Tuple
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from .method import FSmethod
+from src.few_shot_methods import AbstractFewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class Finetune(FSmethod):
+class Finetune(AbstractFewShotMethod):
     """
     Implementation of Finetune (or Baseline method) (ICLR 2019) https://arxiv.org/abs/1904.04232
     """
-    def __init__(self,
-                 args: argparse.Namespace):
+
+    def __init__(self, args: argparse.Namespace):
         super().__init__(args)
         self.softmax_temp = args.softmax_temp
         self.inference_steps = args.inference_steps
@@ -26,16 +28,20 @@ class Finetune(FSmethod):
         returns :
             logits : tensor of shape [shot, num_class]
         """
-        logits = (samples.matmul(self.prototypes.t())
-                  - 1 / 2 * (self.prototypes**2).sum(1).view(1, -1)
-                  - 1 / 2 * (samples**2).sum(1).view(-1, 1))
+        logits = (
+            samples.matmul(self.prototypes.t())
+            - 1 / 2 * (self.prototypes ** 2).sum(1).view(1, -1)
+            - 1 / 2 * (samples ** 2).sum(1).view(-1, 1)
+        )
 
         return self.softmax_temp * logits
 
-    def forward(self,
-                feat_s: Tensor,
-                feat_q: Tensor,
-                y_s: Tensor,) -> Tensor:
+    def forward(
+        self,
+        feat_s: Tensor,
+        feat_q: Tensor,
+        y_s: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
 
         num_classes = y_s.unique().size(0)
         y_s_one_hot = F.one_hot(y_s, num_classes)
@@ -53,7 +59,7 @@ class Finetune(FSmethod):
         for i in range(self.inference_steps):
 
             logits_s = self.get_logits(feat_s)
-            ce = - (y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
+            ce = -(y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             optimizer.zero_grad()
             ce.backward()
             optimizer.step()

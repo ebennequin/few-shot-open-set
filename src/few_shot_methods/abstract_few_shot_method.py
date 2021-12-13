@@ -1,4 +1,6 @@
 import argparse
+
+import torch
 import torch.nn as nn
 from torch import Tensor
 from typing import Tuple
@@ -12,6 +14,7 @@ class AbstractFewShotMethod(nn.Module):
     def __init__(self, args: argparse.Namespace):
         super().__init__()
         self.softmax_temperature = args.softmax_temperature
+        self.prototypes: Tensor
 
     def forward(
         self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor
@@ -29,3 +32,13 @@ class AbstractFewShotMethod(nn.Module):
                 in the task, representing the soft predictions of the method for query samples.
         """
         raise NotImplementedError
+
+    def get_logits_from_euclidean_distances_to_prototypes(self, samples):
+        return -self.softmax_temperature * torch.cdist(samples, self.prototypes)
+
+    def get_logits_from_cosine_distances_to_prototypes(self, samples):
+        return (
+            self.softmax_temperature
+            * nn.functional.normalize(samples, dim=1)
+            @ nn.functional.normalize(self.prototypes, dim=1).T
+        )

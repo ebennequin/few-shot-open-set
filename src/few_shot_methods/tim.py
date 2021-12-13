@@ -9,34 +9,19 @@ from src.few_shot_methods import AbstractFewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class TIM(AbstractFewShotMethod):
-    """Implementation of TIM method (NeurIPS 2020) https://arxiv.org/abs/2008.11297"""
+class AbstractTIM(AbstractFewShotMethod):
+    """
+    Implementation of TIM method (NeurIPS 2020) https://arxiv.org/abs/2008.11297
+    This is an abstract class.
+    """
 
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-        self.softmax_temperature = args.softmax_temperature
         self.loss_weights = [1.0, 1.0, 0.1]
         self.inference_steps = args.inference_steps
-        self.prototypes: Tensor  # Will be init at the first forward
-
-    def get_logits(self, feats: Tensor) -> Tensor:
-        """
-        inputs:
-            feats : Tensor of shape [shot, feature_dim]
-
-        returns :
-            logits : Tensor of shape [shot, num_class]
-        """
-        logits = self.softmax_temperature * (
-            feats.matmul(self.prototypes.t())
-            - 1 / 2 * (self.prototypes ** 2).sum(1).view(1, -1)
-            - 1 / 2 * (feats ** 2).sum(1).view(-1, 1)
-        )
-
-        return logits
 
 
-class TIM_GD(TIM):
+class TIM_GD(AbstractTIM):
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
         self.lr = args.inference_lr
@@ -64,8 +49,8 @@ class TIM_GD(TIM):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
 
         for i in range(self.inference_steps):
-            logits_s = self.get_logits(feat_s)
-            logits_q = self.get_logits(feat_q)
+            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(feat_s)
+            logits_q = self.get_logits_from_euclidean_distances_to_prototypes(feat_q)
 
             ce = -(y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             q_probs = logits_q.softmax(1)

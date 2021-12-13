@@ -23,8 +23,12 @@ class BDCSPN(AbstractFewShotMethod):
         )  # [1, feature_dim]
         feat_q = feat_q + eta
 
-        logits_s = self.get_logits(feat_s).exp()  # [shot_s, K]
-        logits_q = self.get_logits(feat_q).exp()  # [shot_q, K]
+        logits_s = self.get_logits_from_cosine_distances_to_prototypes(
+            feat_s
+        ).exp()  # [shot_s, K]
+        logits_q = self.get_logits_from_cosine_distances_to_prototypes(
+            feat_q
+        ).exp()  # [shot_q, K]
 
         preds_q = logits_q.argmax(-1)
         one_hot_q = F.one_hot(preds_q, Kes)
@@ -41,22 +45,6 @@ class BDCSPN(AbstractFewShotMethod):
             w_q * one_hot_q
         ).t().matmul(feat_q)
 
-    def get_logits(self, feats: Tensor):
-        """
-        inputs:
-            samples : tensor of shape [shot, feature_dim]
-
-        returns :
-            logits : tensor of shape [shot, K]
-        """
-        cosine = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
-        logits = cosine(feats[:, None, :], self.prototypes[None, :, :])
-        assert logits.max() <= self.temp and logits.min() >= -self.temp, (
-            logits.min(),
-            logits.max(),
-        )
-        return self.temp * logits
-
     def forward(
         self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor
     ) -> Tuple[Tensor, Tensor]:
@@ -68,6 +56,10 @@ class BDCSPN(AbstractFewShotMethod):
         # Initialize prototypes
         self.prototypes = compute_prototypes(feat_s, y_s)  # [K, d]
         self.rectify_prototypes(feat_s=feat_s, y_s=y_s, feat_q=feat_q)
-        probs_s = self.get_logits(feat_s).softmax(-1)
-        probs_q = self.get_logits(feat_q).softmax(-1)
+        probs_s = self.get_logits_from_cosine_distances_to_prototypes(feat_s).softmax(
+            -1
+        )
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(feat_q).softmax(
+            -1
+        )
         return probs_s, probs_q

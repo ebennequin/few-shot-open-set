@@ -19,22 +19,6 @@ class Finetune(AbstractFewShotMethod):
         self.inference_steps = args.inference_steps
         self.lr = args.inference_lr
 
-    def get_logits(self, samples: Tensor) -> Tensor:
-        """
-        inputs:
-            samples : tensor of shape [shot, feature_dim]
-
-        returns :
-            logits : tensor of shape [shot, num_class]
-        """
-        logits = (
-            samples.matmul(self.prototypes.t())
-            - 1 / 2 * (self.prototypes ** 2).sum(1).view(1, -1)
-            - 1 / 2 * (samples ** 2).sum(1).view(-1, 1)
-        )
-
-        return self.softmax_temperature * logits
-
     def forward(
         self,
         feat_s: Tensor,
@@ -57,13 +41,17 @@ class Finetune(AbstractFewShotMethod):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits(feat_s)
+            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(feat_s)
             ce = -(y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             optimizer.zero_grad()
             ce.backward()
             optimizer.step()
 
-        probs_q = self.get_logits(feat_q).softmax(-1)
-        probs_s = self.get_logits(feat_s).softmax(-1)
+        probs_q = self.get_logits_from_euclidean_distances_to_prototypes(
+            feat_q
+        ).softmax(-1)
+        probs_s = self.get_logits_from_euclidean_distances_to_prototypes(
+            feat_s
+        ).softmax(-1)
 
         return probs_s.detach(), probs_q.detach()

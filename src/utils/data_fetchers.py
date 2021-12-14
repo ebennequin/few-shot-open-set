@@ -1,8 +1,13 @@
 """
 Utils for quick fetching of Dataset or DataLoader objects.
 """
+import pickle
+from pathlib import Path
+from typing import Tuple, Dict
 
+import torch
 from easyfsl.data_tools import TaskSampler
+from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 
 from src.constants import (
@@ -11,7 +16,7 @@ from src.constants import (
     MINI_IMAGENET_ROOT_DIR,
     MINI_IMAGENET_SPECS_DIR,
 )
-from src.datasets import FewShotCIFAR100, MiniImageNet
+from src.datasets import FewShotCIFAR100, MiniImageNet, FeaturesDataset
 from src.open_query_sampler import OpenQuerySampler
 
 
@@ -86,3 +91,38 @@ def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=1
         num_workers=n_workers,
         pin_memory=True,
     )
+
+
+def get_features_data_loader(features_dict, features_to_center_on, n_way, n_shot, n_query, n_tasks, n_workers):
+    dataset = FeaturesDataset(features_dict, features_to_center_on=features_to_center_on)
+    sampler = OpenQuerySampler(
+        dataset=dataset,
+        n_way=n_way,
+        n_shot=n_shot,
+        n_query=n_query,
+        n_tasks=n_tasks,
+    )
+    return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
+
+
+def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, ndarray]:
+    pickle_basename = f"{backbone}_{dataset}_{training_method}.pickle"
+    features_path = Path("data/features") / dataset / "test" / pickle_basename
+    train_features_path = Path("data/features") / dataset / "train" / pickle_basename
+
+    with open(features_path, "rb") as stream:
+        features = pickle.load(stream)
+
+    # We also load features from the train set to center query features on the average train set
+    # feature vector
+    with open(train_features_path, "rb") as stream:
+        train_features = pickle.load(stream)
+        average_train_features = torch.cat(
+            [
+                torch.from_numpy(features_per_label)
+                for features_per_label in train_features.values()
+            ],
+            dim=0,
+        ).mean(0)
+
+    return features, average_train_features

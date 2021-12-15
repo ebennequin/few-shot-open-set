@@ -103,6 +103,8 @@ def get_args(class_, extra=None):
 
 def evaluate_classifier(classifier):
     accuracy_list = []
+    query_top_1_score_list = []
+    support_top_1_score_list = []
     for support_features, support_labels, query_features, query_labels, _ in tqdm(
         data_loader, desc="Evaluating the classifier..."
     ):
@@ -112,6 +114,8 @@ def evaluate_classifier(classifier):
             support_labels=support_labels,
         )
         hard_query_predictions = query_predictions.argmax(-1)
+        query_top_1_score_list += query_predictions.max(-1)[0].tolist()
+        support_top_1_score_list += support_predictions.max(-1)[0].tolist()
 
         accuracy_list.append(
             (
@@ -124,6 +128,13 @@ def evaluate_classifier(classifier):
         )
     st.write(
         f"Average classifier accuracy: {(100 * mean(accuracy_list)):.2f} +- {(100 * confidence_interval(stdev(accuracy_list), len(accuracy_list))):.2f} %"
+    )
+    st.write(
+        f"Average Top-1 score for queries: {(100 * mean(query_top_1_score_list)):.2f} +- {(100 * confidence_interval(stdev(query_top_1_score_list), len(query_top_1_score_list))):.2f} %"
+    )
+
+    st.write(
+        f"Average Top-1 score for support examples: {(100 * mean(support_top_1_score_list)):.2f} +- {(100 * confidence_interval(stdev(support_top_1_score_list), len(support_top_1_score_list))):.2f} %"
     )
 
 

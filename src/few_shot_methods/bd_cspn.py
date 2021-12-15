@@ -16,7 +16,9 @@ class BDCSPN(AbstractFewShotMethod):
     This is a transductive method.
     """
 
-    def rectify_prototypes(self, support_features: Tensor, query_features: Tensor, support_labels: Tensor) -> None:
+    def rectify_prototypes(
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
+    ) -> None:
         Kes = support_labels.unique().size(0)
         one_hot_s = F.one_hot(support_labels, Kes)  # [shot_s, K]
         eta = support_features.mean(0, keepdim=True) - query_features.mean(
@@ -56,11 +58,15 @@ class BDCSPN(AbstractFewShotMethod):
 
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]
-        self.rectify_prototypes(support_features=support_features, support_labels=support_labels, query_features=query_features)
-        probs_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(
-            -1
+        self.rectify_prototypes(
+            support_features=support_features,
+            support_labels=support_labels,
+            query_features=query_features,
         )
-        probs_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(
-            -1
-        )
+        probs_s = self.get_logits_from_cosine_distances_to_prototypes(
+            support_features
+        ).softmax(-1)
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(
+            query_features
+        ).softmax(-1)
         return probs_s, probs_q

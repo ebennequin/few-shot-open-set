@@ -90,3 +90,15 @@ def show_all_metrics_and_plots(outliers_df: pd.DataFrame, title: str, objective=
     print(f"Recall for precision={objective}: {recall_at_precision_objective}")
 
     plot_twin_hist(outliers_df, title=title)
+
+
+def confidence_interval(standard_deviation, n_samples):
+    """
+    Computes statistical 95% confidence interval of the results from standard deviation and number of samples
+    Args:
+        standard_deviation (float): standard deviation of the results
+        n_samples (int): number of samples
+    Returns:
+        float: confidence interval
+    """
+    return 1.96 * standard_deviation / np.sqrt(n_samples)

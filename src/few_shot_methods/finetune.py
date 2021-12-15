@@ -47,7 +47,9 @@ class Finetune(AbstractFewShotMethod):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(support_features)
+            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(
+                support_features
+            )
             ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             optimizer.zero_grad()
             ce.backward()

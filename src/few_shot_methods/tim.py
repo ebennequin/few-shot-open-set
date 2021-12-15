@@ -52,8 +52,12 @@ class TIM_GD(AbstractTIM):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
 
         for i in range(self.inference_steps):
-            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(support_features)
-            logits_q = self.get_logits_from_euclidean_distances_to_prototypes(query_features)
+            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(
+                support_features
+            )
+            logits_q = self.get_logits_from_euclidean_distances_to_prototypes(
+                query_features
+            )
 
             ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             q_probs = logits_q.softmax(1)

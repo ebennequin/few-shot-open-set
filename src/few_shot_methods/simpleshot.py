@@ -17,7 +17,11 @@ class SimpleShot(AbstractFewShotMethod):
     """
 
     def forward(
-        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
+        self,
+        support_features: Tensor,
+        query_features: Tensor,
+        support_labels: Tensor,
+        **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
         # Perform required normalizations
@@ -27,6 +31,10 @@ class SimpleShot(AbstractFewShotMethod):
         self.prototypes = compute_prototypes(support_features, support_labels)
 
         return (
-            self.get_logits_from_euclidean_distances_to_prototypes(support_features).softmax(-1),
-            self.get_logits_from_euclidean_distances_to_prototypes(query_features).softmax(-1),
+            self.get_logits_from_euclidean_distances_to_prototypes(
+                support_features
+            ).softmax(-1),
+            self.get_logits_from_euclidean_distances_to_prototypes(
+                query_features
+            ).softmax(-1),
         )

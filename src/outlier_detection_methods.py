@@ -28,7 +28,9 @@ class RenyiEntropyOutlierDetector(AbstractOutlierDetector):
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         _, query_predictions = self.few_shot_classifier(
-            support_features=support_features, query_features=query_features, support_labels=support_labels
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
         )
 
         return get_pseudo_renyi_entropy(query_predictions)
@@ -43,7 +45,9 @@ class ShannonEntropyOutlierDetector(AbstractOutlierDetector):
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         _, query_predictions = self.few_shot_classifier(
-            support_features=support_features, query_features=query_features, support_labels=support_labels
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
         )
 
         return get_shannon_entropy(query_predictions)
@@ -67,13 +71,17 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         support_predictions, query_predictions = self.few_shot_classifier(
-            support_features=support_features, query_features=query_features, support_labels=support_labels
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
         )
 
         return compute_outlier_scores_with_renyi_divergence(
             soft_predictions=query_predictions,
             soft_support_predictions=support_predictions,
-            alpha=-5,
+            alpha=self.alpha,
+            method=self.method,
+            k=self.k,
         )
 
 

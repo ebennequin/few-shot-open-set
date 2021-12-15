@@ -93,8 +93,12 @@ def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=1
     )
 
 
-def get_features_data_loader(features_dict, features_to_center_on, n_way, n_shot, n_query, n_tasks, n_workers):
-    dataset = FeaturesDataset(features_dict, features_to_center_on=features_to_center_on)
+def get_features_data_loader(
+    features_dict, features_to_center_on, n_way, n_shot, n_query, n_tasks, n_workers
+):
+    dataset = FeaturesDataset(
+        features_dict, features_to_center_on=features_to_center_on
+    )
     sampler = OpenQuerySampler(
         dataset=dataset,
         n_way=n_way,

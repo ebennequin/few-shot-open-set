@@ -118,3 +118,13 @@ class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
     def initialize_detector(self):
         return KNN(n_neighbors=self.n_neighbors, method=self.method, n_jobs=-1)
+
+
+ALL_OUTLIER_DETECTORS = [
+    RenyiEntropyOutlierDetector,
+    RenyiDivergenceOutlierDetector,
+    ShannonEntropyOutlierDetector,
+    LOFOutlierDetector,
+    IForestOutlierDetector,
+    KNNOutlierDetector,
+]

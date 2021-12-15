@@ -15,10 +15,15 @@ class Finetune(AbstractFewShotMethod):
     This is an inductive method.
     """
 
-    def __init__(self, args: argparse.Namespace):
-        super().__init__(args)
-        self.inference_steps = args.inference_steps
-        self.lr = args.inference_lr
+    def __init__(
+        self,
+        softmax_temperature: float = 1.0,
+        inference_steps: int = 10,
+        inference_lr: float = 1e-3,
+    ):
+        super().__init__(softmax_temperature)
+        self.inference_steps = inference_steps
+        self.lr = inference_lr
 
     def forward(
         self,

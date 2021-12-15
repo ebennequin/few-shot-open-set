@@ -11,9 +11,9 @@ class AbstractFewShotMethod(nn.Module):
     Abstract class for few-shot methods
     """
 
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, softmax_temperature: float = 1.0):
         super().__init__()
-        self.softmax_temperature = args.softmax_temperature
+        self.softmax_temperature = softmax_temperature
         self.prototypes: Tensor
 
     def forward(

@@ -1,5 +1,5 @@
 import argparse
-from typing import Tuple
+from typing import Tuple, List
 
 import torch
 import torch.nn.functional as F
@@ -16,17 +16,20 @@ class AbstractTIM(AbstractFewShotMethod):
     TIM is a transductive method.
     """
 
-    def __init__(self, args: argparse.Namespace):
-        super().__init__(args)
-        self.loss_weights = [1.0, 1.0, 0.1]
-        self.inference_steps = args.inference_steps
+    def __init__(
+        self,
+        softmax_temperature: float = 1.0,
+        inference_steps: int = 10,
+        inference_lr: float = 1e-3,
+        loss_weights: List[float] = None,
+    ):
+        super().__init__(softmax_temperature)
+        self.loss_weights = [1.0, 1.0, 0.1] if loss_weights is None else loss_weights
+        self.inference_steps = inference_steps
+        self.inference_lr = inference_lr
 
 
 class TIM_GD(AbstractTIM):
-    def __init__(self, args: argparse.Namespace):
-        super().__init__(args)
-        self.lr = args.inference_lr
-
     def forward(
         self,
         feat_s: Tensor,
@@ -47,7 +50,7 @@ class TIM_GD(AbstractTIM):
 
         # Run adaptation
         self.prototypes.requires_grad_()
-        optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
+        optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
 
         for i in range(self.inference_steps):
             logits_s = self.get_logits_from_euclidean_distances_to_prototypes(feat_s)

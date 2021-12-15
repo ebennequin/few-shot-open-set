@@ -1,9 +1,10 @@
 """
 Functions used to compute outlier scores from classification predictions.
 """
-
+import pandas as pd
 import torch
 from torch import nn
+from tqdm import tqdm
 
 
 def get_pseudo_renyi_entropy(soft_predictions: torch.Tensor) -> torch.Tensor:
@@ -64,3 +65,22 @@ def compute_outlier_scores_with_renyi_divergence(
         return 1 - pairwise_divergences.topk(k, dim=1, largest=False)[0][:, -1]
     else:
         raise ValueError("Don't know this method.")
+
+
+def detect_outliers(outlier_detector, data_loader, n_way, n_query):
+    outlier_detection_df_list = []
+    for support_features, support_labels, query_features, query_labels, _ in tqdm(
+        data_loader
+    ):
+        outlier_detection_df_list.append(
+            pd.DataFrame(
+                {
+                    "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
+                    "outlier_score": outlier_detector(
+                        support_features, support_labels, query_features, query_labels
+                    ),
+                }
+            )
+        )
+
+    return pd.concat(outlier_detection_df_list, ignore_index=True)

@@ -11,8 +11,8 @@ import sklearn
 from sklearn.manifold import TSNE
 import streamlit as st
 
+from src.constants import FEATURES_DIR
 
-FEATURES_ROOT = Path("data/features")
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
 
 
@@ -147,7 +147,7 @@ def plot_clusters(key):
         st.title("Select stuff")
         selected_dataset = st.selectbox(
             "Dataset",
-            list(FEATURES_ROOT.glob("*")),
+            list(FEATURES_DIR.glob("*")),
             format_func=lambda path: path.name,
             key=key,
         )

@@ -3,14 +3,7 @@ Load the features extracted from a dataset's images, sample Open Set Few-Shot Cl
 and infer various outlier detection methods en them.
 """
 
-#%%
-from statistics import mean
-
 import argparse
-
-import pandas as pd
-from pyod.models.knn import KNN
-from tqdm import tqdm
 
 from src.outlier_detection_methods import RenyiEntropyOutlierDetector
 from src.utils.utils import (
@@ -18,22 +11,10 @@ from src.utils.utils import (
 )
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.utils.outlier_detectors import (
-    compute_outlier_scores_with_renyi_divergence,
     detect_outliers,
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots
 from src.utils.data_fetchers import get_features_data_loader, get_test_features
-
-#%% Constants
-
-n_way: int = 10
-n_shot: int = 500
-n_query: int = 10
-n_tasks: int = 500
-random_seed: int = 0
-n_workers = 12
-
-set_random_seed(random_seed)
 
 
 def parse_args() -> argparse.Namespace:
@@ -74,12 +55,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(args):
-    #%% Load pre-computed features for the selected dataset.
+    set_random_seed(args.random_seed)
+
     features, average_train_features = get_test_features(
         args.backbone, args.dataset, args.training
     )
 
-    #%% Create data loader
     data_loader = get_features_data_loader(
         features,
         average_train_features,
@@ -90,17 +71,15 @@ def main(args):
         args.n_workers,
     )
 
-    #%%% Create method
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
         if class_.__name__ == args.inference_method
-    ][0](args.softmax_temperature)
+    ][0].from_cli_args(args)
 
     outlier_detector = RenyiEntropyOutlierDetector(
         few_shot_classifier=few_shot_classifier
     )
-    #%% Outlier detection strategies using model's predictions
 
     outliers_df = detect_outliers(
         outlier_detector, data_loader, args.n_way, args.n_query

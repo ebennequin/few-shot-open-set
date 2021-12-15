@@ -1,4 +1,5 @@
 import argparse
+import inspect
 
 import torch
 import torch.nn as nn
@@ -41,4 +42,11 @@ class AbstractFewShotMethod(nn.Module):
             self.softmax_temperature
             * nn.functional.normalize(samples, dim=1)
             @ nn.functional.normalize(self.prototypes, dim=1).T
+        )
+
+    @classmethod
+    def from_cli_args(cls, args):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()}
         )

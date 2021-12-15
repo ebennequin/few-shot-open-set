@@ -60,9 +60,8 @@ data_loader = get_features_data_loader(
 def select_class(class_list, name):
     class_dict = {x.__name__: x for x in class_list}
     class_str = st.selectbox(
-        "Outlier Detector",
+        name,
         class_dict.keys(),
-        # format_func=lambda x: x.__name__,
     )
     return class_dict[class_str]
 

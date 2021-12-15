@@ -27,37 +27,37 @@ class Finetune(AbstractFewShotMethod):
 
     def forward(
         self,
-        feat_s: Tensor,
-        feat_q: Tensor,
-        y_s: Tensor,
+        support_features: Tensor,
+        query_features: Tensor,
+        support_labels: Tensor,
     ) -> Tuple[Tensor, Tensor]:
 
-        num_classes = y_s.unique().size(0)
-        y_s_one_hot = F.one_hot(y_s, num_classes)
+        num_classes = support_labels.unique().size(0)
+        support_labels_one_hot = F.one_hot(support_labels, num_classes)
 
         # Perform required normalizations
-        feat_s = F.normalize(feat_s, dim=-1)
-        feat_q = F.normalize(feat_q, dim=-1)
+        support_features = F.normalize(support_features, dim=-1)
+        query_features = F.normalize(query_features, dim=-1)
 
         # Initialize prototypes
-        self.prototypes = compute_prototypes(feat_s, y_s)
+        self.prototypes = compute_prototypes(support_features, support_labels)
 
         # Run adaptation
         self.prototypes.requires_grad_()
         optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(feat_s)
-            ce = -(y_s_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
+            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(support_features)
+            ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             optimizer.zero_grad()
             ce.backward()
             optimizer.step()
 
         probs_q = self.get_logits_from_euclidean_distances_to_prototypes(
-            feat_q
+            query_features
         ).softmax(-1)
         probs_s = self.get_logits_from_euclidean_distances_to_prototypes(
-            feat_s
+            support_features
         ).softmax(-1)
 
         return probs_s.detach(), probs_q.detach()

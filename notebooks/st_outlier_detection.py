@@ -74,6 +74,10 @@ def get_args(class_, extra=None):
             args[parameter_name] = parameter.annotation(
                 st.number_input(parameter_name, value=parameter.default)
             )
+        elif parameter.annotation in [str]:
+            args[parameter_name] = parameter.annotation(
+                st.text_input(parameter_name, value=parameter.default)
+            )
         elif extra is not None:
             if parameter_name == extra:
                 args[parameter_name] = None
@@ -82,21 +86,11 @@ def get_args(class_, extra=None):
 
 def get_detector():
     st.header("Outlier detector")
-    # outlier_detector_class = st.selectbox(
-    #     "Outlier Detector",
-    #     ALL_OUTLIER_DETECTORS,
-    #     format_func=lambda x: x.__name__,
-    # )
     outlier_detector_class = select_class(ALL_OUTLIER_DETECTORS, "Outlier detector")
     detector_args = get_args(outlier_detector_class, extra="few_shot_classifier")
 
     if "few_shot_classifier" in detector_args.keys():
         st.header("Few-Shot Classifier")
-        # few_shot_classifier_class = st.selectbox(
-        #     "Few-Shot Classifier",
-        #     ALL_FEW_SHOT_CLASSIFIERS,
-        #     format_func=lambda x: x.__name__,
-        # )
         few_shot_classifier_class = select_class(
             ALL_FEW_SHOT_CLASSIFIERS, "Few-Shot Classifier"
         )

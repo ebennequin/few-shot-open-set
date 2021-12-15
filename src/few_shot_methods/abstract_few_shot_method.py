@@ -18,13 +18,13 @@ class AbstractFewShotMethod(nn.Module):
         self.prototypes: Tensor
 
     def forward(
-        self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
     ) -> Tuple[Tensor, Tensor]:
         """
         Args:
-            feat_s: support features
-            feat_q: query features
-            y_s: support labels
+            support_features: support features
+            query_features: query features
+            support_labels: support labels
 
         Returns:
             support_soft_predictions: Tensor of shape [n_query, K], where K is the number of classes

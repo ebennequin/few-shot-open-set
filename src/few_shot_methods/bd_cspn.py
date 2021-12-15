@@ -16,19 +16,19 @@ class BDCSPN(AbstractFewShotMethod):
     This is a transductive method.
     """
 
-    def rectify_prototypes(self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor) -> None:
-        Kes = y_s.unique().size(0)
-        one_hot_s = F.one_hot(y_s, Kes)  # [shot_s, K]
-        eta = feat_s.mean(0, keepdim=True) - feat_q.mean(
+    def rectify_prototypes(self, support_features: Tensor, query_features: Tensor, support_labels: Tensor) -> None:
+        Kes = support_labels.unique().size(0)
+        one_hot_s = F.one_hot(support_labels, Kes)  # [shot_s, K]
+        eta = support_features.mean(0, keepdim=True) - query_features.mean(
             0, keepdim=True
         )  # [1, feature_dim]
-        feat_q = feat_q + eta
+        query_features = query_features + eta
 
         logits_s = self.get_logits_from_cosine_distances_to_prototypes(
-            feat_s
+            support_features
         ).exp()  # [shot_s, K]
         logits_q = self.get_logits_from_cosine_distances_to_prototypes(
-            feat_q
+            query_features
         ).exp()  # [shot_q, K]
 
         preds_q = logits_q.argmax(-1)
@@ -42,25 +42,25 @@ class BDCSPN(AbstractFewShotMethod):
         w_s = (one_hot_s * logits_s) / normalization  # [shot_s, K]
         w_q = (one_hot_q * logits_q) / normalization  # [shot_q, K]
 
-        self.prototypes = (w_s * one_hot_s).t().matmul(feat_s) + (
+        self.prototypes = (w_s * one_hot_s).t().matmul(support_features) + (
             w_q * one_hot_q
-        ).t().matmul(feat_q)
+        ).t().matmul(query_features)
 
     def forward(
-        self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
     ) -> Tuple[Tensor, Tensor]:
 
         # Perform required normalizations
-        feat_s = F.normalize(feat_s, dim=-1)
-        feat_q = F.normalize(feat_q, dim=-1)
+        support_features = F.normalize(support_features, dim=-1)
+        query_features = F.normalize(query_features, dim=-1)
 
         # Initialize prototypes
-        self.prototypes = compute_prototypes(feat_s, y_s)  # [K, d]
-        self.rectify_prototypes(feat_s=feat_s, y_s=y_s, feat_q=feat_q)
-        probs_s = self.get_logits_from_cosine_distances_to_prototypes(feat_s).softmax(
+        self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]
+        self.rectify_prototypes(support_features=support_features, support_labels=support_labels, query_features=query_features)
+        probs_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(
             -1
         )
-        probs_q = self.get_logits_from_cosine_distances_to_prototypes(feat_q).softmax(
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(
             -1
         )
         return probs_s, probs_q

@@ -17,16 +17,16 @@ class SimpleShot(AbstractFewShotMethod):
     """
 
     def forward(
-        self, feat_s: Tensor, feat_q: Tensor, y_s: Tensor, **kwargs
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
         # Perform required normalizations
-        feat_s = F.normalize(feat_s, dim=-1)  # [S, d]
-        feat_q = F.normalize(feat_q, dim=-1)  # [Q, d]
+        support_features = F.normalize(support_features, dim=-1)  # [S, d]
+        query_features = F.normalize(query_features, dim=-1)  # [Q, d]
 
-        self.prototypes = compute_prototypes(feat_s, y_s)
+        self.prototypes = compute_prototypes(support_features, support_labels)
 
         return (
-            self.get_logits_from_euclidean_distances_to_prototypes(feat_s).softmax(-1),
-            self.get_logits_from_euclidean_distances_to_prototypes(feat_q).softmax(-1),
+            self.get_logits_from_euclidean_distances_to_prototypes(support_features).softmax(-1),
+            self.get_logits_from_euclidean_distances_to_prototypes(query_features).softmax(-1),
         )

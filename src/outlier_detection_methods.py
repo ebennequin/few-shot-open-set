@@ -3,6 +3,7 @@ from pyod.models.knn import KNN
 from pyod.models.lof import LocalOutlierFactor
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from src.few_shot_methods import AbstractFewShotMethod
 from src.utils.outlier_detectors import (
@@ -86,20 +87,32 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
 
 
 class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
+    def __init__(self, normalize_features: bool = True):
+        super().__init__()
+        self.normalize_features = normalize_features
+
     def initialize_detector(self):
         raise NotImplementedError
 
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
+        if self.normalize_features:
+            support_features = F.normalize(support_features, dim=-1)
+            query_features = F.normalize(query_features, dim=-1)
         detector = self.initialize_detector()
         detector.fit(support_features)
         return torch.from_numpy(1 - detector.decision_function(query_features))
 
 
 class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
-    def __init__(self, n_neighbors=3, metric="euclidean"):
-        super().__init__()
+    def __init__(
+        self,
+        normalize_features: bool = True,
+        n_neighbors: int = 3,
+        metric: str = "euclidean",
+    ):
+        super().__init__(normalize_features)
         self.n_neighbors = n_neighbors
         self.metric = metric
 
@@ -110,8 +123,8 @@ class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
-    def __init__(self, n_estimators=100):
-        super().__init__()
+    def __init__(self, normalize_features: bool = True, n_estimators: int = 100):
+        super().__init__(normalize_features)
         self.n_estimators = n_estimators
 
     def initialize_detector(self):
@@ -119,8 +132,13 @@ class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
-    def __init__(self, n_neighbors=3, method="mean"):
-        super().__init__()
+    def __init__(
+        self,
+        normalize_features: bool = True,
+        n_neighbors: int = 3,
+        method: str = "mean",
+    ):
+        super().__init__(normalize_features)
         self.n_neighbors = n_neighbors
         self.method = method
 

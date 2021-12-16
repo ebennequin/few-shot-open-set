@@ -1,9 +1,8 @@
-import argparse
 from typing import Tuple
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor
+from torch import Tensor, nn
 
 from src.few_shot_methods import AbstractFewShotMethod
 from easyfsl.utils import compute_prototypes
@@ -18,10 +17,11 @@ class Finetune(AbstractFewShotMethod):
     def __init__(
         self,
         softmax_temperature: float = 1.0,
+        normalize_features: bool = False,
         inference_steps: int = 10,
         inference_lr: float = 1e-3,
     ):
-        super().__init__(softmax_temperature)
+        super().__init__(softmax_temperature, normalize_features)
         self.inference_steps = inference_steps
         self.lr = inference_lr
 
@@ -33,11 +33,10 @@ class Finetune(AbstractFewShotMethod):
     ) -> Tuple[Tensor, Tensor]:
 
         num_classes = support_labels.unique().size(0)
-        support_labels_one_hot = F.one_hot(support_labels, num_classes)
 
         # Perform required normalizations
-        support_features = F.normalize(support_features, dim=-1)
-        query_features = F.normalize(query_features, dim=-1)
+        support_features = self.normalize_features_if_specified(support_features)
+        query_features = self.normalize_features_if_specified(query_features)
 
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)
@@ -50,7 +49,7 @@ class Finetune(AbstractFewShotMethod):
             logits_s = self.get_logits_from_euclidean_distances_to_prototypes(
                 support_features
             )
-            ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
+            ce = nn.functional.cross_entropy(logits_s, support_labels)
             optimizer.zero_grad()
             ce.backward()
             optimizer.step()

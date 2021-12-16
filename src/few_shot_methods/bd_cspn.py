@@ -1,7 +1,5 @@
-import argparse
 from typing import Tuple
 
-import torch
 import torch.nn.functional as F
 from torch import Tensor
 
@@ -53,8 +51,8 @@ class BDCSPN(AbstractFewShotMethod):
     ) -> Tuple[Tensor, Tensor]:
 
         # Perform required normalizations
-        support_features = F.normalize(support_features, dim=-1)
-        query_features = F.normalize(query_features, dim=-1)
+        support_features = self.normalize_features_if_specified(support_features)
+        query_features = self.normalize_features_if_specified(query_features)
 
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]

@@ -18,11 +18,12 @@ class AbstractTIM(AbstractFewShotMethod):
     def __init__(
         self,
         softmax_temperature: float = 1.0,
+        normalize_features: bool = False,
         inference_steps: int = 10,
         inference_lr: float = 1e-3,
         loss_weights: List[float] = None,
     ):
-        super().__init__(softmax_temperature)
+        super().__init__(softmax_temperature, normalize_features)
         self.loss_weights = [1.0, 1.0, 0.1] if loss_weights is None else loss_weights
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
@@ -41,8 +42,8 @@ class TIM_GD(AbstractTIM):
         support_labels_one_hot = F.one_hot(support_labels, num_classes)
 
         # Perform required normalizations
-        support_features = F.normalize(support_features, dim=-1)
-        query_features = F.normalize(query_features, dim=-1)
+        support_features = self.normalize_features_if_specified(support_features)
+        query_features = self.normalize_features_if_specified(query_features)
 
         # Initialize weights
         self.prototypes = compute_prototypes(support_features, support_labels)

@@ -61,7 +61,7 @@ def compute_outlier_scores_with_renyi_divergence(
     if method == "min":
         return 1 - pairwise_divergences.min(dim=1)[0]
     elif method == "topk":
-        return 1 - pairwise_divergences.topk(k, dim=1, largest=False)[0][:, -1]
+        return 1 - pairwise_divergences.topk(k, dim=1, largest=False)[0].mean(-1)
     else:
         raise ValueError("Don't know this method.")
 

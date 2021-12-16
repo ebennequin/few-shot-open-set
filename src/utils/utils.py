@@ -21,7 +21,6 @@ def set_random_seed(seed: int):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    logger.info(f"Random seed : {seed}")
 
 
 def tensor_product(left_tensor: torch.Tensor, right_tensor: torch.Tensor):

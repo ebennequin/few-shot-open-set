@@ -1,12 +1,9 @@
-import argparse
-from typing import Optional, Tuple
+from typing import Tuple
 
-import torch
 from torch import Tensor
 
 from src.few_shot_methods import AbstractFewShotMethod
 from easyfsl.utils import compute_prototypes
-import torch.nn.functional as F
 
 
 class SimpleShot(AbstractFewShotMethod):
@@ -25,8 +22,8 @@ class SimpleShot(AbstractFewShotMethod):
     ) -> Tuple[Tensor, Tensor]:
 
         # Perform required normalizations
-        support_features = F.normalize(support_features, dim=-1)  # [S, d]
-        query_features = F.normalize(query_features, dim=-1)  # [Q, d]
+        support_features = self.normalize_features_if_specified(support_features)
+        query_features = self.normalize_features_if_specified(query_features)
 
         self.prototypes = compute_prototypes(support_features, support_labels)
 

@@ -3,6 +3,7 @@ import inspect
 
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple
 
@@ -12,9 +13,12 @@ class AbstractFewShotMethod(nn.Module):
     Abstract class for few-shot methods
     """
 
-    def __init__(self, softmax_temperature: float = 1.0):
+    def __init__(
+        self, softmax_temperature: float = 1.0, normalize_features: bool = False
+    ):
         super().__init__()
         self.softmax_temperature = softmax_temperature
+        self.normalize_features = normalize_features
         self.prototypes: Tensor
 
     def forward(
@@ -40,9 +44,12 @@ class AbstractFewShotMethod(nn.Module):
     def get_logits_from_cosine_distances_to_prototypes(self, samples):
         return (
             self.softmax_temperature
-            * nn.functional.normalize(samples, dim=1)
-            @ nn.functional.normalize(self.prototypes, dim=1).T
+            * F.normalize(samples, dim=1)
+            @ F.normalize(self.prototypes, dim=1).T
         )
+
+    def normalize_features_if_specified(self, features):
+        return F.normalize(features, dim=-1) if self.normalize_features else features
 
     @classmethod
     def from_cli_args(cls, args):

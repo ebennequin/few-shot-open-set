@@ -33,9 +33,7 @@ class FeaturesDataset(Dataset):
                     {
                         "label": k,
                         "features": list(
-                            nn.functional.normalize(
-                                torch.from_numpy(v) - self.features_centered_on, dim=1
-                            )
+                            torch.from_numpy(v) - self.features_centered_on,
                         ),
                     }
                 )

@@ -109,7 +109,7 @@ def get_features_data_loader(
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 
-def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, ndarray]:
+def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, Dict, ndarray]:
     pickle_basename = f"{backbone}_{dataset}_{training_method}.pickle"
     features_path = Path("data/features") / dataset / "test" / pickle_basename
     train_features_path = Path("data/features") / dataset / "train" / pickle_basename
@@ -129,4 +129,4 @@ def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, ndarray
             dim=0,
         ).mean(0)
 
-    return features, average_train_features
+    return features, train_features, average_train_features

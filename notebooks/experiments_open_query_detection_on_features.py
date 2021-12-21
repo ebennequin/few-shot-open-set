@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
 def main(args):
     set_random_seed(args.random_seed)
 
-    features, average_train_features = get_test_features(
+    features, _, average_train_features = get_test_features(
         args.backbone, args.dataset, args.training
     )
 

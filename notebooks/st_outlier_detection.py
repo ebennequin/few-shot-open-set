@@ -56,13 +56,22 @@ training_method = st.sidebar.selectbox(
     "Backbone",
     ["classic", "episodic"],
 )
+center_features = st.sidebar.checkbox(
+    "Center features on train set average", value=True
+)
 
-features, average_train_features = get_test_features(
+features, train_features, average_train_features = get_test_features(
     backbone=backbone, dataset=dataset, training_method=training_method
 )
 
 data_loader = get_features_data_loader(
-    features, average_train_features, n_way, n_shot, n_query, n_tasks, n_workers
+    features,
+    average_train_features if center_features else None,
+    n_way,
+    n_shot,
+    n_query,
+    n_tasks,
+    n_workers,
 )
 
 
@@ -95,8 +104,12 @@ def get_args(class_, extra=None):
             args[parameter_name] = parameter.annotation(
                 st.text_input(parameter_name, value=parameter.default)
             )
+        elif parameter.annotation in [bool]:
+            args[parameter_name] = parameter.annotation(
+                st.checkbox(parameter_name, value=parameter.default)
+            )
         elif extra is not None:
-            if parameter_name == extra:
+            if parameter_name in extra:
                 args[parameter_name] = None
     return args
 
@@ -127,22 +140,26 @@ def evaluate_classifier(classifier):
             / (n_way * n_query)
         )
     st.write(
-        f"Average classifier accuracy: {(100 * mean(accuracy_list)):.2f} +- {(100 * confidence_interval(stdev(accuracy_list), len(accuracy_list))):.2f} %"
+        f"Average classifier accuracy: {(100 * mean(accuracy_list)):.2f}"
+        f" +- {(100 * confidence_interval(stdev(accuracy_list), len(accuracy_list))):.2f} %"
     )
     st.write(
-        f"Average Top-1 score for queries: {(100 * mean(query_top_1_score_list)):.2f} +- {(100 * confidence_interval(stdev(query_top_1_score_list), len(query_top_1_score_list))):.2f} %"
+        f"Average Top-1 score for queries: {(100 * mean(query_top_1_score_list)):.2f}"
+        f" +- {(100 * confidence_interval(stdev(query_top_1_score_list), len(query_top_1_score_list))):.2f} %"
     )
 
     st.write(
-        f"Average Top-1 score for support examples: {(100 * mean(support_top_1_score_list)):.2f} +- {(100 * confidence_interval(stdev(support_top_1_score_list), len(support_top_1_score_list))):.2f} %"
+        f"Average Top-1 score for support examples: {(100 * mean(support_top_1_score_list)):.2f}"
+        f" +- {(100 * confidence_interval(stdev(support_top_1_score_list), len(support_top_1_score_list))):.2f} %"
     )
 
 
 def get_detector():
     st.header("Outlier detector")
     outlier_detector_class = select_class(ALL_OUTLIER_DETECTORS, "Outlier detector")
-    detector_args = get_args(outlier_detector_class, extra="few_shot_classifier")
-
+    detector_args = get_args(
+        outlier_detector_class, extra=["few_shot_classifier", "base_features"]
+    )
     if "few_shot_classifier" in detector_args.keys():
         st.header("Few-Shot Classifier")
         few_shot_classifier_class = select_class(
@@ -154,6 +171,9 @@ def get_detector():
         few_shot_classifier = few_shot_classifier_class(**classifier_args)
         evaluate_classifier(few_shot_classifier)
         detector_args["few_shot_classifier"] = few_shot_classifier
+
+    if "base_features" in detector_args.keys():
+        detector_args["base_features"] = train_features
 
     return outlier_detector_class(**detector_args)
 
@@ -169,10 +189,8 @@ fp_rate, tp_rate, _ = roc_curve(outliers_df.outlier, -outliers_df.outlier_score)
 cols = st.columns([1, 2, 2])
 
 with cols[0]:
-    # st.header("Metrics")
     roc_auc = auc(fp_rate, tp_rate)
-    objective = 0.9
-    # objective = st.slider("Objective", min_value=0., max_value=1., value=0.9)
+    objective = st.slider("Objective", min_value=0.0, max_value=1.0, value=0.9)
 
     precisions, recalls, _ = precision_recall_curve(
         outliers_df.outlier, -outliers_df.outlier_score

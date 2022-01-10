@@ -11,7 +11,6 @@ class FeaturesDataset(Dataset):
     def __init__(
         self,
         features_dict: Dict[int, ndarray],
-        features_to_center_on: torch.Tensor = None,
     ):
         """
         Build a dataset yielding feature vectors from a dictionary describing those vectors and
@@ -24,16 +23,13 @@ class FeaturesDataset(Dataset):
                 images with this label
             features_to_center_on: a 1-dim feature vector of length feature_dimension
         """
-        self.features_centered_on = (
-            features_to_center_on if features_to_center_on is not None else 0.0
-        )
         self.data = pd.concat(
             [
                 pd.DataFrame(
                     {
                         "label": k,
                         "features": list(
-                            torch.from_numpy(v) - self.features_centered_on,
+                            torch.from_numpy(v),
                         ),
                     }
                 )

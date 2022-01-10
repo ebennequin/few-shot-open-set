@@ -9,7 +9,7 @@ import torch
 from sklearn.svm import SVC
 from torch import nn
 from torch.nn import functional as F
-
+from sklearn.metrics import roc_curve, auc
 from src.few_shot_methods import AbstractFewShotMethod
 from src.utils.outlier_detectors import (
     get_pseudo_renyi_entropy,
@@ -33,13 +33,16 @@ class RenyiEntropyOutlierDetector(AbstractOutlierDetector):
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
+        # Transforming features
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+
         _, query_predictions = self.few_shot_classifier(
             support_features=support_features,
             query_features=query_features,
             support_labels=support_labels,
         )
 
-        return get_pseudo_renyi_entropy(query_predictions)
+        return get_pseudo_renyi_entropy(query_predictions), query_predictions.argmax(-1)
 
 
 class ShannonEntropyOutlierDetector(AbstractOutlierDetector):
@@ -50,13 +53,16 @@ class ShannonEntropyOutlierDetector(AbstractOutlierDetector):
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
+        # Transforming features
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+
         _, query_predictions = self.few_shot_classifier(
             support_features=support_features,
             query_features=query_features,
             support_labels=support_labels,
         )
 
-        return get_shannon_entropy(query_predictions)
+        return get_shannon_entropy(query_predictions), query_predictions.argmax(-1)
 
 
 class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
@@ -76,6 +82,9 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
+        # Transforming features
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+
         support_predictions, query_predictions = self.few_shot_classifier(
             support_features=support_features,
             query_features=query_features,
@@ -88,13 +97,13 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
             alpha=self.alpha,
             method=self.method,
             k=self.k,
-        )
+        ), query_predictions.argmax(-1)
 
 
 class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
-    def __init__(self, normalize_features: bool = True):
+    def __init__(self, few_shot_classifier: AbstractFewShotMethod):
         super().__init__()
-        self.normalize_features = normalize_features
+        self.few_shot_classifier = few_shot_classifier
 
     def initialize_detector(self):
         raise NotImplementedError
@@ -102,22 +111,31 @@ class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
-        if self.normalize_features:
-            support_features = F.normalize(support_features, dim=-1)
-            query_features = F.normalize(query_features, dim=-1)
+
+        # Transforming features
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+
+        # Doing OOD detection
+
         detector = self.initialize_detector()
         detector.fit(support_features)
-        return torch.from_numpy(1 - detector.decision_function(query_features))
+        outlier_scores = torch.from_numpy(1 - detector.decision_function(query_features))
+        
+        # Obtaining predictions from few-shot classifier
+
+        _, probs_q = self.few_shot_classifier(support_features, query_features, support_labels)
+        predictions = probs_q.argmax(-1)
+        return outlier_scores, predictions
 
 
 class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
     def __init__(
         self,
-        normalize_features: bool = True,
+        few_shot_classifier: AbstractFewShotMethod,
         n_neighbors: int = 3,
         metric: str = "euclidean",
     ):
-        super().__init__(normalize_features)
+        super().__init__(few_shot_classifier)
         self.n_neighbors = n_neighbors
         self.metric = metric
 
@@ -128,37 +146,79 @@ class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
-    def __init__(self, normalize_features: bool = True, n_estimators: int = 100):
-        super().__init__(normalize_features)
+    def __init__(self, few_shot_classifier, n_estimators: int = 100):
+        super().__init__(few_shot_classifier)
         self.n_estimators = n_estimators
 
     def initialize_detector(self):
         return IForest(n_estimators=self.n_estimators, n_jobs=-1)
 
-
 class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
     def __init__(
         self,
-        normalize_features: bool = True,
+        few_shot_classifier,
         n_neighbors: int = 3,
         method: str = "mean",
     ):
-        super().__init__(normalize_features)
+        super().__init__(few_shot_classifier)
         self.n_neighbors = n_neighbors
         self.method = method
 
     def initialize_detector(self):
         return KNN(n_neighbors=self.n_neighbors, method=self.method, n_jobs=-1)
 
+class IterativeKNNOutlierDetector(KNNOutlierDetector):
+
+
+    def forward(
+        self, support_features, support_labels, query_features, query_labels
+    ) -> torch.Tensor:
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+        known = support_features
+        unknown = query_features
+
+        n_query = query_features.size(0)
+
+        n_neighbors = self.n_neighbors
+
+        for index in range(20):
+
+            # Compute those with very low outlier scores
+
+            detector = KNN(n_neighbors=n_neighbors, method=self.method, n_jobs=-1)
+            detector.fit(known)
+            unknown_score = torch.from_numpy(detector.decision_function(unknown))
+            k = 1
+            kth_score = unknown_score.topk(k=k, largest=False).values[k-1]
+            new_known = unknown_score <= kth_score
+
+            # Update sets
+
+            known = torch.cat([known, unknown[new_known]], 0)
+            unknown = unknown[~new_known]
+
+            # Monitoring 
+
+            full_outlier = torch.from_numpy(detector.decision_function(query_features))
+            fp_rate, tp_rate, _ = roc_curve([False] * (n_query // 2) + [True] * (n_query // 2), full_outlier)
+            area = auc(fp_rate, tp_rate)
+
+            print(f"Iteration {index} : auc={area} \t |K|={len(known)} \t |U|={len(unknown)}")
+
+        outlier_scores = torch.from_numpy(1 - detector.decision_function(query_features))
+
+        return outlier_scores, torch.ones_like(query_labels)
+        
+
 
 class SupervisedOutlierDetector(AbstractOutlierDetectorOnFeatures):
     def __init__(
         self,
-        normalize_features: bool = True,
+        few_shot_classifier,
         predict_class_by_class: bool = True,
         base_features: Dict = None,
     ):
-        super().__init__(normalize_features)
+        super().__init__(few_shot_classifier)
         if base_features is None:
             raise ValueError("Missing base set features")
         self.base_features = torch.from_numpy(
@@ -212,8 +272,7 @@ class KNNWithDispatchedClusters(KNNOutlierDetector):
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
 
-        support_features = F.normalize(support_features, dim=-1)
-        query_features = F.normalize(query_features, dim=-1)
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
 
         dispatcher = nn.Linear(
             support_features.shape[1], support_features.shape[1], bias=False
@@ -294,7 +353,6 @@ class NearestNeighborRatio(AbstractOutlierDetectorOnFeatures):
         distances = torch.cdist(query_features, support_features_by_class)
 
         query_to_classwise_nn = distances.min(dim=-1)[0].T
-
         top2_query_to_classwise_nn = query_to_classwise_nn.topk(
             k=2, dim=1, largest=False
         )[0]
@@ -305,14 +363,14 @@ class NearestNeighborRatio(AbstractOutlierDetectorOnFeatures):
         pass
 
 
-ALL_OUTLIER_DETECTORS = [
-    RenyiEntropyOutlierDetector,
-    RenyiDivergenceOutlierDetector,
-    ShannonEntropyOutlierDetector,
-    LOFOutlierDetector,
-    IForestOutlierDetector,
-    KNNOutlierDetector,
-    SupervisedOutlierDetector,
-    KNNWithDispatchedClusters,
-    NearestNeighborRatio,
-]
+# ALL_OUTLIER_DETECTORS = [
+#     RenyiEntropyOutlierDetector,
+#     RenyiDivergenceOutlierDetector,
+#     ShannonEntropyOutlierDetector,
+#     LOFOutlierDetector,
+#     IForestOutlierDetector,
+#     KNNOutlierDetector,
+#     SupervisedOutlierDetector,
+#     KNNWithDispatchedClusters,
+#     NearestNeighborRatio,
+# ]

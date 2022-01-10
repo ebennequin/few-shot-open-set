@@ -77,7 +77,7 @@ def get_task_loader(
     return create_dataloader(dataset, sampler, n_workers)
 
 
-def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=12):
+def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=6):
     if dataset_name == "cifar":
         train_set = get_cifar_set(split)
     elif dataset_name == "mini_imagenet":
@@ -94,10 +94,10 @@ def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=1
 
 
 def get_features_data_loader(
-    features_dict, features_to_center_on, n_way, n_shot, n_query, n_tasks, n_workers
+    features_dict, n_way, n_shot, n_query, n_tasks, n_workers
 ):
     dataset = FeaturesDataset(
-        features_dict, features_to_center_on=features_to_center_on
+        features_dict,
     )
     sampler = OpenQuerySampler(
         dataset=dataset,
@@ -127,6 +127,10 @@ def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, Dict, n
                 for features_per_label in train_features.values()
             ],
             dim=0,
-        ).mean(0)
+        )
+    if len(average_train_features.size()) == 4: # This is a feature map, so we also average over spatial dims.
+        dims = (0, -2, -1)
+    else:
+        dims = (0,) # Already pooled features, we only average over sample dimension.
 
-    return features, train_features, average_train_features
+    return features, train_features, average_train_features.mean(dims, keepdim=True)

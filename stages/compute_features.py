@@ -37,13 +37,20 @@ def main(
         batch_size: the batch size
         device: what device to train the model on
     """
+    logger.info("Building model...")
+    feature_extractor = BACKBONES[backbone]().to(device)
+    state_dict = torch.load(weights, map_location=device)
+    if "state_dict" in state_dict:
+        state_dict = strip_prefix(state_dict["state_dict"], "module.")
+    else:
+        state_dict = strip_prefix(state_dict, "backbone.")
+
+    feature_extractor.load_state_dict(state_dict, strict=False)
+    feature_extractor.eval()
+
     logger.info("Fetching data...")
     data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
 
-    logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone]().to(device)
-    feature_extractor.load_state_dict(strip_prefix(torch.load(weights), "backbone."))
-    feature_extractor.eval()
 
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor, data_loader, device=device)

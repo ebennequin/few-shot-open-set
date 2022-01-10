@@ -83,21 +83,18 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, use_fc=False):
-        features = torch.flatten(
-            self.avgpool(
-                self.layer4(
-                    self.layer3(
-                        self.layer2(self.layer1(self.relu(self.bn1(self.conv1(x)))))
-                    )
+
+        x = \
+            self.layer4(
+                self.layer3(
+                    self.layer2(self.layer1(self.relu(self.bn1(self.conv1(x)))))
                 )
-            ),
-            1,
-        )
+            )
 
         if use_fc:
             return self.fc(x)
 
-        return features
+        return x
 
 
 def resnet10(**kwargs):

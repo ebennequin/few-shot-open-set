@@ -8,7 +8,7 @@ import seaborn as sns
 import torchvision
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
-
+import argparse
 
 def plot_episode(support_images, query_images):
     """
@@ -43,11 +43,11 @@ def plot_roc(outliers_df: pd.DataFrame, title: str) -> float:
     """
     fp_rate, tp_rate, _ = roc_curve(outliers_df.outlier, -outliers_df.outlier_score)
 
-    plt.plot(fp_rate, tp_rate)
-    plt.xlim(0.0, 1.0)
-    plt.ylim(0.0, 1.0)
-    plt.title(title)
-    plt.show()
+    # plt.plot(fp_rate, tp_rate)
+    # plt.xlim(0.0, 1.0)
+    # plt.ylim(0.0, 1.0)
+    # plt.title(title)
+    # plt.show()
 
     return auc(fp_rate, tp_rate)
 
@@ -75,7 +75,9 @@ def show_all_metrics_and_plots(outliers_df: pd.DataFrame, title: str, objective=
             recall (resp. precision) threshold
     """
     roc_auc = plot_roc(outliers_df, title=title)
+    acc = (outliers_df.predictions == outliers_df.labels)[~outliers_df.outlier].mean()
     print(f"ROC AUC: {roc_auc}")
+    print(f"Accuracy: {acc}")
 
     precisions, recalls, _ = precision_recall_curve(
         outliers_df.outlier, -outliers_df.outlier_score
@@ -89,8 +91,51 @@ def show_all_metrics_and_plots(outliers_df: pd.DataFrame, title: str, objective=
     print(f"Precision for recall={objective}: {precision_at_recall_objective}")
     print(f"Recall for precision={objective}: {recall_at_precision_objective}")
 
-    plot_twin_hist(outliers_df, title=title)
+    # plot_twin_hist(outliers_df, title=title)
 
+    return roc_auc, precision_at_recall_objective, recall_at_precision_objective
+
+
+def update_csv(args: argparse.Namespace,
+               metrics: dict,
+               path: str):
+
+    # The metrics we need to fill in the row
+    fill_entry = metrics
+    # fill_entry['completed'] = True
+    try:
+        res = pd.read_csv(path)
+    except FileNotFoundError:
+        res = pd.DataFrame({})
+
+    group_by_args = args.general_hparams + args.simu_hparams
+    records = res.to_dict('records')
+
+    # Check whether the row exists already, if yes, simply update the metrics
+    match = False
+    for entry in records:
+        if any([param not in entry for param in group_by_args]):
+            continue
+        matches = [str(entry[param]) == str(getattr(args, param)) for param in group_by_args]
+        match = (sum(matches) == len(matches))
+        if match:
+            if not args.override:
+                print("Matching entry found. Not overriding.")
+                return
+            elif args.override:
+                print("Overriding existing results.")
+            entry.update(fill_entry)
+
+    # If entry does not exist, just create it
+    if not match:
+        new_entry = {param: getattr(args, param)
+                     for param in group_by_args}
+        new_entry.update(fill_entry)
+        records.append(new_entry)
+
+    # Save back to dataframe
+    df = pd.DataFrame.from_records(records)
+    df.to_csv(path, index=False)
 
 def confidence_interval(standard_deviation, n_samples):
     """

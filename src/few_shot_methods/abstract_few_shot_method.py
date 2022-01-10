@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
-from typing import Tuple
-
+from typing import Tuple, List
+from .feature_transforms import __dict__ as ALL_FEATURE_TRANSFORMS
 
 class AbstractFewShotMethod(nn.Module):
     """
@@ -14,11 +14,13 @@ class AbstractFewShotMethod(nn.Module):
     """
 
     def __init__(
-        self, softmax_temperature: float = 1.0, normalize_features: bool = False
+        self, prepool_transforms: List[str], postpool_transforms: List[str], average_train_features: Tensor, softmax_temperature: float = 1.0,
     ):
         super().__init__()
         self.softmax_temperature = softmax_temperature
-        self.normalize_features = normalize_features
+        self.prepool_transforms = prepool_transforms
+        self.postpool_transforms = postpool_transforms
+        self.average_train_features = average_train_features
         self.prototypes: Tensor
 
     def forward(
@@ -48,12 +50,28 @@ class AbstractFewShotMethod(nn.Module):
             @ F.normalize(self.prototypes, dim=1).T
         )
 
-    def normalize_features_if_specified(self, features):
-        return F.normalize(features, dim=-1) if self.normalize_features else features
+    def transform_features(self, support_features: Tensor, query_features: Tensor):
+        """
+        Performs an (optional) normalization of feature maps, then average pooling, then another (optional) normalization
+        """
+
+        # Pre-pooling transforms
+        for transf in self.prepool_transforms:
+            support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+
+        # Average pooling
+        support_features, query_features = support_features.mean((-2, -1)), query_features.mean((-2, -1))
+
+        # Post-pooling transforms
+        for transf in self.postpool_transforms:
+            support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+        
+        return support_features, query_features
+
 
     @classmethod
-    def from_cli_args(cls, args):
+    def from_cli_args(cls, args, average_train_features):
         signature = inspect.signature(cls.__init__)
         return cls(
-            **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()}
+            **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()}, average_train_features=average_train_features
         )

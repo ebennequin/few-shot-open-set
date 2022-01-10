@@ -55,6 +55,11 @@ class MiniImageNet(VisionDataset):
                 lambda row: root / row["class_name"] / row["image_name"], axis=1
             )
         )
+        # data_df = pd.read_csv(specs_file).assign(
+        #     image_paths=lambda df: df.apply(
+        #         lambda row: root / row["image_name"], axis=1
+        #     )
+        # )
         self.images = torch.stack(
             [
                 self.load_image_as_tensor(image_path)

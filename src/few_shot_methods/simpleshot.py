@@ -21,9 +21,6 @@ class SimpleShot(AbstractFewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        # Perform required normalizations
-        support_features = self.normalize_features_if_specified(support_features)
-        query_features = self.normalize_features_if_specified(query_features)
 
         self.prototypes = compute_prototypes(support_features, support_labels)
 

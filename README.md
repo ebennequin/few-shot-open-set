@@ -40,6 +40,10 @@ and follow this structure:
 }
 ```
 
+## Normalization experiments (Malik)
+
+Scripts in scripts/test_normalizations.sh
+
 ## Plot clusters with streamlit
 To look at clusters run 
 ```bash

@@ -4,9 +4,12 @@ __pycache__/
 *$py.class
 *.sublime-project
 *.sublime-workspace
+*.DS_Store
+*.tar.gz
 
 # C extensions
 *.so
+results/
 
 # Distribution / packaging
 .Python

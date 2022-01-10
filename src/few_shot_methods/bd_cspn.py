@@ -50,10 +50,6 @@ class BDCSPN(AbstractFewShotMethod):
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
     ) -> Tuple[Tensor, Tensor]:
 
-        # Perform required normalizations
-        support_features = self.normalize_features_if_specified(support_features)
-        query_features = self.normalize_features_if_specified(query_features)
-
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]
         self.rectify_prototypes(

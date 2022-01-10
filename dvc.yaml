@@ -32,19 +32,29 @@ stages:
     foreach:
       - backbone: resnet18
         dataset: cifar
+        batch_size: 512
       - backbone: resnet12
         dataset: cifar
+        batch_size: 512
       - backbone: resnet18
         dataset: mini_imagenet
+        batch_size: 512
       - backbone: resnet12
         dataset: mini_imagenet
+        batch_size: 512
+      - backbone: resnet18
+        dataset: tiered_imagenet
+        batch_size: 256
+      - backbone: resnet12
+        dataset: tiered_imagenet
+        batch_size: 256
     do:
       cmd: python -m stages.train_classic
         ${item.backbone}
         ${item.dataset}
         --output-model ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
         --n-epochs 200
-        --batch-size 512
+        --batch-size ${item.batch_size}
         --tb-log-dir ${tb_logs_dir}/${item.backbone}_${item.dataset}_classic
         &> ${logs_dir}/train_classic_${item.backbone}_${item.dataset}.out
       deps:
@@ -119,6 +129,22 @@ stages:
       - backbone: resnet12
         dataset: mini_imagenet
         training: episodic
+        split: test
+      - backbone: resnet18
+        dataset: tiered_imagenet
+        training: classic
+        split: train
+      - backbone: resnet12
+        dataset: tiered_imagenet
+        training: classic
+        split: train
+      - backbone: resnet18
+        dataset: tiered_imagenet
+        training: classic
+        split: test
+      - backbone: resnet12
+        dataset: tiered_imagenet
+        training: classic
         split: test
     do:
       cmd: python -m stages.compute_features

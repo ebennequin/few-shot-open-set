@@ -7,6 +7,7 @@ from src.resnet import resnet12, resnet18, resnet34
 # Data
 CIFAR_SPECS_DIR = Path("data") / "cifar" / "specs"
 MINI_IMAGENET_SPECS_DIR = Path("data") / "mini_imagenet" / "specs"
+TIERED_IMAGENET_SPECS_DIR = Path("data") / "tiered_imagenet" / "specs"
 
 CIFAR_ROOT_DIR = Path("data") / "cifar" / "data"
 MINI_IMAGENET_ROOT_DIR = Path("data") / "mini_imagenet" / "images"

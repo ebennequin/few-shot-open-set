@@ -2,15 +2,15 @@ from math import floor
 from pathlib import Path
 from statistics import mean
 
+from easyfsl.data_tools import EasySet
 from loguru import logger
 import torch
 from torch import nn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import MultiStepLR
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Dataset
 from torch.utils.tensorboard import SummaryWriter
 import typer
-from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
 from src.constants import (
@@ -21,9 +21,10 @@ from src.constants import (
     CIFAR_ROOT_DIR,
     MINI_IMAGENET_ROOT_DIR,
     MINI_IMAGENET_SPECS_DIR,
+    TIERED_IMAGENET_SPECS_DIR,
 )
 from src.datasets import FewShotCIFAR100, MiniImageNet
-from src.utils import set_random_seed
+from src.utils.utils import set_random_seed
 
 
 def main(
@@ -70,7 +71,7 @@ def main(
     logger.info(f"Trained model weights dumped at {output_model}")
 
 
-def get_dataset(dataset_name: str) -> VisionDataset:
+def get_dataset(dataset_name: str) -> Dataset:
     if dataset_name == "cifar":
         return FewShotCIFAR100(
             root=CIFAR_ROOT_DIR,
@@ -81,6 +82,12 @@ def get_dataset(dataset_name: str) -> VisionDataset:
         return MiniImageNet(
             root=MINI_IMAGENET_ROOT_DIR,
             specs_file=MINI_IMAGENET_SPECS_DIR / "train_val_images.csv",
+            training=True,
+        )
+    elif dataset_name == "tiered_imagenet":
+        return EasySet(
+            specs_file=TIERED_IMAGENET_SPECS_DIR / "train_val.json",
+            image_size=224,
             training=True,
         )
     else:

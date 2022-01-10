@@ -2,7 +2,7 @@ from pathlib import Path
 
 from easyfsl.methods import PrototypicalNetworks
 
-from src.resnet import resnet12, resnet18, resnet34
+from src.resnet import resnet12, resnet18, resnet34, resnet12imagenet, resnet18imagenet
 
 # Data
 CIFAR_SPECS_DIR = Path("data") / "cifar" / "specs"
@@ -24,6 +24,8 @@ BACKBONES = {
     "resnet12": resnet12,
     "resnet18": resnet18,
     "resnet34": resnet34,
+    "resnet12i": resnet12imagenet,
+    "resnet18i": resnet18imagenet,
 }
 FEW_SHOT_METHODS = {
     "protonet": PrototypicalNetworks,

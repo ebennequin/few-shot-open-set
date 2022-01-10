@@ -49,7 +49,7 @@ def main(
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
     """
-    n_workers = 12
+    n_workers = 20
 
     set_random_seed(random_seed)
 

@@ -32,7 +32,10 @@ def main(
     dataset: str,
     output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
     n_epochs: int = 200,
+    scheduler_milestones: str = "160",
+    scheduler_gamma: float = 0.1,
     batch_size: int = 512,
+    learning_rate: float = 0.1,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
@@ -44,7 +47,11 @@ def main(
         dataset: what dataset to train the model on.
         output_model: where to dump the archive containing trained model weights
         n_epochs: number of training epochs
+        scheduler_milestones: all milestones for optimizer scheduler, must be a string of
+            comma-separated integers
+        scheduler_gamma: discount factor for optimizer scheduler
         batch_size: the batch size
+        learning_rate: optimizer's learning rate
         tb_log_dir: where to dump tensorboard event files
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
@@ -65,7 +72,23 @@ def main(
     model.device = device
 
     logger.info("Starting training...")
-    model = train(model, n_epochs, train_loader, val_loader, tb_log_dir)
+    optimizer = SGD(
+        model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
+    )
+    train_scheduler = MultiStepLR(
+        optimizer,
+        milestones=list(map(int, scheduler_milestones.split(","))),
+        gamma=scheduler_gamma,
+    )
+    model = train(
+        model=model,
+        n_epochs=n_epochs,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        optimizer=optimizer,
+        scheduler=train_scheduler,
+        tb_log_dir=tb_log_dir,
+    )
 
     torch.save(model.state_dict(prefix="backbone."), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")
@@ -120,11 +143,9 @@ def get_loaders(whole_set, batch_size, n_workers, random_seed):
     return train_loader, val_loader
 
 
-def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
+def train(model, n_epochs, train_loader, val_loader, optimizer, scheduler, tb_log_dir):
     tb_log_dir.mkdir(parents=True, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
-    optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
     loss_fn = nn.CrossEntropyLoss()
 
     for epoch in range(n_epochs):
@@ -137,7 +158,7 @@ def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
             tb_writer.add_scalar("Train/loss", average_loss, epoch)
             tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
 
-        train_scheduler.step(epoch)
+        scheduler.step(epoch)
 
     return model
 

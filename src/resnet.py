@@ -51,8 +51,8 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, widths[3], layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        if self.use_fc:
-            self.fc = nn.Linear(widths[3] * block.expansion, num_classes)
+        # Only used when self.use_fc is True
+        self.fc = nn.Linear(widths[3] * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -87,7 +87,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, use_fc=False):
+    def forward(self, x):
         features = torch.flatten(
             self.avgpool(
                 self.layer4(
@@ -99,7 +99,7 @@ class ResNet(nn.Module):
             1,
         )
 
-        if use_fc:
+        if self.use_fc:
             return self.fc(x)
 
         return features

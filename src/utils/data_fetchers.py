@@ -42,45 +42,60 @@ def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
     )
 
 
-def get_cifar_set(split):
+def get_cifar_set(split, training):
     return FewShotCIFAR100(
         root=CIFAR_ROOT_DIR,
         specs_file=CIFAR_SPECS_DIR / f"{split}.json",
-        training=False,
+        training=training,
     )
 
 
-def get_mini_imagenet_set(split):
+def get_mini_imagenet_set(split, training):
     return MiniImageNet(
         root=MINI_IMAGENET_ROOT_DIR,
         specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}_images.csv",
-        training=False,
+        training=training,
     )
 
 
-def get_tiered_imagenet_set(split):
+def get_tiered_imagenet_set(split, training):
     return TieredImageNet(
         specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}.json",
         image_size=84,
-        training=False,
+        training=training,
     )
 
 
-def get_dataset(dataset_name, split):
+def get_dataset(dataset_name, split, training=False):
     if dataset_name == "cifar":
-        return get_cifar_set(split)
+        return get_cifar_set(split, training)
     elif dataset_name == "mini_imagenet":
-        return get_mini_imagenet_set(split)
+        return get_mini_imagenet_set(split, training)
     elif dataset_name == "tiered_imagenet":
-        return get_tiered_imagenet_set(split)
+        return get_tiered_imagenet_set(split, training)
     else:
         raise NotImplementedError("I don't know this dataset.")
 
 
-def get_task_loader(
-    dataset_name, n_way, n_shot, n_query, n_tasks, split="test", n_workers=12
+def get_closed_task_loader(
+    dataset_name, n_way, n_shot, n_query, n_tasks, split, training=False, n_workers=12
 ):
-    dataset = get_dataset(dataset_name, split)
+    dataset = get_dataset(dataset_name, split=split, training=training)
+
+    sampler = TaskSampler(
+        dataset=dataset,
+        n_way=n_way,
+        n_shot=n_shot,
+        n_query=n_query,
+        n_tasks=n_tasks,
+    )
+    return create_dataloader(dataset, sampler, n_workers)
+
+
+def get_open_task_loader(
+    dataset_name, n_way, n_shot, n_query, n_tasks, split, training=False, n_workers=12
+):
+    dataset = get_dataset(dataset_name, split=split, training=training)
 
     sampler = OpenQuerySampler(
         dataset=dataset,
@@ -92,8 +107,10 @@ def get_task_loader(
     return create_dataloader(dataset, sampler, n_workers)
 
 
-def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=12):
-    dataset = get_dataset(dataset_name, split)
+def get_classic_loader(
+    dataset_name, split, training=False, batch_size=1024, n_workers=12
+):
+    dataset = get_dataset(dataset_name, split=split, training=training)
 
     return DataLoader(
         dataset,

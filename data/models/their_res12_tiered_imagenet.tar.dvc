@@ -1,0 +1,4 @@
+outs:
+- md5: a3f19c4d54c3942fdfeab39e1afa258e
+  size: 49766661
+  path: their_res12_tiered_imagenet.tar

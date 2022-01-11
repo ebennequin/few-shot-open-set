@@ -150,7 +150,7 @@ def validate_model(model, val_loader):
     few_shot_model = SimpleShot(normalize_features=True)
     model.eval()
     predictions_are_accurate = []
-    for _, (
+    for (
         support_images,
         support_labels,
         query_images,

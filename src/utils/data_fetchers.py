@@ -15,6 +15,7 @@ from src.constants import (
     CIFAR_SPECS_DIR,
     MINI_IMAGENET_ROOT_DIR,
     MINI_IMAGENET_SPECS_DIR,
+    TIERED_IMAGENET_SPECS_DIR,
 )
 from src.datasets import FewShotCIFAR100, MiniImageNet, FeaturesDataset
 from src.datasets.tiered_imagenet import TieredImageNet
@@ -60,7 +61,7 @@ def get_mini_imagenet_set(split, training):
 
 def get_tiered_imagenet_set(split, training):
     return TieredImageNet(
-        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}.json",
+        specs_file=TIERED_IMAGENET_SPECS_DIR / f"{split}.json",
         image_size=84,
         training=training,
     )

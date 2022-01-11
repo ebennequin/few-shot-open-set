@@ -52,7 +52,7 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         # Only used when self.use_fc is True
-        self.fc = nn.Linear(widths[3] * block.expansion, num_classes)
+        self.fc = nn.Linear(self.inplanes, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -100,7 +100,7 @@ class ResNet(nn.Module):
         )
 
         if self.use_fc:
-            return self.fc(x)
+            return self.fc(features)
 
         return features
 

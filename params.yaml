@@ -3,7 +3,7 @@ features_dir: data/features
 tb_logs_dir: data/tb_logs
 logs_dir: data/logs
 
-models_grid:
+model_grid:
   - backbone: resnet18
     dataset: mini_imagenet
   - backbone: resnet12
@@ -42,6 +42,6 @@ features_grid:
 training_setup:
   learning_rate: 0.1
   n_epochs: 500
-  scheduler_milestones: "350, 450, 480"
+  scheduler_milestones: "350,450,480"
   scheduler_gamma: 0.1
   batch_size: 512

@@ -26,12 +26,12 @@ stages:
       cmd: python -m stages.compute_features
         ${item.backbone}
         ${item.dataset}
-        ${models_dir}/${item.backbone}_${item.dataset}_${item.training}.tar
+        ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
         --split ${item.split}
-        &> ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_${item.training}.out
+        &> ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_classic.out
       deps:
         - stages/compute_features.py
-        - ${models_dir}/${item.backbone}_${item.dataset}_${item.training}.tar
+        - ${models_dir}/${item.backbone}_${item.dataset}_classic.tar
       outs:
-        - ${features_dir}/${item.dataset}/${item.split}/${item.backbone}_${item.dataset}_${item.training}.pickle
-        - ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_${item.training}.out
+        - ${features_dir}/${item.dataset}/${item.split}/${item.backbone}_${item.dataset}_classic.pickle
+        - ${logs_dir}/compute_features_${item.dataset}_${item.split}_${item.backbone}_classic.out

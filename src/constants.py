@@ -3,6 +3,7 @@ from pathlib import Path
 from easyfsl.methods import PrototypicalNetworks
 from torchvision import transforms
 
+from src.other_resnet import their_res12
 from src.resnet import resnet12, resnet18, resnet34, resnet12imagenet, resnet18imagenet
 
 # Data
@@ -28,6 +29,7 @@ BACKBONES = {
     "resnet34": resnet34,
     "resnet12i": resnet12imagenet,
     "resnet18i": resnet18imagenet,
+    "their_res12": their_res12,
 }
 FEW_SHOT_METHODS = {
     "protonet": PrototypicalNetworks,

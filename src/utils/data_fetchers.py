@@ -17,6 +17,7 @@ from src.constants import (
     MINI_IMAGENET_SPECS_DIR,
 )
 from src.datasets import FewShotCIFAR100, MiniImageNet, FeaturesDataset
+from src.datasets.tiered_imagenet import TieredImageNet
 from src.open_query_sampler import OpenQuerySampler
 
 
@@ -57,15 +58,29 @@ def get_mini_imagenet_set(split):
     )
 
 
+def get_tiered_imagenet_set(split):
+    return TieredImageNet(
+        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}.json",
+        image_size=84,
+        training=False,
+    )
+
+
+def get_dataset(dataset_name, split):
+    if dataset_name == "cifar":
+        return get_cifar_set(split)
+    elif dataset_name == "mini_imagenet":
+        return get_mini_imagenet_set(split)
+    elif dataset_name == "tiered_imagenet":
+        return get_tiered_imagenet_set(split)
+    else:
+        raise NotImplementedError("I don't know this dataset.")
+
+
 def get_task_loader(
     dataset_name, n_way, n_shot, n_query, n_tasks, split="test", n_workers=12
 ):
-    if dataset_name == "cifar":
-        dataset = get_cifar_set(split)
-    elif dataset_name == "mini_imagenet":
-        dataset = get_mini_imagenet_set(split)
-    else:
-        raise NotImplementedError("I don't know this dataset.")
+    dataset = get_dataset(dataset_name, split)
 
     sampler = OpenQuerySampler(
         dataset=dataset,
@@ -78,15 +93,10 @@ def get_task_loader(
 
 
 def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=12):
-    if dataset_name == "cifar":
-        train_set = get_cifar_set(split)
-    elif dataset_name == "mini_imagenet":
-        train_set = get_mini_imagenet_set(split)
-    else:
-        raise NotImplementedError("I don't know this dataset.")
+    dataset = get_dataset(dataset_name, split)
 
     return DataLoader(
-        train_set,
+        dataset,
         batch_size=batch_size,
         num_workers=n_workers,
         pin_memory=True,

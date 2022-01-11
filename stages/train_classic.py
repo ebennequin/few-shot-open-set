@@ -24,6 +24,7 @@ from src.constants import (
     TIERED_IMAGENET_SPECS_DIR,
 )
 from src.datasets import FewShotCIFAR100, MiniImageNet
+from src.datasets.tiered_imagenet import TieredImageNet
 from src.utils.utils import set_random_seed
 
 
@@ -108,9 +109,9 @@ def get_dataset(dataset_name: str) -> Dataset:
             training=True,
         )
     elif dataset_name == "tiered_imagenet":
-        return EasySet(
+        return TieredImageNet(
             specs_file=TIERED_IMAGENET_SPECS_DIR / "train_val.json",
-            image_size=224,
+            image_size=84,
             training=True,
         )
     else:

@@ -9,7 +9,7 @@ from torchvision.datasets import VisionDataset
 from torchvision import transforms
 from tqdm import tqdm
 
-NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+from src.constants import NORMALIZE
 
 
 class MiniImageNet(VisionDataset):
@@ -22,25 +22,30 @@ class MiniImageNet(VisionDataset):
         training: bool = False,
     ):
 
+        # Transformation to do before loading the dataset in RAM
         self.loading_transform = transforms.Compose(
             [
-                transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
+                transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
                 transforms.ToTensor(),
                 NORMALIZE,
             ]
         )
 
+        # Transformation to operate on the fly
         transform = (
             transforms.Compose(
                 [
                     transforms.RandomResizedCrop(image_size),
+                    transforms.ColorJitter(
+                        brightness=0.4, contrast=0.4, saturation=0.4
+                    ),
                     transforms.RandomHorizontalFlip(),
                 ]
             )
             if training
             else transforms.Compose(
                 [
-                    transforms.Resize([image_size, image_size]),
+                    transforms.CenterCrop(image_size),
                 ]
             )
         )

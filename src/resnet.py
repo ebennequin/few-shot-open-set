@@ -27,6 +27,7 @@ class ResNet(nn.Module):
         num_classes=1000,
         zero_init_residual=False,
         use_fc=False,
+        imagenet_setup=False,
     ):
         super(ResNet, self).__init__()
         if widths is None:
@@ -35,8 +36,12 @@ class ResNet(nn.Module):
         self.inplanes = 64
         self.use_fc = use_fc
 
-        self.conv1 = nn.Conv2d(
-            3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False
+        self.conv1 = (
+            nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=1, bias=False)
+            if imagenet_setup
+            else nn.Conv2d(
+                3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False
+            )
         )
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
@@ -46,8 +51,8 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, widths[3], layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        if self.use_fc:
-            self.fc = nn.Linear(widths[3] * block.expansion, num_classes)
+        # Only used when self.use_fc is True
+        self.fc = nn.Linear(self.inplanes, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -82,7 +87,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, use_fc=False):
+    def forward(self, x):
         features = torch.flatten(
             self.avgpool(
                 self.layer4(
@@ -94,8 +99,8 @@ class ResNet(nn.Module):
             1,
         )
 
-        if use_fc:
-            return self.fc(x)
+        if self.use_fc:
+            return self.fc(features)
 
         return features
 
@@ -108,7 +113,6 @@ def resnet10(**kwargs):
 
 def resnet12(**kwargs):
     """Constructs a ResNet-12 model."""
-    print("\n>> Using custom ResNet12 architecture")
     model = ResNet(BasicBlock, [1, 1, 2, 1], widths=[64, 160, 320, 640], **kwargs)
     return model
 
@@ -140,4 +144,22 @@ def resnet101(**kwargs):
 def resnet152(**kwargs):
     """Constructs a ResNet-152 model."""
     model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
+    return model
+
+
+def resnet12imagenet(**kwargs):
+    """Constructs a ResNet-12 model with a bottleneck at the beginning."""
+    model = ResNet(
+        BasicBlock,
+        [1, 1, 2, 1],
+        widths=[64, 160, 320, 640],
+        imagenet_setup=True,
+        **kwargs
+    )
+    return model
+
+
+def resnet18imagenet(**kwargs):
+    """Constructs a ResNet-18 model with a bottleneck at the beginning."""
+    model = ResNet(BasicBlock, [2, 2, 2, 2], imagenet_setup=True, **kwargs)
     return model

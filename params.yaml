@@ -2,3 +2,46 @@ models_dir: data/models
 features_dir: data/features
 tb_logs_dir: data/tb_logs
 logs_dir: data/logs
+
+model_grid:
+  - backbone: resnet18
+    dataset: mini_imagenet
+  - backbone: resnet12
+    dataset: mini_imagenet
+  - backbone: resnet18
+    dataset: tiered_imagenet
+  - backbone: resnet12
+    dataset: tiered_imagenet
+
+features_grid:
+  - backbone: resnet18
+    dataset: mini_imagenet
+    split: train
+  - backbone: resnet12
+    dataset: mini_imagenet
+    split: train
+  - backbone: resnet18
+    dataset: tiered_imagenet
+    split: train
+  - backbone: resnet12
+    dataset: tiered_imagenet
+    split: train
+  - backbone: resnet18
+    dataset: mini_imagenet
+    split: test
+  - backbone: resnet12
+    dataset: mini_imagenet
+    split: test
+  - backbone: resnet18
+    dataset: tiered_imagenet
+    split: test
+  - backbone: resnet12
+    dataset: tiered_imagenet
+    split: test
+
+training_setup:
+  learning_rate: 0.1
+  n_epochs: 500
+  scheduler_milestones: "350,450,480"
+  scheduler_gamma: 0.1
+  batch_size: 512

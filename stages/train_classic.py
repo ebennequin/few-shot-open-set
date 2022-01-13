@@ -1,4 +1,3 @@
-from math import floor
 from pathlib import Path
 from statistics import mean
 
@@ -7,23 +6,21 @@ import torch
 from torch import nn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import MultiStepLR
-from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 import typer
-from torchvision.datasets import VisionDataset
 from tqdm import tqdm
 
 from src.constants import (
-    CIFAR_SPECS_DIR,
     TRAINED_MODELS_DIR,
     TB_LOGS_DIR,
     BACKBONES,
-    CIFAR_ROOT_DIR,
-    MINI_IMAGENET_ROOT_DIR,
-    MINI_IMAGENET_SPECS_DIR,
 )
-from src.datasets import FewShotCIFAR100, MiniImageNet
-from src.utils import set_random_seed
+from src.few_shot_methods import SimpleShot
+from src.utils.data_fetchers import (
+    get_classic_loader,
+    get_closed_task_loader,
+)
+from src.utils.utils import set_random_seed
 
 
 def main(
@@ -31,7 +28,10 @@ def main(
     dataset: str,
     output_model: Path = TRAINED_MODELS_DIR / "trained_classic.tar",
     n_epochs: int = 200,
+    scheduler_milestones: str = "160",
+    scheduler_gamma: float = 0.1,
     batch_size: int = 512,
+    learning_rate: float = 0.1,
     tb_log_dir: Path = TB_LOGS_DIR,
     random_seed: int = 0,
     device: str = "cuda",
@@ -43,81 +43,71 @@ def main(
         dataset: what dataset to train the model on.
         output_model: where to dump the archive containing trained model weights
         n_epochs: number of training epochs
+        scheduler_milestones: all milestones for optimizer scheduler, must be a string of
+            comma-separated integers
+        scheduler_gamma: discount factor for optimizer scheduler
         batch_size: the batch size
+        learning_rate: optimizer's learning rate
         tb_log_dir: where to dump tensorboard event files
         random_seed: defined random seed, for reproducibility
         device: what device to train the model on
     """
-    n_workers = 12
+    n_workers = 20
 
     set_random_seed(random_seed)
 
     logger.info("Fetching training data...")
-    whole_set = get_dataset(dataset)
+    train_loader = get_classic_loader(
+        dataset_name=dataset,
+        split="train",
+        training=True,
+        batch_size=batch_size,
+        n_workers=n_workers,
+    )
 
-    train_loader, val_loader = get_loaders(
-        whole_set, batch_size, n_workers, random_seed
+    val_loader = get_closed_task_loader(
+        dataset_name=dataset,
+        n_way=5,
+        n_shot=5,
+        n_query=10,
+        n_tasks=500,
+        split="val",
+        training=False,
+        n_workers=n_workers,
     )
 
     logger.info("Building model...")
-    model = BACKBONES[backbone](num_classes=len(set(whole_set.labels))).to(device)
+    model = BACKBONES[backbone](
+        num_classes=len(set(train_loader.dataset.labels)), use_fc=True
+    ).to(device)
     model.device = device
 
     logger.info("Starting training...")
-    model = train(model, n_epochs, train_loader, val_loader, tb_log_dir)
+    optimizer = SGD(
+        model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
+    )
+    train_scheduler = MultiStepLR(
+        optimizer,
+        milestones=list(map(int, scheduler_milestones.split(","))),
+        gamma=scheduler_gamma,
+    )
+    model = train(
+        model=model,
+        n_epochs=n_epochs,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        optimizer=optimizer,
+        scheduler=train_scheduler,
+        tb_log_dir=tb_log_dir,
+    )
 
     torch.save(model.state_dict(prefix="backbone."), output_model)
     logger.info(f"Trained model weights dumped at {output_model}")
 
 
-def get_dataset(dataset_name: str) -> VisionDataset:
-    if dataset_name == "cifar":
-        return FewShotCIFAR100(
-            root=CIFAR_ROOT_DIR,
-            specs_file=CIFAR_SPECS_DIR / "train-val.json",
-            training=True,
-        )
-    elif dataset_name == "mini_imagenet":
-        return MiniImageNet(
-            root=MINI_IMAGENET_ROOT_DIR,
-            specs_file=MINI_IMAGENET_SPECS_DIR / "train_val_images.csv",
-            training=True,
-        )
-    else:
-        raise NotImplementedError("I don't know this dataset.")
-
-
-def get_loaders(whole_set, batch_size, n_workers, random_seed):
-    train_set_size = floor(
-        0.87 * len(whole_set)
-    )  # Same factor as in the few-shot setting
-    train_set, val_set = random_split(
-        whole_set,
-        [train_set_size, len(whole_set) - train_set_size],
-        generator=torch.Generator().manual_seed(random_seed),
-    )
-
-    train_loader = DataLoader(
-        train_set,
-        batch_size=batch_size,
-        num_workers=n_workers,
-        pin_memory=True,
-    )
-    val_loader = DataLoader(
-        val_set,
-        batch_size=batch_size,
-        num_workers=n_workers,
-        pin_memory=True,
-    )
-
-    return train_loader, val_loader
-
-
-def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
+def train(model, n_epochs, train_loader, val_loader, optimizer, scheduler, tb_log_dir):
     tb_log_dir.mkdir(parents=True, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=str(tb_log_dir))
-    optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
     loss_fn = nn.CrossEntropyLoss()
 
     for epoch in range(n_epochs):
@@ -130,7 +120,7 @@ def train(model, n_epochs, train_loader, val_loader, tb_log_dir):
             tb_writer.add_scalar("Train/loss", average_loss, epoch)
             tb_writer.add_scalar("Val/acc", validation_accuracy, epoch)
 
-        train_scheduler.step(epoch)
+        scheduler.step(epoch)
 
     return model
 
@@ -156,15 +146,30 @@ def training_epoch(model, train_loader, optimizer, loss_fn, epoch):
 
 
 def validate_model(model, val_loader):
+    model.use_fc = False
+    few_shot_model = SimpleShot(normalize_features=True)
     model.eval()
     predictions_are_accurate = []
-    for images, labels in val_loader:
-        predictions_are_accurate += torch.max(model(images.to(model.device)), 1)[
+    for (
+        support_images,
+        support_labels,
+        query_images,
+        query_labels,
+        _,
+    ) in val_loader:
+        support_features = model(support_images)
+        query_features = model(query_images)
+        _, query_soft_predictions = few_shot_model(
+            support_features, query_features, support_labels
+        )
+        predictions_are_accurate += torch.max(query_soft_predictions, 1)[
             1
-        ] == labels.to(model.device)
+        ] == query_labels.to(model.device)
     average_accuracy = sum(predictions_are_accurate) / len(predictions_are_accurate)
 
     print(f"Validation accuracy: {(100 * average_accuracy):.2f}%")
+
+    model.use_fc = True
 
     return average_accuracy
 

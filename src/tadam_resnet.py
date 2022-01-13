@@ -1,11 +1,11 @@
+"""
+From https://github.com/Sha-Lab/FEAT
+"""
+
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from torch.distributions import Bernoulli
-
-# This ResNet network was designed following the practice of the following papers:
-# TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
-# A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -258,7 +258,7 @@ class ResNet(nn.Module):
         return x
 
 
-def their_res12(keep_prob=1.0, avg_pool=False, **kwargs):
+def tadam_res12(keep_prob=1.0, avg_pool=False, **kwargs):
     """Constructs a ResNet-12 model."""
     model = ResNet(BasicBlock, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
     return model

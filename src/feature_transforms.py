@@ -1,108 +1,217 @@
+from abc import abstractmethod
+from typing import Tuple, List
+
 import torch.nn.functional as F
-from torch import Tensor
+from torch import Tensor, nn
 import torch
 
 
-def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
-    """
-    feat: Tensor shape [N, hidden_dim, *]
-    """
-    return feat_s, feat_q
+class AbstractFeatureTransformer(nn.Module):
+    @abstractmethod
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        raise NotImplementedError
 
 
-def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class Normalize(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, *]
+    Inductive
+    features: Tensor shape [N, hidden_dim, *]
     """
-    return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
+
+    def __init__(self, norm: float = 2.0):
+        super().__init__()
+        self.norm = norm
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        return F.normalize(support_features, dim=1, p=self.norm), F.normalize(
+            query_features, dim=1, p=self.norm
+        )
 
 
-def max_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class MaximumNormalize(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, *]
+    Inductive
+    Compute the maximum values accross support instances for each feature,
+    and divide both support and query features by this tensor.
+    features: Tensor shape [N, hidden_dim, *]
     """
-    norm_term = feat_s.max(dim=0, keepdim=True).values
-    return feat_s / norm_term, feat_q / norm_term
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        norm_term = support_features.max(dim=0, keepdim=True).values
+        return support_features / norm_term, query_features / norm_term
 
 
-def layer_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class LayerNorm(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, h, w]
+    Inductive
+    Normalize each instance in both support and query sets independently.
+    Ensures that the features for an instance have mean 0 and variance 1.
+    features: Tensor shape [N, hidden_dim, h, w]
     """
-    dims = (1, 2, 3)
-    mean_s = torch.mean(feat_s, dim=dims, keepdim=True)
-    var_s = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
-    mean_q = torch.mean(feat_q, dim=dims, keepdim=True)
-    var_q = torch.var(feat_q, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean_s) / (var_s.sqrt() + 1e-10), (feat_q - mean_q) / (
-        var_q.sqrt() + 1e-10
-    )
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        dims = (1, 2, 3)
+        support_mean = torch.mean(support_features, dim=dims, keepdim=True)
+        support_variance = torch.var(
+            support_features, dim=dims, unbiased=False, keepdim=True
+        )
+        query_mean = torch.mean(query_features, dim=dims, keepdim=True)
+        query_variance = torch.var(
+            query_features, dim=dims, unbiased=False, keepdim=True
+        )
+        return (support_features - support_mean) / (support_variance.sqrt() + 1e-10), (
+            query_features - query_mean
+        ) / (query_variance.sqrt() + 1e-10)
 
 
-def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class Identity(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, h, w]
+    features: Tensor shape [N, hidden_dim, *]
     """
-    assert len(feat_s.size()) >= 4
-    dims = (0, 2, 3)
-    mean = torch.mean(feat_s, dim=dims, keepdim=True)
-    var = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (
-        var.sqrt() + 1e-10
-    )
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        return support_features, query_features
 
 
-def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class InductiveBatchNorm(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, h, w]
+    Inductive
+    From the support set, compute the mean and variance for each channel, and
+    normalize both support and query instance wrt. this mean and variance.
+    features: Tensor shape [N, hidden_dim, h, w]
     """
-    assert len(feat_s.size()) >= 4
-    dims = (2, 3)
-    mean_s = torch.mean(feat_s, dim=dims, keepdim=True)
-    var_s = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
-    mean_q = torch.mean(feat_q, dim=dims, keepdim=True)
-    var_q = torch.var(feat_q, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean_s) / (var_s.sqrt() + 1e-10), (feat_q - mean_q) / (
-        var_q.sqrt() + 1e-10
-    )
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        assert len(support_features.size()) >= 4
+        dims = (0, 2, 3)
+        mean = torch.mean(support_features, dim=dims, keepdim=True)
+        var = torch.var(support_features, dim=dims, unbiased=False, keepdim=True)
+        return (support_features - mean) / (var.sqrt() + 1e-10), (
+            query_features - mean
+        ) / (var.sqrt() + 1e-10)
 
 
-def transductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class InstanceNorm(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, h, w]
+    Inductive. Operate on the support and query sets independently.
+    For each channel, instance, compute it's mean and variance across its width and height.
+    Normalize the feature vector for this instance wrt. to this mean and variance.
+    features: Tensor shape [N, hidden_dim, h, w]
     """
-    if len(feat_s.size()) == 4:
-        dims = (0, 2, 3)  # we normalize over the batch, as well as spatial dims
-    elif len(feat_s.size()) == 2:
-        dims = (0,)
-    else:
-        raise ValueError("Problem with size of features.")
-    cat_feat = torch.cat([feat_s, feat_q], 0)
-    mean = torch.mean(cat_feat, dim=dims, keepdim=True)
-    var = torch.var(cat_feat, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (
-        var.sqrt() + 1e-10
-    )
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        assert len(support_features.size()) >= 4
+        dims = (2, 3)
+        support_mean = torch.mean(support_features, dim=dims, keepdim=True)
+        support_variance = torch.var(
+            support_features, dim=dims, unbiased=False, keepdim=True
+        )
+        query_mean = torch.mean(query_features, dim=dims, keepdim=True)
+        query_variance = torch.var(
+            query_features, dim=dims, unbiased=False, keepdim=True
+        )
+        return (support_features - support_mean) / (support_variance.sqrt() + 1e-10), (
+            query_features - query_mean
+        ) / (query_variance.sqrt() + 1e-10)
 
 
-def power(feat_s: Tensor, feat_q: Tensor, **kwargs):
+class TransductiveBatchNorm(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, *]
+    Transductive
+    From all instances, compute the mean and variance for each channel, and
+    normalize both support and query instance wrt. this mean and variance.
+    features: Tensor shape [N, hidden_dim, h, w]
     """
-    beta = 0.5
-    feat_s = torch.pow(feat_s + 1e-6, beta)
-    feat_q = torch.pow(feat_q + 1e-6, beta)
 
-    return feat_s, feat_q
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        if len(support_features.size()) == 4:
+            dims = (0, 2, 3)  # we normalize over the batch, as well as spatial dims
+        elif len(support_features.size()) == 2:
+            dims = (0,)
+        else:
+            raise ValueError("Problem with size of features.")
+        all_features = torch.cat([support_features, query_features], 0)
+        mean = torch.mean(all_features, dim=dims, keepdim=True)
+        var = torch.var(all_features, dim=dims, unbiased=False, keepdim=True)
+        return (support_features - mean) / (var.sqrt() + 1e-10), (
+            query_features - mean
+        ) / (var.sqrt() + 1e-10)
 
 
-def base_centering(
-    feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs
-):
+class PowerTransform(AbstractFeatureTransformer):
     """
-    feat: Tensor shape [N, hidden_dim, *]
+    Inductive
+    Elevate support and query features to power beta.
+    features: Tensor shape [N, hidden_dim, *]
     """
-    # print(feat_s.size(), average_train_features.size())
-    if len(average_train_features.size()) != len(feat_s.size()):
-        average_train_features = average_train_features.squeeze(-1).squeeze(-1)
-    return (feat_s - average_train_features), (feat_q - average_train_features)
+
+    def __init__(self, beta: float = 0.5):
+        super().__init__()
+        self.beta = beta
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+
+        return torch.pow(support_features + 1e-6, self.beta), torch.pow(
+            query_features + 1e-6, self.beta
+        )
+
+
+class BaseSetCentering(AbstractFeatureTransformer):
+    """
+    Inductive
+    Center support and query features on the average train features.
+    features: Tensor shape [N, hidden_dim, *]
+    """
+
+    def __init__(self, average_train_features: Tensor):
+        super().__init__()
+        self.average_train_features = average_train_features
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        if len(self.average_train_features.size()) != len(support_features.size()):
+            self.average_train_features = self.average_train_features.squeeze(
+                -1
+            ).squeeze(-1)
+        return (support_features - self.average_train_features), (
+            query_features - self.average_train_features
+        )
+
+
+class SequentialFeatureTransformer(AbstractFeatureTransformer):
+    """
+    To apply several feature transformers sequentially.
+    """
+
+    def __init__(self, feature_transformers: List[AbstractFeatureTransformer]):
+        super().__init__()
+        self.feature_transformers = feature_transformers
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        for feature_transformer in self.feature_transformers:
+            support_features, query_features = feature_transformer(
+                support_features, query_features
+            )
+
+        return support_features, query_features

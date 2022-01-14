@@ -10,6 +10,11 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve
 from stqdm import stqdm
 import tqdm
 
+from src.feature_transforms import (
+    ALL_FEATURE_TRANSFORMERS,
+    SequentialFeatureTransformer,
+)
+
 tqdm.tqdm = functools.partial(stqdm)
 from tqdm import tqdm
 
@@ -82,6 +87,17 @@ def select_class(class_list, name):
         class_dict.keys(),
     )
     return class_dict[class_str]
+
+
+def get_transformers():
+    transformers_dict = {x.__name__: x for x in ALL_FEATURE_TRANSFORMERS}
+    selected_transformers = st.multiselect(
+        "Feature transformers", transformers_dict.keys()
+    )
+    instantiated_transformers = []
+    for transformer in selected_transformers:
+        instantiated_transformers.append(transformers_dict[transformer](**get_args(transformers_dict[transformer])))
+    return SequentialFeatureTransformer(instantiated_transformers)
 
 
 def get_args(class_, extra=None):
@@ -160,6 +176,7 @@ def get_detector():
     detector_args = get_args(
         outlier_detector_class, extra=["few_shot_classifier", "base_features"]
     )
+    detector_args["prepool_feature_transformer"] = get_transformers()
     if "few_shot_classifier" in detector_args.keys():
         st.header("Few-Shot Classifier")
         few_shot_classifier_class = select_class(

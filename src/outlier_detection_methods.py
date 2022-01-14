@@ -7,9 +7,10 @@ from pyod.models.knn import KNN
 from pyod.models.lof import LocalOutlierFactor
 import torch
 from sklearn.svm import SVC
-from torch import nn
+from torch import nn, Tensor
 from torch.nn import functional as F
 
+from src.feature_transforms import AbstractFeatureTransformer, IdentityTransformer
 from src.few_shot_methods import AbstractFewShotMethod
 from src.utils.outlier_detectors import (
     get_pseudo_renyi_entropy,
@@ -19,18 +20,75 @@ from src.utils.outlier_detectors import (
 
 
 class AbstractOutlierDetector(nn.Module):
+    def __init__(
+        self,
+        prepool_feature_transformer: AbstractFeatureTransformer = None,
+        postpool_feature_transformer: AbstractFeatureTransformer = None,
+    ):
+        super().__init__()
+        self.prepool_feature_transformer = (
+            prepool_feature_transformer
+            if prepool_feature_transformer
+            else IdentityTransformer()
+        )
+        self.postpool_feature_transformer = (
+            postpool_feature_transformer
+            if postpool_feature_transformer
+            else IdentityTransformer()
+        )
+
     def forward(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
-        raise NotImplementedError
+        support_features, query_features = self.transform_features(
+            support_features, query_features
+        )
+        return self.detect_outliers(
+            support_features, support_labels, query_features, query_labels
+        )
+
+    def detect_outliers(
+        self, support_features, support_labels, query_features, query_labels
+    ) -> torch.Tensor:
+        raise NotImplementedError(
+            "All outlier detectors must implement detect_outliers()."
+        )
+
+    def transform_features(self, support_features: Tensor, query_features: Tensor):
+        """
+        Performs an (optional) normalization of feature maps or feature vectors,
+        then average pooling to obtain feature vectors in all cases,
+        then another (optional) normalization.
+        """
+
+        # Pre-pooling transforms
+        support_features, query_features = self.prepool_feature_transformer(
+            support_features, query_features
+        )
+
+        # Average pooling
+        if len(support_features.shape) > 2:
+            support_features = torch.flatten(
+                F.adaptive_avg_pool2d(support_features, (1, 1)), start_dim=1
+            )
+            query_features = torch.flatten(
+                F.adaptive_avg_pool2d(query_features, (1, 1)), start_dim=1
+            )
+
+        # Post-pooling transforms
+        support_features, query_features = self.postpool_feature_transformer(
+            support_features, query_features
+        )
+
+        return support_features, query_features
 
 
 class RenyiEntropyOutlierDetector(AbstractOutlierDetector):
-    def __init__(self, few_shot_classifier: AbstractFewShotMethod):
-        super().__init__()
+    def __init__(self, few_shot_classifier: AbstractFewShotMethod, **kwargs):
+        super().__init__(**kwargs)
         self.few_shot_classifier = few_shot_classifier
 
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         _, query_predictions = self.few_shot_classifier(
@@ -47,7 +105,7 @@ class ShannonEntropyOutlierDetector(AbstractOutlierDetector):
         super().__init__()
         self.few_shot_classifier = few_shot_classifier
 
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         _, query_predictions = self.few_shot_classifier(
@@ -73,7 +131,7 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
         self.method = method
         self.k = k
 
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         support_predictions, query_predictions = self.few_shot_classifier(
@@ -92,19 +150,14 @@ class RenyiDivergenceOutlierDetector(AbstractOutlierDetector):
 
 
 class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
-    def __init__(self, normalize_features: bool = True):
-        super().__init__()
-        self.normalize_features = normalize_features
-
     def initialize_detector(self):
-        raise NotImplementedError
+        raise NotImplementedError(
+            "All outlier detectors on features must implement initialize_detectors."
+        )
 
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
-        if self.normalize_features:
-            support_features = F.normalize(support_features, dim=-1)
-            query_features = F.normalize(query_features, dim=-1)
         detector = self.initialize_detector()
         detector.fit(support_features)
         return torch.from_numpy(1 - detector.decision_function(query_features))
@@ -113,11 +166,11 @@ class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
 class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
     def __init__(
         self,
-        normalize_features: bool = True,
         n_neighbors: int = 3,
         metric: str = "euclidean",
+        **kwargs,
     ):
-        super().__init__(normalize_features)
+        super().__init__(**kwargs)
         self.n_neighbors = n_neighbors
         self.metric = metric
 
@@ -128,8 +181,8 @@ class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
-    def __init__(self, normalize_features: bool = True, n_estimators: int = 100):
-        super().__init__(normalize_features)
+    def __init__(self, n_estimators: int = 100, **kwargs):
+        super().__init__(**kwargs)
         self.n_estimators = n_estimators
 
     def initialize_detector(self):
@@ -139,11 +192,11 @@ class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
 class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
     def __init__(
         self,
-        normalize_features: bool = True,
         n_neighbors: int = 3,
         method: str = "mean",
+        **kwargs,
     ):
-        super().__init__(normalize_features)
+        super().__init__(**kwargs)
         self.n_neighbors = n_neighbors
         self.method = method
 
@@ -152,29 +205,30 @@ class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class SupervisedOutlierDetector(AbstractOutlierDetectorOnFeatures):
+    """
+    Deprecated.
+    """
+
     def __init__(
         self,
-        normalize_features: bool = True,
         predict_class_by_class: bool = True,
         base_features: Dict = None,
+        **kwargs,
     ):
-        super().__init__(normalize_features)
+        super().__init__(**kwargs)
         if base_features is None:
             raise ValueError("Missing base set features")
         self.base_features = torch.from_numpy(
             np.concatenate(list(base_features.values()))
         )
-        if normalize_features:
-            self.base_features = F.normalize(self.base_features, dim=-1)
+        # Deprecated because we now have several possible normalization methods
+        # if normalize_features:
+        #     self.base_features = F.normalize(self.base_features, dim=-1)
         self.predict_class_by_class = predict_class_by_class
 
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
-        if self.normalize_features:
-            support_features = F.normalize(support_features, dim=-1, p=2)
-            query_features = F.normalize(query_features, dim=-1, p=2)
-
         if self.predict_class_by_class:
             predictions = torch.zeros((len(query_labels), 5))
             for i in range(5):
@@ -208,13 +262,9 @@ class SupervisedOutlierDetector(AbstractOutlierDetectorOnFeatures):
 
 
 class KNNWithDispatchedClusters(KNNOutlierDetector):
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
-
-        support_features = F.normalize(support_features, dim=-1)
-        query_features = F.normalize(query_features, dim=-1)
-
         dispatcher = nn.Linear(
             support_features.shape[1], support_features.shape[1], bias=False
         )
@@ -285,7 +335,7 @@ class KNNWithDispatchedClusters(KNNOutlierDetector):
 
 
 class NearestNeighborRatio(AbstractOutlierDetectorOnFeatures):
-    def forward(
+    def detect_outliers(
         self, support_features, support_labels, query_features, query_labels
     ) -> torch.Tensor:
         support_features_by_class = support_features.view(

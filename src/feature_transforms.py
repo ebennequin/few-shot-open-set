@@ -11,7 +11,20 @@ class AbstractFeatureTransformer(nn.Module):
     def forward(
         self, support_features: Tensor, query_features: Tensor
     ) -> Tuple[Tensor, Tensor]:
-        raise NotImplementedError
+        raise NotImplementedError(
+            "All feature transformers must implement a forward method."
+        )
+
+
+class IdentityTransformer(AbstractFeatureTransformer):
+    """
+    features: Tensor shape [N, hidden_dim, *]
+    """
+
+    def forward(
+        self, support_features: Tensor, query_features: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        return support_features, query_features
 
 
 class Normalize(AbstractFeatureTransformer):
@@ -70,17 +83,6 @@ class LayerNorm(AbstractFeatureTransformer):
         return (support_features - support_mean) / (support_variance.sqrt() + 1e-10), (
             query_features - query_mean
         ) / (query_variance.sqrt() + 1e-10)
-
-
-class Identity(AbstractFeatureTransformer):
-    """
-    features: Tensor shape [N, hidden_dim, *]
-    """
-
-    def forward(
-        self, support_features: Tensor, query_features: Tensor
-    ) -> Tuple[Tensor, Tensor]:
-        return support_features, query_features
 
 
 class InductiveBatchNorm(AbstractFeatureTransformer):
@@ -215,3 +217,16 @@ class SequentialFeatureTransformer(AbstractFeatureTransformer):
             )
 
         return support_features, query_features
+
+
+ALL_FEATURE_TRANSFORMERS = [
+    IdentityTransformer,
+    Normalize,
+    MaximumNormalize,
+    LayerNorm,
+    InductiveBatchNorm,
+    InstanceNorm,
+    TransductiveBatchNorm,
+    PowerTransform,
+    BaseSetCentering,
+]

@@ -22,25 +22,30 @@ class MiniImageNet(VisionDataset):
         training: bool = False,
     ):
 
-        self.loading_transform = transforms.Compose(
-            [
-                transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
-                transforms.ToTensor(),
-                NORMALIZE,
-            ]
-        )
+        # self.loading_transform = transforms.Compose(
+        #     [
+        #         transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
+        #         transforms.ToTensor(),
+        #         NORMALIZE,
+        #     ]
+        # )
 
         transform = (
             transforms.Compose(
                 [
                     transforms.RandomResizedCrop(image_size),
                     transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    NORMALIZE,
                 ]
             )
             if training
             else transforms.Compose(
                 [
-                    transforms.Resize([image_size, image_size]),
+                    transforms.Resize(int(image_size*256/224)),
+                    transforms.CenterCrop(image_size),
+                    transforms.ToTensor(),
+                    NORMALIZE,
                 ]
             )
         )
@@ -60,12 +65,11 @@ class MiniImageNet(VisionDataset):
         #         lambda row: root / row["image_name"], axis=1
         #     )
         # )
-        self.images = torch.stack(
-            [
-                self.load_image_as_tensor(image_path)
+        self.images = \
+            torch.stack([
+                self.load_image(image_path)
                 for image_path in tqdm(data_df.image_paths)
-            ]
-        )
+            ], 0)
 
         self.class_list = data_df.class_name.unique()
         self.id_to_class = dict(enumerate(self.class_list))
@@ -78,7 +82,7 @@ class MiniImageNet(VisionDataset):
     def __getitem__(self, item):
 
         img, label = (
-            self.transform(self.images[item]),
+            self.images[item],
             self.labels[item],
         )
 
@@ -87,5 +91,5 @@ class MiniImageNet(VisionDataset):
 
         return img, label
 
-    def load_image_as_tensor(self, filename):
-        return self.loading_transform(Image.open(filename).convert("RGB"))
+    def load_image(self, filename):
+        return self.transform(Image.open(filename).convert("RGB"))

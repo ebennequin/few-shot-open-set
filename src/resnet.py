@@ -9,7 +9,6 @@ from torchvision.models.resnet import Bottleneck, BasicBlock, conv1x1
 
 __all__ = [
     "resnet10",
-    "resnet12",
     "resnet18",
     "resnet34",
     "resnet50",
@@ -100,13 +99,6 @@ class ResNet(nn.Module):
 def resnet10(**kwargs):
     """Constructs a ResNet-10 model."""
     model = ResNet(BasicBlock, [1, 1, 1, 1], **kwargs)
-    return model
-
-
-def resnet12(**kwargs):
-    """Constructs a ResNet-12 model."""
-    print("\n>> Using custom ResNet12 architecture")
-    model = ResNet(BasicBlock, [1, 1, 2, 1], widths=[64, 160, 320, 640], **kwargs)
     return model
 
 

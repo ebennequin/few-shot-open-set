@@ -2,7 +2,8 @@ from pathlib import Path
 
 from easyfsl.methods import PrototypicalNetworks
 
-from src.resnet import resnet12, resnet18, resnet34
+from src.resnet import resnet18, resnet34
+from src.custom_resnet import resnet12
 
 # Data
 CIFAR_SPECS_DIR = Path("data") / "cifar" / "specs"

@@ -42,10 +42,14 @@ def main(
     state_dict = torch.load(weights, map_location=device)
     if "state_dict" in state_dict:
         state_dict = strip_prefix(state_dict["state_dict"], "module.")
+    elif "params" in state_dict:
+        state_dict = strip_prefix(state_dict["params"], "encoder.")
     else:
         state_dict = strip_prefix(state_dict, "backbone.")
 
-    feature_extractor.load_state_dict(state_dict, strict=False)
+    missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
+    print(f"Missing keys {missing_keys}")
+    print(f"Unexpected keys {unexpected}")
     feature_extractor.eval()
 
     logger.info("Fetching data...")
@@ -67,7 +71,10 @@ def main(
         )
     output_file.parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, "wb") as stream:
-        pickle.dump(packed_features, stream, protocol=pickle.HIGHEST_PROTOCOL)
+        if split == 'test' or split == 'val':
+            pickle.dump(packed_features, stream, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            pickle.dump(features.mean(axis=0), stream, protocol=pickle.HIGHEST_PROTOCOL)
     logger.info(f"Dumped features in {output_file}")
 
 

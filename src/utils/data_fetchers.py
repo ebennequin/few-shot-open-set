@@ -112,25 +112,16 @@ def get_features_data_loader(
 def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, Dict, ndarray]:
     pickle_basename = f"{backbone}_{dataset}_{training_method}.pickle"
     features_path = Path("data/features") / dataset / "test" / pickle_basename
-    train_features_path = Path("data/features") / dataset / "train" / pickle_basename
+    avg_train_features_path = Path("data/features") / dataset / "train" / pickle_basename
 
     with open(features_path, "rb") as stream:
         features = pickle.load(stream)
 
     # We also load features from the train set to center query features on the average train set
     # feature vector
-    with open(train_features_path, "rb") as stream:
+    with open(avg_train_features_path, "rb") as stream:
         train_features = pickle.load(stream)
-        average_train_features = torch.cat(
-            [
-                torch.from_numpy(features_per_label)
-                for features_per_label in train_features.values()
-            ],
-            dim=0,
-        )
-    if len(average_train_features.size()) == 4: # This is a feature map, so we also average over spatial dims.
-        dims = (0, -2, -1)
-    else:
-        dims = (0,) # Already pooled features, we only average over sample dimension.
+        average_train_features = torch.from_numpy(train_features).unsqueeze(0)
+        dims = (-2, -1)
 
     return features, train_features, average_train_features.mean(dims, keepdim=True)

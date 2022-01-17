@@ -5,7 +5,7 @@ and infer various outlier detection methods en them.
 
 import argparse
 import logging
-from src.outlier_detection_methods import RenyiEntropyOutlierDetector, KNNOutlierDetector, IterativeKNNOutlierDetector
+from src.outlier_detection_methods import RenyiEntropyOutlierDetector, KNNOutlierDetector
 from src.utils.utils import (
     set_random_seed,
 )
@@ -96,6 +96,10 @@ def parse_args() -> argparse.Namespace:
         "--override",
     action='store_true',
     help='Whether to override results already present in the .csv out file.')
+    parser.add_argument(
+        "--streamlit",
+    action='store_true',
+    help='Whether to add streamlit.')
 
     args = parser.parse_args()
     return args
@@ -131,18 +135,13 @@ def main(args):
         outlier_detector = KNNOutlierDetector(
             few_shot_classifier=few_shot_classifier, n_neighbors=args.nn
         )
-    elif args.outlier_detector == 'iterative_knn':
-        outlier_detector = IterativeKNNOutlierDetector(
-            few_shot_classifier=few_shot_classifier, n_neighbors=args.nn
-        )
-
     outliers_df, acc = detect_outliers(
         outlier_detector, data_loader, args.n_way, args.n_query
     )
 
     # Saving results 
 
-    roc_auc, prec_at_90, rec_at_90 = show_all_metrics_and_plots(outliers_df, title=outlier_detector.__class__.__name__)
+    roc_auc, prec_at_90, rec_at_90 = show_all_metrics_and_plots(args, outliers_df, title=outlier_detector.__class__.__name__)
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
     metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4), 'prec@0.9': np.round(prec_at_90, 4), 'rec@90': np.round(rec_at_90, 4)}

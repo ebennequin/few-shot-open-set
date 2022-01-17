@@ -6,6 +6,7 @@ from pyod.models.iforest import IForest
 from pyod.models.knn import KNN
 from pyod.models.lof import LocalOutlierFactor
 import torch
+from torch import Tensor
 from sklearn.svm import SVC
 from torch import nn
 from torch.nn import functional as F
@@ -105,7 +106,7 @@ class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
         super().__init__()
         self.few_shot_classifier = few_shot_classifier
 
-    def initialize_detector(self):
+    def fit_detector(self, known: Tensor):
         raise NotImplementedError
 
     def forward(
@@ -117,8 +118,7 @@ class AbstractOutlierDetectorOnFeatures(AbstractOutlierDetector):
 
         # Doing OOD detection
 
-        detector = self.initialize_detector()
-        detector.fit(support_features)
+        detector = self.fit_detector(support_features)
         outlier_scores = torch.from_numpy(1 - detector.decision_function(query_features))
         
         # Obtaining predictions from few-shot classifier
@@ -139,7 +139,7 @@ class LOFOutlierDetector(AbstractOutlierDetectorOnFeatures):
         self.n_neighbors = n_neighbors
         self.metric = metric
 
-    def initialize_detector(self):
+    def fit_detector(self, known: Tensor):
         return LocalOutlierFactor(
             n_neighbors=self.n_neighbors, novelty=True, metric=self.metric
         )
@@ -150,7 +150,7 @@ class IForestOutlierDetector(AbstractOutlierDetectorOnFeatures):
         super().__init__(few_shot_classifier)
         self.n_estimators = n_estimators
 
-    def initialize_detector(self):
+    def fit_detector(self, known: Tensor):
         return IForest(n_estimators=self.n_estimators, n_jobs=-1)
 
 class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
@@ -164,10 +164,13 @@ class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
         self.n_neighbors = n_neighbors
         self.method = method
 
-    def initialize_detector(self):
-        return KNN(n_neighbors=self.n_neighbors, method=self.method, n_jobs=-1)
+    def fit_detector(self, known: Tensor):
+        detector = KNN(n_neighbors=self.n_neighbors, method=self.method, n_jobs=-1)
+        detector.fit(known)
+        return detector
 
-class IterativeKNNOutlierDetector(KNNOutlierDetector):
+
+class IterativeDetector(KNNOutlierDetector):
 
 
     def forward(
@@ -295,7 +298,7 @@ class KNNWithDispatchedClusters(KNNOutlierDetector):
         dispatched_support = dispatcher(support_features).detach()
         dispatched_queries = dispatcher(query_features).detach()
 
-        detector = self.initialize_detector()
+        detector = self.fit_detector()
         detector.fit(dispatched_support)
         return torch.from_numpy(1 - detector.decision_function(dispatched_queries))
 
@@ -359,7 +362,7 @@ class NearestNeighborRatio(AbstractOutlierDetectorOnFeatures):
 
         return top2_query_to_classwise_nn[:, 1] / top2_query_to_classwise_nn[:, 0] ** 2
 
-    def initialize_detector(self):
+    def fit_detector(self, known: Tensor):
         pass
 
 

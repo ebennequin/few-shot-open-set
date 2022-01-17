@@ -25,10 +25,10 @@ class SimpleShot(AbstractFewShotMethod):
         self.prototypes = compute_prototypes(support_features, support_labels)
 
         return (
-            self.get_logits_from_euclidean_distances_to_prototypes(
+            self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             ).softmax(-1),
-            self.get_logits_from_euclidean_distances_to_prototypes(
+            self.get_logits_from_cosine_distances_to_prototypes(
                 query_features
             ).softmax(-1),
         )

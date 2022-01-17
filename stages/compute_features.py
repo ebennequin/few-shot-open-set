@@ -41,11 +41,15 @@ def main(
         device: what device to train the model on
     """
     logger.info("Fetching data...")
-    data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
+    data_loader = get_classic_loader(
+        dataset, split=split, batch_size=batch_size, n_workers=20
+    )
 
     logger.info("Building model...")
     feature_extractor = BACKBONES[backbone](avg_pool=avg_pool).to(device)
-    feature_extractor.load_state_dict(strip_prefix(torch.load(weights), "backbone."), strict=False)
+    feature_extractor.load_state_dict(
+        strip_prefix(torch.load(weights), "backbone."), strict=False
+    )
     feature_extractor.eval()
 
     logger.info("Computing features...")

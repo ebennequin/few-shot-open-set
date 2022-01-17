@@ -45,7 +45,7 @@ def compute_features(
         all_features = []
         all_labels = []
         for images, labels in tqdm(loader, unit="batch"):
-            all_features.append(feature_extractor(images.to(device)).data)
+            all_features.append(feature_extractor(images.to(device)).data.cpu())
             all_labels.append(labels)
 
     return (

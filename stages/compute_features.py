@@ -23,7 +23,7 @@ def main(
     split: str = "test",
     output_file: Path = None,
     batch_size: int = 1024,
-    pool_features: bool = True,
+    avg_pool: bool = True,
     device: str = "cuda",
 ):
     """
@@ -36,13 +36,15 @@ def main(
         split: which split of the dataset to infer on
         output_file: where to dump the pickle containing the features
         batch_size: the batch size
+        avg_pool: whether to return, for each instance, a 1-d vector of pooled veatures,
+            or a 3D feature map (n_channels, height, width)
         device: what device to train the model on
     """
     logger.info("Fetching data...")
     data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
 
     logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone](pool_features=pool_features).to(device)
+    feature_extractor = BACKBONES[backbone](avg_pool=avg_pool).to(device)
     feature_extractor.load_state_dict(strip_prefix(torch.load(weights), "backbone."), strict=False)
     feature_extractor.eval()
 

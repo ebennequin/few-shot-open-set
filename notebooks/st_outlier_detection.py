@@ -94,9 +94,10 @@ def get_transformers():
     selected_transformers = st.multiselect(
         "Feature transformers", transformers_dict.keys()
     )
-    instantiated_transformers = []
-    for transformer in selected_transformers:
-        instantiated_transformers.append(transformers_dict[transformer](**get_args(transformers_dict[transformer])))
+    instantiated_transformers = [
+        transformers_dict[transformer](**get_args(transformers_dict[transformer]))
+        for transformer in selected_transformers
+    ]
     return SequentialFeatureTransformer(instantiated_transformers)
 
 

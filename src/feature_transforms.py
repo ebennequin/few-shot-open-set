@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 import torch
 
+EPSILON = 1e-10
+
 
 class AbstractFeatureTransformer(nn.Module):
     @abstractmethod
@@ -80,9 +82,9 @@ class LayerNorm(AbstractFeatureTransformer):
         query_variance = torch.var(
             query_features, dim=dims, unbiased=False, keepdim=True
         )
-        return (support_features - support_mean) / (support_variance.sqrt() + 1e-10), (
-            query_features - query_mean
-        ) / (query_variance.sqrt() + 1e-10)
+        return (support_features - support_mean) / (
+            support_variance.sqrt() + EPSILON
+        ), (query_features - query_mean) / (query_variance.sqrt() + EPSILON)
 
 
 class InductiveBatchNorm(AbstractFeatureTransformer):
@@ -100,9 +102,9 @@ class InductiveBatchNorm(AbstractFeatureTransformer):
         dims = (0, 2, 3)
         mean = torch.mean(support_features, dim=dims, keepdim=True)
         var = torch.var(support_features, dim=dims, unbiased=False, keepdim=True)
-        return (support_features - mean) / (var.sqrt() + 1e-10), (
+        return (support_features - mean) / (var.sqrt() + EPSILON), (
             query_features - mean
-        ) / (var.sqrt() + 1e-10)
+        ) / (var.sqrt() + EPSILON)
 
 
 class InstanceNorm(AbstractFeatureTransformer):
@@ -126,9 +128,9 @@ class InstanceNorm(AbstractFeatureTransformer):
         query_variance = torch.var(
             query_features, dim=dims, unbiased=False, keepdim=True
         )
-        return (support_features - support_mean) / (support_variance.sqrt() + 1e-10), (
-            query_features - query_mean
-        ) / (query_variance.sqrt() + 1e-10)
+        return (support_features - support_mean) / (
+            support_variance.sqrt() + EPSILON
+        ), (query_features - query_mean) / (query_variance.sqrt() + EPSILON)
 
 
 class TransductiveBatchNorm(AbstractFeatureTransformer):
@@ -151,9 +153,9 @@ class TransductiveBatchNorm(AbstractFeatureTransformer):
         all_features = torch.cat([support_features, query_features], 0)
         mean = torch.mean(all_features, dim=dims, keepdim=True)
         var = torch.var(all_features, dim=dims, unbiased=False, keepdim=True)
-        return (support_features - mean) / (var.sqrt() + 1e-10), (
+        return (support_features - mean) / (var.sqrt() + EPSILON), (
             query_features - mean
-        ) / (var.sqrt() + 1e-10)
+        ) / (var.sqrt() + EPSILON)
 
 
 class PowerTransform(AbstractFeatureTransformer):
@@ -171,8 +173,8 @@ class PowerTransform(AbstractFeatureTransformer):
         self, support_features: Tensor, query_features: Tensor
     ) -> Tuple[Tensor, Tensor]:
 
-        return torch.pow(support_features + 1e-6, self.beta), torch.pow(
-            query_features + 1e-6, self.beta
+        return torch.pow(support_features + EPSILON, self.beta), torch.pow(
+            query_features + EPSILON, self.beta
         )
 
 

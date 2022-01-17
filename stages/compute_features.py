@@ -23,6 +23,7 @@ def main(
     split: str = "test",
     output_file: Path = None,
     batch_size: int = 1024,
+    pool_features: bool = True,
     device: str = "cuda",
 ):
     """
@@ -41,8 +42,8 @@ def main(
     data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
 
     logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone]().to(device)
-    feature_extractor.load_state_dict(strip_prefix(torch.load(weights), "backbone."))
+    feature_extractor = BACKBONES[backbone](pool_features=pool_features).to(device)
+    feature_extractor.load_state_dict(strip_prefix(torch.load(weights), "backbone."), strict=False)
     feature_extractor.eval()
 
     logger.info("Computing features...")

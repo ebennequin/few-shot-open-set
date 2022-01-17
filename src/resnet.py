@@ -28,6 +28,7 @@ class ResNet(nn.Module):
         zero_init_residual=False,
         use_fc=False,
         imagenet_setup=False,
+        pool_features=True,
     ):
         super(ResNet, self).__init__()
         if widths is None:
@@ -35,6 +36,7 @@ class ResNet(nn.Module):
 
         self.inplanes = 64
         self.use_fc = use_fc
+        self.pool_features = pool_features
 
         self.conv1 = (
             nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=1, bias=False)
@@ -99,8 +101,18 @@ class ResNet(nn.Module):
             1,
         )
 
-        if self.use_fc:
-            return self.fc(features)
+        if self.pool_features:
+            features = torch.flatten(
+                self.avgpool(features),
+                1,
+            )
+
+            if self.use_fc:
+                return self.fc(features)
+            else:
+                raise ValueError(
+                    "You can't use the fully connected layer without pooling features."
+                )
 
         return features
 

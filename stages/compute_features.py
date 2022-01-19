@@ -1,4 +1,4 @@
-import pickle
+import _pickle as cpickle
 from collections import OrderedDict
 
 import numpy as np
@@ -22,7 +22,7 @@ def main(
     weights: Path,
     split: str = "test",
     output_file: Path = None,
-    batch_size: int = 1024,
+    batch_size: int = 256,
     device: str = "cuda",
 ):
     """
@@ -55,33 +55,32 @@ def main(
     logger.info("Fetching data...")
     data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
 
-
     logger.info("Computing features...")
-    features, labels = compute_features(feature_extractor, data_loader, device=device)
-
-    logger.info("Packing by class...")
-    packed_features = {
-        class_integer_label: features[np.where(labels == class_integer_label)]
-        for class_integer_label in set(labels)
-    }
+    features, labels = compute_features(feature_extractor, data_loader, device=device, split=split)
 
     if output_file is None:
-        output_file = (
-            FEATURES_DIR / dataset / split / weights.with_suffix(".pickle").name
-        )
+        output_file = FEATURES_DIR / dataset / split / weights.with_suffix(".pickle").name
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, "wb") as stream:
-        if split == 'test' or split == 'val':
-            pickle.dump(packed_features, stream, protocol=pickle.HIGHEST_PROTOCOL)
-        else:
-            pickle.dump(features.mean(axis=0), stream, protocol=pickle.HIGHEST_PROTOCOL)
+    if split == 'test' or split == 'val':
+        logger.info("Packing by class...")
+        packed_features = {
+            class_integer_label: features[labels == class_integer_label]
+            for class_integer_label in labels.unique()
+        }
+
+        with open(output_file, "wb") as stream:
+            cpickle.dump(packed_features, stream, protocol=-1)
+    else:
+        logger.info("Dumping average feature map...")
+        with open(output_file, "wb") as stream:
+            cpickle.dump(features, stream, protocol=-1)
     logger.info(f"Dumped features in {output_file}")
 
 
 def strip_prefix(state_dict: OrderedDict, prefix: str):
     return OrderedDict(
         [
-            (k[len(prefix) :] if k.startswith(prefix) else k, v)
+            (k[len(prefix):] if k.startswith(prefix) else k, v)
             for k, v in state_dict.items()
         ]
     )

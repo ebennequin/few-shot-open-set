@@ -107,7 +107,6 @@ def update_csv(args: argparse.Namespace,
 
     # The metrics we need to fill in the row
     fill_entry = metrics
-    # fill_entry['completed'] = True
     try:
         res = pd.read_csv(path)
     except FileNotFoundError:
@@ -133,14 +132,21 @@ def update_csv(args: argparse.Namespace,
 
     # If entry does not exist, just create it
     if not match:
-        new_entry = {param: getattr(args, param)
-                     for param in group_by_args}
+        new_entry = {}
+        for param in group_by_args:
+            value = getattr(args, param)
+            if isinstance(value, list):
+                value = '-'.join(value)
+            else:
+                value = str(value)
+            new_entry[param] = value
         new_entry.update(fill_entry)
         records.append(new_entry)
 
     # Save back to dataframe
     df = pd.DataFrame.from_records(records)
     df.to_csv(path, index=False)
+
 
 def confidence_interval(standard_deviation, n_samples):
     """

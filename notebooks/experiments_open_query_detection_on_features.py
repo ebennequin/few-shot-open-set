@@ -5,7 +5,7 @@ and infer various outlier detection methods en them.
 
 import argparse
 import logging
-from src.outlier_detection_methods import RenyiEntropyOutlierDetector, KNNOutlierDetector
+from src.outlier_detection_methods import DETECTORS, MultiDetector
 from src.utils.utils import (
     set_random_seed,
 )
@@ -37,7 +37,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--training", type=str, default="classic")
 
     # Detector
-    parser.add_argument("--outlier_detector", type=str, default="knn")
+    parser.add_argument("--outlier_detectors", nargs='+',
+                        type=str, default="knn")
     parser.add_argument("--nn", type=int, default=3)
 
     # Method
@@ -82,7 +83,7 @@ def parse_args() -> argparse.Namespace:
     "--general_hparams",
     type=str,
     nargs='+',
-    default=['backbone', 'outlier_detector', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+    default=['backbone', 'dataset', 'outlier_detector', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
     help="Important params that will appear in .csv result file.",
     )
     parser.add_argument(
@@ -127,14 +128,14 @@ def main(args):
         if class_.__name__ == args.inference_method
     ][0].from_cli_args(args, average_train_features)
 
-    if args.outlier_detector == 'renyi':
-        outlier_detector = RenyiEntropyOutlierDetector(
-            few_shot_classifier=few_shot_classifier
-        )
-    elif args.outlier_detector == 'knn':
-        outlier_detector = KNNOutlierDetector(
-            few_shot_classifier=few_shot_classifier, n_neighbors=args.nn
-        )
+    # if args.outlier_detector == 'renyi':
+    #     outlier_detector = RenyiEntropyOutlierDetector(
+    #         few_shot_classifier=few_shot_classifier
+    #     )
+    # elif args.outlier_detector == 'knn':
+    #     outlier_detector = KNNOutlierDetector(
+    #         few_shot_classifier=few_shot_classifier, n_neighbors=args.nn
+    #     )
     outliers_df, acc = detect_outliers(
         outlier_detector, data_loader, args.n_way, args.n_query
     )

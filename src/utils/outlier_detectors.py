@@ -6,6 +6,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 
+
 def get_pseudo_renyi_entropy(soft_predictions: torch.Tensor) -> torch.Tensor:
     """
     Compute the pseudo-Renyi entropy of the prediction for each query, i.e. the sum of the
@@ -69,8 +70,7 @@ def compute_outlier_scores_with_renyi_divergence(
 def detect_outliers(outlier_detector, data_loader, n_way, n_query):
     outlier_detection_df_list = []
     accs = []
-    for support_features, support_labels, query_features, query_labels, _ in tqdm(
-        data_loader):
+    for support_features, support_labels, query_features, query_labels, _ in tqdm(data_loader):
         outliers = (n_way * n_query) * [False] + (n_way * n_query) * [True]
         out_score, predictions = outlier_detector(
                         support_features, support_labels, query_features, query_labels

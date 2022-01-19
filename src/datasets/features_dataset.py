@@ -29,7 +29,7 @@ class FeaturesDataset(Dataset):
                     {
                         "label": k,
                         "features": list(
-                            torch.from_numpy(v),
+                            v,
                         ),
                     }
                 )

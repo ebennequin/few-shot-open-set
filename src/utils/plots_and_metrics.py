@@ -33,7 +33,7 @@ def plot_episode(support_images, query_images):
     plt.show()
 
 
-def plot_roc(outliers_df: pd.DataFrame, title: str, plot: bool) -> float:
+def plot_roc(metrics: dict, title: str, plot: bool) -> float:
     """
     Plot the ROC curve from outlier prediction scores and ground truth, and returns
     Args:
@@ -42,17 +42,16 @@ def plot_roc(outliers_df: pd.DataFrame, title: str, plot: bool) -> float:
     Returns:
         the area under the ROC curve.
     """
-    fp_rate, tp_rate, _ = roc_curve(outliers_df.outlier, -outliers_df.outlier_score)
+    aucs = []
+    outliers = metrics['outliers']
+    outlier_scores = metrics['outlier_scores']
+    assert outliers.size() == outlier_scores.size()
+    for i in range(len(outliers)):
+        gt, scores = outliers[i], outlier_scores[i]
+        fp_rate, tp_rate, thresholds = roc_curve(gt, -scores)
+        aucs.append(auc(fp_rate, tp_rate))
 
-    if plot:
-        fig, ax = plt.subplots(1)
-        ax.plot(fp_rate, tp_rate)
-        ax.xlim(0.0, 1.0)
-        ax.ylim(0.0, 1.0)
-        ax.title(title)
-        st.pyplot(fig)
-
-    return auc(fp_rate, tp_rate)
+    return np.mean(aucs)
 
 
 def plot_twin_hist(outliers_df: pd.DataFrame, title: str, plot: bool):
@@ -70,7 +69,7 @@ def plot_twin_hist(outliers_df: pd.DataFrame, title: str, plot: bool):
         st.pyplot(fig, clear_figure=True)
 
 
-def show_all_metrics_and_plots(args, outliers_df: pd.DataFrame, title: str, objective=0.9):
+def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
     """
     Print all metrics and plot all plots for a given set of outlier predictions.
     Args:
@@ -79,26 +78,26 @@ def show_all_metrics_and_plots(args, outliers_df: pd.DataFrame, title: str, obje
         objective: two of the metrics are the maximum precision (resp. recall) possible for a fixed
             recall (resp. precision) threshold
     """
-    roc_auc = plot_roc(outliers_df, title=title, plot=args.streamlit)
-    acc = (outliers_df.predictions == outliers_df.labels)[~outliers_df.outlier].mean()
+    roc_auc = plot_roc(metrics, title=title, plot=args.streamlit)
+    acc = (metrics['query_labels'] == metrics['predictions']).float().mean(-1).mean(-1)
     print(f"ROC AUC: {roc_auc}")
     print(f"Accuracy: {acc}")
 
-    precisions, recalls, _ = precision_recall_curve(
-        outliers_df.outlier, -outliers_df.outlier_score
-    )
-    precision_at_recall_objective = precisions[
-        next(i for i, value in enumerate(recalls) if value < objective)
-    ]
-    recall_at_precision_objective = recalls[
-        next(i for i, value in enumerate(precisions) if value > objective)
-    ]
-    print(f"Precision for recall={objective}: {precision_at_recall_objective}")
-    print(f"Recall for precision={objective}: {recall_at_precision_objective}")
+    # precisions, recalls, _ = precision_recall_curve(
+    #     outliers_df.outlier, -outliers_df.outlier_score
+    # )
+    # precision_at_recall_objective = precisions[
+    #     next(i for i, value in enumerate(recalls) if value < objective)
+    # ]
+    # recall_at_precision_objective = recalls[
+    #     next(i for i, value in enumerate(precisions) if value > objective)
+    # ]
+    # print(f"Precision for recall={objective}: {precision_at_recall_objective}")
+    # print(f"Recall for precision={objective}: {recall_at_precision_objective}")
 
-    plot_twin_hist(outliers_df, title=title, plot=args.streamlit)
+    # plot_twin_hist(outliers_df, title=title, plot=args.streamlit)
 
-    return roc_auc, precision_at_recall_objective, recall_at_precision_objective
+    return roc_auc
 
 
 def update_csv(args: argparse.Namespace,

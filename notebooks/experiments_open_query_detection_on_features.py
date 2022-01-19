@@ -37,9 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--training", type=str, default="classic")
 
     # Detector
-    parser.add_argument("--outlier_detectors", nargs='+',
-                        type=str, default="knn")
-    parser.add_argument("--nn", type=int, default=3)
+    parser.add_argument("--outlier_detectors", type=str, default="knn_3")
 
     # Method
     parser.add_argument("--inference_method", type=str, default="SimpleShot")
@@ -76,31 +74,31 @@ def parse_args() -> argparse.Namespace:
     # Logging / Saving results
     parser.add_argument(
         "--exp_name",
-    type=str,
-    default='default',
-    help="Name the experiment for easy grouping.")
+        type=str,
+        default='default',
+        help="Name the experiment for easy grouping.")
     parser.add_argument(
-    "--general_hparams",
-    type=str,
-    nargs='+',
-    default=['backbone', 'dataset', 'outlier_detector', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
-    help="Important params that will appear in .csv result file.",
-    )
+        "--general_hparams",
+        type=str,
+        nargs='+',
+        default=['backbone', 'dataset', 'outlier_detectors', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+        help="Important params that will appear in .csv result file.",
+        )
     parser.add_argument(
-    "--simu_hparams",
-    type=str,
-    nargs='*',
-    default=[],
-    help="Important params that will appear in .csv result file.",
-    )
+        "--simu_hparams",
+        type=str,
+        nargs='*',
+        default=[],
+        help="Important params that will appear in .csv result file.",
+        )
     parser.add_argument(
-        "--override",
-    action='store_true',
-    help='Whether to override results already present in the .csv out file.')
+            "--override",
+            action='store_true',
+            help='Whether to override results already present in the .csv out file.')
     parser.add_argument(
-        "--streamlit",
-    action='store_true',
-    help='Whether to add streamlit.')
+            "--streamlit",
+            action='store_true',
+            help='Whether to add streamlit.')
 
     args = parser.parse_args()
     return args
@@ -128,6 +126,10 @@ def main(args):
         if class_.__name__ == args.inference_method
     ][0].from_cli_args(args, average_train_features)
 
+    all_detectors = args.outlier_detectors.split('-')
+    outlier_detector = MultiDetector(few_shot_classifier=few_shot_classifier,
+                                     detectors=[DETECTORS[x] for x in all_detectors])
+
     # if args.outlier_detector == 'renyi':
     #     outlier_detector = RenyiEntropyOutlierDetector(
     #         few_shot_classifier=few_shot_classifier
@@ -142,12 +144,11 @@ def main(args):
 
     # Saving results 
 
-    roc_auc, prec_at_90, rec_at_90 = show_all_metrics_and_plots(args, outliers_df, title=outlier_detector.__class__.__name__)
+    roc_auc = show_all_metrics_and_plots(args, outliers_df, title=outlier_detector.__class__.__name__)
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
-    metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4), 'prec@0.9': np.round(prec_at_90, 4), 'rec@90': np.round(rec_at_90, 4)}
-    update_csv(args, metrics, path= res_root / 'out.csv')
-
+    metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4)}
+    update_csv(args, metrics, path=res_root / 'out.csv')
 
 
 if __name__ == "__main__":

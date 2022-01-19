@@ -1,6 +1,7 @@
 """
 Functions used to compute outlier scores from classification predictions.
 """
+from collections import defaultdict
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -68,24 +69,30 @@ def compute_outlier_scores_with_renyi_divergence(
 
 
 def detect_outliers(outlier_detector, data_loader, n_way, n_query):
-    outlier_detection_df_list = []
     accs = []
+    metrics = defaultdict(list)
     for support_features, support_labels, query_features, query_labels, _ in tqdm(data_loader):
-        outliers = (n_way * n_query) * [False] + (n_way * n_query) * [True]
-        out_score, predictions = outlier_detector(
+        outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
+        outlier_scores, predictions = outlier_detector(
                         support_features, support_labels, query_features, query_labels
                     )
         accs.append((predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean())
+        predictions = predictions[:n_way * n_query]
+        query_labels = query_labels[:n_way * n_query]
 
-        outlier_detection_df_list.append(
-            pd.DataFrame(
-                {
-                    "outlier": outliers,
-                    "outlier_score": out_score,
-                    "predictions": predictions,
-                    "labels": query_labels,
-                }
-            )
-        )
+        for metric_name in ['outliers', 'outlier_scores', 'predictions', 'query_labels']:
+            metrics[metric_name].append(eval(metric_name))
+        # outlier_detection_df_list.append(
+        #     pd.DataFrame(
+        #         {
+        #             "outlier": outliers,
+        #             "outlier_score": out_score,
+        #             "predictions": predictions,
+        #             "labels": query_labels,
+        #         }
+        #     )
+        # )
+    for metric_name in metrics:
+        metrics[metric_name] = torch.stack(metrics[metric_name], 0)
 
-    return pd.concat(outlier_detection_df_list, ignore_index=True), np.mean(accs)
+    return metrics, np.mean(accs)

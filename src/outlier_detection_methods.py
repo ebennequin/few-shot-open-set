@@ -10,6 +10,7 @@ from torch import Tensor
 from sklearn.svm import SVC
 from torch import nn
 from torch.nn import functional as F
+from functools import partial
 from sklearn.metrics import roc_curve, auc
 from src.few_shot_methods import AbstractFewShotMethod
 from src.utils.outlier_detectors import (
@@ -221,9 +222,10 @@ class MultiDetector(AbstractOutlierDetectorOnFeatures):
     ):
         super().__init__(few_shot_classifier)
         self.detectors = detectors
+        # print(self.detectors)
         self.few_shot_classifier = few_shot_classifier
 
-    def fit_detector(self, known: Tensor):
+    def fit_detectors(self, known: Tensor):
         for detector in self.detectors:
             detector.fit(known)
 
@@ -234,8 +236,10 @@ class MultiDetector(AbstractOutlierDetectorOnFeatures):
         # Transforming features
         support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
 
+        # Fit detectors
+        self.fit_detectors(support_features)
+
         # Doing OOD detection
-        self.fit_detector(support_features)
         outlier_scores = []
         for detector in self.detectors:
             out = torch.from_numpy(1 - detector.decision_function(query_features))
@@ -250,6 +254,4 @@ class MultiDetector(AbstractOutlierDetectorOnFeatures):
         return outlier_scores, predictions
 
 
-DETECTORS = {f'knn_{i}': KNNOutlierDetector for i in [1, 3, 5, 7, 10, 12, 15, 18]
-             }
-DETECTORS['renyi'] = RenyiDivergenceOutlierDetector
+DETECTORS = {f'knn_{i}': KNN(n_neighbors=i, method='mean') for i in range(20)}

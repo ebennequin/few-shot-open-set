@@ -1,6 +1,6 @@
 import random
-from typing import Tuple
-
+from typing import Tuple, Dict
+from types import SimpleNamespace
 import numpy as np
 import torch
 from loguru import logger

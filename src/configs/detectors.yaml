@@ -1,0 +1,7 @@
+knn:
+  NAME: "KNN"
+  HPARAMS2TUNE: ['n_neighbors']
+  HPARAMS_VALUES: [[1, 3, 5, 7, 9, 11, 13, 15]]
+  n_neighbors: 10
+
+

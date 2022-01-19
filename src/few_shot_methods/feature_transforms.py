@@ -3,12 +3,12 @@ from torch import Tensor
 import torch
 
 
-
 def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
     return feat_s, feat_q
+
 
 def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
@@ -16,12 +16,22 @@ def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
 
+
+def react(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    c = torch.quantile(feat_s, 0.9)
+    return feat_s.clamp(max=c), feat_q.clamp(max=c)
+
+
 def max_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
     norm_term = feat_s.max(dim=0, keepdim=True).values
     return feat_s / norm_term, feat_q / norm_term
+
 
 def layer_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
@@ -34,6 +44,7 @@ def layer_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     var_q = torch.var(feat_q, dim=dims, unbiased=False, keepdim=True)
     return (feat_s - mean_s) / (var_s.sqrt() + 1e-10), (feat_q - mean_q) / (var_q.sqrt() + 1e-10)
 
+
 def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, h, w]
@@ -43,6 +54,7 @@ def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     mean = torch.mean(feat_s, dim=dims, keepdim=True)
     var = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
     return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
+
 
 def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
@@ -71,6 +83,7 @@ def transductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     mean = torch.mean(cat_feat, dim=dims, keepdim=True)
     var = torch.var(cat_feat, dim=dims, unbiased=False, keepdim=True)
     return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
+
 
 def power(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """

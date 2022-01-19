@@ -18,6 +18,7 @@ from src.utils.outlier_detectors import (
     get_shannon_entropy,
     compute_outlier_scores_with_renyi_divergence,
 )
+from pyod.utils.utility import standardizer
 
 
 class AbstractOutlierDetector(nn.Module):
@@ -172,46 +173,46 @@ class KNNOutlierDetector(AbstractOutlierDetectorOnFeatures):
         return detector
 
 
-class IterativeDetector(KNNOutlierDetector):
+# class IterativeDetector(KNNOutlierDetector):
 
-    def forward(
-        self, support_features, support_labels, query_features, query_labels
-    ) -> torch.Tensor:
-        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
-        known = support_features
-        unknown = query_features
+#     def forward(
+#         self, support_features, support_labels, query_features, query_labels
+#     ) -> torch.Tensor:
+#         support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+#         known = support_features
+#         unknown = query_features
 
-        n_query = query_features.size(0)
+#         n_query = query_features.size(0)
 
-        n_neighbors = self.n_neighbors
+#         n_neighbors = self.n_neighbors
 
-        for index in range(20):
+#         for index in range(20):
 
-            # Compute those with very low outlier scores
+#             # Compute those with very low outlier scores
 
-            detector = KNN(n_neighbors=n_neighbors, method=self.method, n_jobs=-1)
-            detector.fit(known)
-            unknown_score = torch.from_numpy(detector.decision_function(unknown))
-            k = 1
-            kth_score = unknown_score.topk(k=k, largest=False).values[k-1]
-            new_known = unknown_score <= kth_score
+#             detector = KNN(n_neighbors=n_neighbors, method=self.method, n_jobs=-1)
+#             detector.fit(known)
+#             unknown_score = torch.from_numpy(detector.decision_function(unknown))
+#             k = 1
+#             kth_score = unknown_score.topk(k=k, largest=False).values[k-1]
+#             new_known = unknown_score <= kth_score
 
-            # Update sets
+#             # Update sets
 
-            known = torch.cat([known, unknown[new_known]], 0)
-            unknown = unknown[~new_known]
+#             known = torch.cat([known, unknown[new_known]], 0)
+#             unknown = unknown[~new_known]
 
-            # Monitoring 
+#             # Monitoring
 
-            full_outlier = torch.from_numpy(detector.decision_function(query_features))
-            fp_rate, tp_rate, _ = roc_curve([False] * (n_query // 2) + [True] * (n_query // 2), full_outlier)
-            area = auc(fp_rate, tp_rate)
+#             full_outlier = torch.from_numpy(detector.decision_function(query_features))
+#             fp_rate, tp_rate, _ = roc_curve([False] * (n_query // 2) + [True] * (n_query // 2), full_outlier)
+#             area = auc(fp_rate, tp_rate)
 
-            print(f"Iteration {index} : auc={area} \t |K|={len(known)} \t |U|={len(unknown)}")
+#             print(f"Iteration {index} : auc={area} \t |K|={len(known)} \t |U|={len(unknown)}")
 
-        outlier_scores = torch.from_numpy(1 - detector.decision_function(query_features))
+#         outlier_scores = torch.from_numpy(1 - detector.decision_function(query_features))
 
-        return outlier_scores, torch.ones_like(query_labels)
+#         return outlier_scores, torch.ones_like(query_labels)
 
 
 class MultiDetector(AbstractOutlierDetectorOnFeatures):
@@ -237,15 +238,23 @@ class MultiDetector(AbstractOutlierDetectorOnFeatures):
         support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
 
         # Fit detectors
-        self.fit_detectors(support_features)
+        self.fit_detectors(support_features.numpy())
 
         # Doing OOD detection
-        outlier_scores = []
-        for detector in self.detectors:
-            out = torch.from_numpy(1 - detector.decision_function(query_features))
-            out = out - out.min() / (out.max() - out.min())
-            outlier_scores.append(out)
-        outlier_scores = torch.stack(outlier_scores, 0).mean(0)
+        n_clf = len(self.detectors)
+        train_scores = np.zeros([support_features.size(0), n_clf])  # [Q, n_clf]
+        test_scores = np.zeros([query_features.size(0), n_clf])  # [Q, n_clf]
+        for i, detector in enumerate(self.detectors):
+            train_scores[:, i] = detector.decision_scores_  # [Q, ]
+            test_scores[:, i] = detector.decision_function(query_features)  # [Q, ]
+
+        # Normalize scores
+        # train_scores_norm, test_scores_norm = standardizer(train_scores, test_scores)
+        test_scores_norm = test_scores
+
+        # Combine
+        # outlier_scores = torch.from_numpy(test_scores_norm).max(-1).values
+        outlier_scores = torch.from_numpy(test_scores_norm).mean(-1)
 
         # Obtaining predictions from few-shot classifier
 
@@ -254,4 +263,9 @@ class MultiDetector(AbstractOutlierDetectorOnFeatures):
         return outlier_scores, predictions
 
 
-DETECTORS = {f'knn_{i}': KNN(n_neighbors=i, method='mean') for i in range(20)}
+DETECTORS = {}
+for i in range(25):
+    DETECTORS[f'knn_larg_{i}'] = KNN(n_neighbors=i, method='largest')
+    DETECTORS[f'knn_med_{i}'] = KNN(n_neighbors=i, method='median')
+    DETECTORS[f'knn_avg_{i}'] = KNN(n_neighbors=i, method='mean')
+

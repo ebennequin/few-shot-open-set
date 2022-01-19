@@ -10,6 +10,7 @@ from src.utils.utils import (
     set_random_seed,
 )
 import pandas as pd
+import yaml
 import numpy as np
 from pathlib import Path
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
@@ -38,6 +39,7 @@ def parse_args() -> argparse.Namespace:
 
     # Detector
     parser.add_argument("--outlier_detectors", type=str, default="knn_3")
+    parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Method
     parser.add_argument("--inference_method", type=str, default="SimpleShot")
@@ -95,13 +97,17 @@ def parse_args() -> argparse.Namespace:
             "--override",
             action='store_true',
             help='Whether to override results already present in the .csv out file.')
-    parser.add_argument(
-            "--streamlit",
-            action='store_true',
-            help='Whether to add streamlit.')
 
     args = parser.parse_args()
+    merge_from_yaml_file(args, args.detector_config_file)
     return args
+
+
+def merge_from_yaml_file(args, yaml_file: Path):
+    with open(yaml_file) as f:
+        parsed_yaml_file = yaml.load(f, Loader=yaml.FullLoader)
+        for key, value in parsed_yaml_file.items():
+            args.key = value
 
 
 def main(args):
@@ -130,14 +136,6 @@ def main(args):
     outlier_detector = MultiDetector(few_shot_classifier=few_shot_classifier,
                                      detectors=[DETECTORS[x] for x in all_detectors])
 
-    # if args.outlier_detector == 'renyi':
-    #     outlier_detector = RenyiEntropyOutlierDetector(
-    #         few_shot_classifier=few_shot_classifier
-    #     )
-    # elif args.outlier_detector == 'knn':
-    #     outlier_detector = KNNOutlierDetector(
-    #         few_shot_classifier=few_shot_classifier, n_neighbors=args.nn
-    #     )
     outliers_df, acc = detect_outliers(
         outlier_detector, data_loader, args.n_way, args.n_query
     )

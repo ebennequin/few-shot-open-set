@@ -48,7 +48,7 @@ def plot_roc(metrics: dict, title: str, plot: bool) -> float:
     assert outliers.size() == outlier_scores.size()
     for i in range(len(outliers)):
         gt, scores = outliers[i], outlier_scores[i]
-        fp_rate, tp_rate, thresholds = roc_curve(gt, -scores)
+        fp_rate, tp_rate, thresholds = roc_curve(gt, scores)
         aucs.append(auc(fp_rate, tp_rate))
 
     return np.mean(aucs)
@@ -104,22 +104,33 @@ def update_csv(args: argparse.Namespace,
                metrics: dict,
                path: str):
 
-    # The metrics we need to fill in the row
-    fill_entry = metrics
+    # Load records
     try:
         res = pd.read_csv(path)
     except FileNotFoundError:
         res = pd.DataFrame({})
-
-    group_by_args = args.general_hparams + args.simu_hparams
     records = res.to_dict('records')
+
+    # Metrics part of the new record
+    fill_entry = metrics
+
+    # Params part of the new record
+    group_by_args = args.general_hparams + args.simu_hparams
+    new_entry = {}
+    for param in group_by_args:
+        value = getattr(args, param)
+        if isinstance(value, list):
+            value = '-'.join(value)
+        else:
+            value = str(value)
+        new_entry[param] = value
 
     # Check whether the row exists already, if yes, simply update the metrics
     match = False
-    for entry in records:
-        if any([param not in entry for param in group_by_args]):
+    for existing_entry in records:
+        if any([param not in existing_entry for param in group_by_args]):
             continue
-        matches = [str(entry[param]) == str(getattr(args, param)) for param in group_by_args]
+        matches = [str(existing_entry[param]) == new_entry[param] for param in group_by_args]
         match = (sum(matches) == len(matches))
         if match:
             if not args.override:
@@ -127,18 +138,11 @@ def update_csv(args: argparse.Namespace,
                 return
             elif args.override:
                 print("Overriding existing results.")
-            entry.update(fill_entry)
+            existing_entry.update(fill_entry)
+            break
 
     # If entry does not exist, just create it
     if not match:
-        new_entry = {}
-        for param in group_by_args:
-            value = getattr(args, param)
-            if isinstance(value, list):
-                value = '-'.join(value)
-            else:
-                value = str(value)
-            new_entry[param] = value
         new_entry.update(fill_entry)
         records.append(new_entry)
 

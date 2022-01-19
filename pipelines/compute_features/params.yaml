@@ -1,0 +1,11 @@
+grid:
+  - dataset: mini_imagenet
+    weights: tadam_resnet12_mini_imagenet.tar
+  - dataset: tiered_imagenet
+    weights: tadam_resnet12_tiered_imagenet.tar
+
+backbone: src.tadam_resnet.tadam_res12
+batch_size: 1024
+n_workers: 20
+device: cuda
+

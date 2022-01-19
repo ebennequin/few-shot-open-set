@@ -1,0 +1,12 @@
+stages:
+  compute_features:
+    foreach: ${grid}
+    do:
+      cmd: python compute_features.py
+        ${item.dataset}
+        ${item.weights}
+      deps:
+        - compute_features.py
+        - ${item.weights}
+      outs:
+        - data/features/${item.dataset}.pickle

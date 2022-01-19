@@ -89,10 +89,10 @@ def select_class(class_list, name):
     return class_dict[class_str]
 
 
-def get_transformers():
+def get_transformers(key=0):
     transformers_dict = {x.__name__: x for x in ALL_FEATURE_TRANSFORMERS}
     selected_transformers = st.multiselect(
-        "Feature transformers", transformers_dict.keys()
+        "Feature transformers", transformers_dict.keys(), key=key
     )
     instantiated_transformers = [
         transformers_dict[transformer](**get_args(transformers_dict[transformer]))
@@ -177,7 +177,8 @@ def get_detector():
     detector_args = get_args(
         outlier_detector_class, extra=["few_shot_classifier", "base_features"]
     )
-    detector_args["prepool_feature_transformer"] = get_transformers()
+    detector_args["prepool_feature_transformer"] = get_transformers(key=0)
+    detector_args["postpool_feature_transformer"] = get_transformers(key=1)
     if "few_shot_classifier" in detector_args.keys():
         st.header("Few-Shot Classifier")
         few_shot_classifier_class = select_class(

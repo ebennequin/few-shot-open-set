@@ -41,18 +41,29 @@ def main(dataset: str):
         n_workers=N_WORKERS,
     )
 
+    logger.info(f"Building model: {DETECTOR.__name__}")
     few_shot_classifier = CLASSIFIER.from_args(CLASSIFIER_ARGS)
 
     prepool_transformer = SequentialFeatureTransformer(
         [
-            transformer.from_args(TRANSFORMERS_ARGS)
+            transformer.from_args(
+                dict(
+                    average_train_features=saved_features["average_train_set_features"],
+                    **TRANSFORMERS_ARGS,
+                )
+            )
             for transformer in PREPOOL_TRANSFORMERS
         ]
     )
 
     postpool_transformer = SequentialFeatureTransformer(
         [
-            transformer.from_args(TRANSFORMERS_ARGS)
+            transformer.from_args(
+                dict(
+                    average_train_features=saved_features["average_train_set_features"],
+                    **TRANSFORMERS_ARGS,
+                )
+            )
             for transformer in POSTPOOL_TRANSFORMERS
         ]
     )
@@ -66,10 +77,12 @@ def main(dataset: str):
         )
     )
 
+    logger.info(f"Running inference on {N_TASKS} tasks...")
     outliers_df = detect_outliers(outlier_detector, data_loader, N_WAY, N_QUERY)
 
     # Saving results
     outliers_df.to_csv(OUTLIER_PREDICTIONS_CSV)
+    logger.info(f"Predictions dumped to {OUTLIER_PREDICTIONS_CSV}.")
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ classifier: SimpleShot
 classifier_args:
   softmax_temperature: 1.0
 prepool_transformers:
-  - IdentityTransformer
+  - BaseSetCentering
 postpool_transformers:
   - Normalize
 transformers_args:

@@ -13,17 +13,13 @@ class SimpleShot(AbstractFewShotMethod):
     In this fashion, it comes down to Prototypical Networks.
     """
 
-    def forward(
+    def classify_support_and_queries(
         self,
         support_features: Tensor,
         query_features: Tensor,
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
-
-        # Perform required normalizations
-        support_features = self.normalize_features_if_specified(support_features)
-        query_features = self.normalize_features_if_specified(query_features)
 
         self.prototypes = compute_prototypes(support_features, support_labels)
 

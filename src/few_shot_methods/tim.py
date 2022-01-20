@@ -17,20 +17,19 @@ class AbstractTIM(AbstractFewShotMethod):
 
     def __init__(
         self,
-        softmax_temperature: float = 1.0,
-        normalize_features: bool = False,
         inference_steps: int = 10,
         inference_lr: float = 1e-3,
         loss_weights: List[float] = None,
+        **kwargs,
     ):
-        super().__init__(softmax_temperature, normalize_features)
+        super().__init__(**kwargs)
         self.loss_weights = [1.0, 1.0, 0.1] if loss_weights is None else loss_weights
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
 
 
 class TIM_GD(AbstractTIM):
-    def forward(
+    def classify_support_and_queries(
         self,
         support_features: Tensor,
         query_features: Tensor,
@@ -40,10 +39,6 @@ class TIM_GD(AbstractTIM):
         # Metric dic
         num_classes = support_labels.unique().size(0)
         support_labels_one_hot = F.one_hot(support_labels, num_classes)
-
-        # Perform required normalizations
-        support_features = self.normalize_features_if_specified(support_features)
-        query_features = self.normalize_features_if_specified(query_features)
 
         # Initialize weights
         self.prototypes = compute_prototypes(support_features, support_labels)

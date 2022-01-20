@@ -38,6 +38,15 @@ def main(
     )
     feature_extractor.eval()
 
+    logger.info("Starting inference on train set...")
+    train_features, _ = infer_on_dataset(
+        dataset=dataset, split="train", model=feature_extractor
+    )
+    average_train_features = train_features.mean(0)
+
+    # On tieredImageNet, training features take ~50Go on RAM, let's make some space
+    del train_features
+
     logger.info("Starting inference on test set...")
     features, labels = infer_on_dataset(
         dataset=dataset, split="test", model=feature_extractor
@@ -48,12 +57,6 @@ def main(
         class_integer_label: features[np.where(labels == class_integer_label)]
         for class_integer_label in set(labels)
     }
-
-    logger.info("Starting inference on train set...")
-    train_features, _ = infer_on_dataset(
-        dataset=dataset, split="train", model=feature_extractor
-    )
-    average_train_features = train_features.mean(0)
 
     if output_file is None:
         output_file = FEATURES_DIR / f"{dataset}.pickle"

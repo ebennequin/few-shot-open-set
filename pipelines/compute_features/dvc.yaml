@@ -3,7 +3,7 @@ stages:
     foreach: ${grid}
     do:
       wdir: ../..
-      cmd: python pipelines/compute_features/compute_features.py
+      cmd: PYTHONPATH=. python pipelines/compute_features/compute_features.py
         ${key}
         ${item.weights}
       deps:

@@ -45,10 +45,15 @@ def compute_features(
         all_features = []
         all_labels = []
         for images, labels in tqdm(loader, unit="batch"):
-            all_features.append(feature_extractor(images.to(device)).data.cpu())
-            all_labels.append(labels)
+            all_features.append(
+                feature_extractor(images.to(device))
+                .data.cpu()
+                .numpy()
+                .astype(np.float16)
+            )
+            all_labels.append(labels.data.cpu().numpy().astype(np.float16))
 
     return (
-        torch.cat(all_features, dim=0).cpu().numpy(),
-        torch.cat(all_labels, dim=0).cpu().numpy(),
+        np.concatenate(all_features, axis=0),
+        np.concatenate(all_labels, axis=0),
     )

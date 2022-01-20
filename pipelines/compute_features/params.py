@@ -1,9 +1,10 @@
+from pathlib import Path
 from pydoc import locate
 
 import yaml
 from loguru import logger
 
-PARAMETERS_FILE = "params.yaml"
+PARAMETERS_FILE = Path("pipelines") / "compute_features" / "params.yaml"
 
 
 with open(PARAMETERS_FILE) as file:

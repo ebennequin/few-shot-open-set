@@ -1,0 +1,30 @@
+schema: '2.0'
+stages:
+  compute_features@mini_imagenet:
+    cmd: PYTHONPATH=. python pipelines/compute_features/compute_features.py mini_imagenet
+      data/models/tadam_resnet12_mini_imagenet.tar
+    deps:
+    - path: data/models/tadam_resnet12_mini_imagenet.tar
+      md5: 28deb213fbfd3c126dba09139a129089
+      size: 49766661
+    - path: pipelines/compute_features/compute_features.py
+      md5: 16d0b50d9071dadef47e7b43384930fd
+      size: 2835
+    outs:
+    - path: data/features/mini_imagenet.pickle
+      md5: 2c5b63924f38a9b1b80ccad779d3d5e5
+      size: 384033341
+  compute_features@tiered_imagenet:
+    cmd: PYTHONPATH=. python pipelines/compute_features/compute_features.py tiered_imagenet
+      data/models/tadam_resnet12_tiered_imagenet.tar
+    deps:
+    - path: data/models/tadam_resnet12_tiered_imagenet.tar
+      md5: 32f8ce9b85cd65333a4df2bc96ea1937
+      size: 49766661
+    - path: pipelines/compute_features/compute_features.py
+      md5: 16d0b50d9071dadef47e7b43384930fd
+      size: 2835
+    outs:
+    - path: data/features/tiered_imagenet.pickle
+      md5: 8bf5de8337d4579a4bfbbb06325a9d1b
+      size: 6598729181

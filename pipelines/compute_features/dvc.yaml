@@ -2,11 +2,12 @@ stages:
   compute_features:
     foreach: ${grid}
     do:
-      cmd: python compute_features.py
+      wdir: ../..
+      cmd: python pipelines/compute_features/compute_features.py
         ${key}
         ${item.weights}
       deps:
-        - compute_features.py
+        - pipelines/compute_features/compute_features.py
         - ${item.weights}
       outs:
         - data/features/${key}.pickle

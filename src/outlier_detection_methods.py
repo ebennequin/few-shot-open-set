@@ -1,3 +1,4 @@
+import inspect
 import math
 from typing import Dict
 
@@ -81,6 +82,13 @@ class AbstractOutlierDetector(nn.Module):
         )
 
         return support_features, query_features
+
+    @classmethod
+    def from_args(cls, args: Dict):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args.items() if k in signature.parameters.keys()}
+        )
 
 
 class RenyiEntropyOutlierDetector(AbstractOutlierDetector):

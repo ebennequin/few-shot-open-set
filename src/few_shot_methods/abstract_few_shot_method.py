@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
-from typing import Tuple
+from typing import Tuple, Dict
 
 
 class AbstractFewShotMethod(nn.Module):
@@ -56,4 +56,11 @@ class AbstractFewShotMethod(nn.Module):
         signature = inspect.signature(cls.__init__)
         return cls(
             **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()}
+        )
+
+    @classmethod
+    def from_args(cls, args: Dict):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args.items() if k in signature.parameters.keys()}
         )

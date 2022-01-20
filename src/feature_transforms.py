@@ -1,5 +1,7 @@
+import inspect
+
 from abc import abstractmethod
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 import torch.nn.functional as F
 from torch import Tensor, nn
@@ -15,6 +17,13 @@ class AbstractFeatureTransformer(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         raise NotImplementedError(
             "All feature transformers must implement a forward method."
+        )
+
+    @classmethod
+    def from_args(cls, args: Dict):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args.items() if k in signature.parameters.keys()}
         )
 
 

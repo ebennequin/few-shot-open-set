@@ -1,0 +1,10 @@
+stages:
+  detect_outliers:
+    wdir: ../..
+    cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py
+        ${dataset}
+    deps:
+      - pipelines/inference/detect_outliers.py
+      - data/features/${dataset}.pickle
+    outs:
+      - data/predictions/outliers.csv

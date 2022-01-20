@@ -3,10 +3,10 @@ stages:
     foreach: ${grid}
     do:
       cmd: python compute_features.py
-        ${item.dataset}
+        ${key}
         ${item.weights}
       deps:
         - compute_features.py
         - ${item.weights}
       outs:
-        - data/features/${item.dataset}.pickle
+        - data/features/${key}.pickle

@@ -1,7 +1,7 @@
 grid:
-  - dataset: mini_imagenet
+  mini_imagenet:
     weights: tadam_resnet12_mini_imagenet.tar
-  - dataset: tiered_imagenet
+  tiered_imagenet:
     weights: tadam_resnet12_tiered_imagenet.tar
 
 backbone: src.tadam_resnet.tadam_res12

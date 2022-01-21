@@ -52,8 +52,8 @@ stages:
       md5: d65457a931298a9ae4258bfe3f385167
       size: 6598730175
     - path: pipelines/inference/detect_outliers.py
-      md5: 4b9d2d1ab92a5c3df996e8234e2b53e4
-      size: 2658
+      md5: 7b4d7c215ef199176074166e96a1fa12
+      size: 2614
     outs:
     - path: data/predictions/tiered_imagenet/outliers.csv
       md5: 7965097e248cdbc0857593a2a9fdbd26
@@ -65,8 +65,8 @@ stages:
       md5: d65457a931298a9ae4258bfe3f385167
       size: 6598730175
     - path: pipelines/inference/classify_queries.py
-      md5: 5958ea6acda5005953980773aabc0a0b
-      size: 3778
+      md5: b548adbf3037302f22ac0a2400171343
+      size: 3680
     outs:
     - path: data/predictions/tiered_imagenet/classifications.csv
       md5: 337050d023c6be7bd215ed7d8a4c81f2
@@ -81,8 +81,8 @@ stages:
       md5: 7965097e248cdbc0857593a2a9fdbd26
       size: 21956
     - path: pipelines/inference/compute_metrics.py
-      md5: b703d89e207213285fea4ce84bd7d80e
-      size: 2863
+      md5: b1fefb40f417b36be0b863f8ff8869fb
+      size: 2167
     outs:
     - path: data/predictions/tiered_imagenet/metrics.json
       md5: f1f8857c0484f3034cf2e5f206a4d4c7
@@ -97,8 +97,8 @@ stages:
       md5: f0a320542b15f255e9512dc251696939
       size: 384033495
     - path: pipelines/inference/classify_queries.py
-      md5: 5958ea6acda5005953980773aabc0a0b
-      size: 3778
+      md5: b548adbf3037302f22ac0a2400171343
+      size: 3680
     outs:
     - path: data/predictions/mini_imagenet/classifications.csv
       md5: 4a977382918a350b97ef1dbd7a42fdb6
@@ -110,8 +110,8 @@ stages:
       md5: f0a320542b15f255e9512dc251696939
       size: 384033495
     - path: pipelines/inference/detect_outliers.py
-      md5: 4b9d2d1ab92a5c3df996e8234e2b53e4
-      size: 2658
+      md5: 7b4d7c215ef199176074166e96a1fa12
+      size: 2614
     outs:
     - path: data/predictions/mini_imagenet/outliers.csv
       md5: 0b2aaca69ab552391bbf6e6394c3f580
@@ -126,8 +126,8 @@ stages:
       md5: 0b2aaca69ab552391bbf6e6394c3f580
       size: 22023
     - path: pipelines/inference/compute_metrics.py
-      md5: b703d89e207213285fea4ce84bd7d80e
-      size: 2863
+      md5: b1fefb40f417b36be0b863f8ff8869fb
+      size: 2167
     outs:
     - path: data/predictions/mini_imagenet/metrics.json
       md5: 0ff691e214a3e92e3cd6b3384667b768

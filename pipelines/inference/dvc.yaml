@@ -1,4 +1,5 @@
-vars: pipelines/inference/params.yaml
+vars:
+  - params.yaml
 
 stages:
   detect_outliers:

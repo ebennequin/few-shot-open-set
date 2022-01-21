@@ -1,4 +1,5 @@
-vars: pipelines/compute_features/params.yaml
+vars:
+  - params.yaml
 
 stages:
   compute_features:

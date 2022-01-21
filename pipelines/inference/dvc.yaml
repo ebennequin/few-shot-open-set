@@ -19,3 +19,14 @@ stages:
     outs:
       - data/predictions/classifications.csv
 
+  compute_metrics:
+    wdir: ../..
+    cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py
+      ${dataset}
+    deps:
+      - pipelines/inference/compute_metrics.py
+      - data/predictions/outliers.csv
+      - data/predictions/classifications.csv
+    metrics:
+      - data/predictions/metrics.json
+

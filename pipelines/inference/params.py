@@ -13,12 +13,16 @@ with open(PARAMETERS_FILE) as file:
     logger.info(f'Parsing parameters from "{PARAMETERS_FILE}"')
     params = yaml.safe_load(file)
 
+# Problem settings
+
 RANDOM_SEED = params["random_seed"]
 N_WAY = params["n_way"]
 N_SHOT = params["n_shot"]
 N_QUERY = params["n_query"]
 N_TASKS = params["n_tasks"]
 N_WORKERS = params["n_workers"]
+
+# Problem solvers
 
 DETECTOR = locate(DETECTORS_ROOT + params["detector"])
 DETECTOR_ARGS = params["detector_args"]
@@ -33,3 +37,6 @@ POSTPOOL_TRANSFORMERS = [
     for transformer in params["postpool_transformers"]
 ]
 TRANSFORMERS_ARGS = params["transformers_args"]
+
+# Metrics
+OBJECTIVE = params["objective"]

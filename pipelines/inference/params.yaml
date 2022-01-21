@@ -23,3 +23,6 @@ postpool_transformers:
 transformers_args:
   beta: 0.5
   norm: 2.0
+
+# Metrics params
+objective: 0.9

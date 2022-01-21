@@ -68,12 +68,17 @@ def compute_outlier_scores_with_renyi_divergence(
 
 def detect_outliers(outlier_detector, data_loader, n_way, n_query):
     outlier_detection_df_list = []
-    for support_features, support_labels, query_features, query_labels, _ in tqdm(
-        data_loader
-    ):
+    for task_id, (
+        support_features,
+        support_labels,
+        query_features,
+        query_labels,
+        _,
+    ) in tqdm(enumerate(data_loader)):
         outlier_detection_df_list.append(
             pd.DataFrame(
                 {
+                    "task": task_id,
                     "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
                     "outlier_score": outlier_detector(
                         support_features, support_labels, query_features, query_labels

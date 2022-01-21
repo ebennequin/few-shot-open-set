@@ -25,6 +25,7 @@ TB_LOGS_DIR = DATA_ROOT_DIR / "tb_logs"
 
 OUTLIER_PREDICTIONS_CSV = DATA_ROOT_DIR / "predictions" / "outliers.csv"
 CLASSIFICATION_PREDICTIONS_CSV = DATA_ROOT_DIR / "predictions" / "classifications.csv"
+METRICS_JSON = DATA_ROOT_DIR / "predictions" / "metrics.json"
 
 # Models
 BACKBONES = {

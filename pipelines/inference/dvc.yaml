@@ -1,3 +1,5 @@
+vars: pipelines/inference/params.yaml
+
 stages:
   detect_outliers:
     foreach: ${grid}

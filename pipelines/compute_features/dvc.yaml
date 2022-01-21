@@ -1,3 +1,5 @@
+vars: pipelines/compute_features/params.yaml
+
 stages:
   compute_features:
     foreach: ${grid}

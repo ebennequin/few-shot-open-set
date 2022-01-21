@@ -22,8 +22,4 @@ NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 
 TRAINED_MODELS_DIR = DATA_ROOT_DIR / "models"
 FEATURES_DIR = DATA_ROOT_DIR / "features"
 TB_LOGS_DIR = DATA_ROOT_DIR / "tb_logs"
-
 PREDICTIONS_DIR = DATA_ROOT_DIR / "predictions"
-OUTLIER_PREDICTIONS_CSV = PREDICTIONS_DIR / "outliers.csv"
-CLASSIFICATION_PREDICTIONS_CSV = PREDICTIONS_DIR / "classifications.csv"
-METRICS_JSON = PREDICTIONS_DIR / "metrics.json"

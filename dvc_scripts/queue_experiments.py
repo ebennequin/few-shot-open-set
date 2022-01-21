@@ -13,8 +13,15 @@ import yaml
     type=Path,
     default=Path("grid.yaml"),
 )
+@click.option(
+    "-p",
+    "--pipeline",
+    help="Root directory of the pipeline we want to launch.",
+    type=Path,
+    default=Path("pipelines") / "inference",
+)
 @click.command()
-def main(file):
+def main(file, pipeline):
     """
     Queue DVC experiments parameterized with a YAML file using this template:
 
@@ -39,7 +46,7 @@ def main(file):
     for experiment in grid_params["grid"]:
         if "untracked_files" in grid_params:
             index_files(grid_params["untracked_files"])
-        queue(experiment)
+        queue(experiment, pipeline)
 
 
 def index_files(untracked_files: List[str]):
@@ -53,18 +60,19 @@ def index_files(untracked_files: List[str]):
     )
 
 
-def queue(experiment: Dict):
+def queue(experiment: Dict, pipeline: Path):
     """
     Queue an experiment with DVC.
     Args:
         experiment: dictionary where the keys are the parameters to be updated
             and the values are the value with which to update the parameter.
+        pipeline: root directory of the pipeline we want to launch
     """
-    command_line = ["dvc", "exp", "run", "--queue"]
+    command_line = ["dvc", "exp", "run", str(pipeline / "dvc.yaml"), "--queue"]
     for param, value in experiment.items():
         command_line += [
             "--set-param",
-            f"{param}={value}",
+            f"{pipeline}/params.yaml:{param}={value}",
         ]
 
     subprocess.run(command_line)

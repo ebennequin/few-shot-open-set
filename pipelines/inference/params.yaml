@@ -13,7 +13,7 @@ setting:
 
 # Problem solvers
 method:
-  detector: blabla
+  detector: KNNOutlierDetector
   detector_args:
     n_neighbors: 3
     method: mean

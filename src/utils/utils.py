@@ -6,6 +6,7 @@ import torch
 from loguru import logger
 from numpy import ndarray
 from torch import nn
+from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -45,10 +46,26 @@ def compute_features(
         all_features = []
         all_labels = []
         for images, labels in tqdm(loader, unit="batch"):
-            all_features.append(feature_extractor(images.to(device)).data.cpu())
-            all_labels.append(labels)
+            all_features.append(
+                feature_extractor(images.to(device))
+                .data.cpu()
+                .numpy()
+                .astype(np.float16)
+            )
+            all_labels.append(labels.data.cpu().numpy())
 
     return (
-        torch.cat(all_features, dim=0).cpu().numpy(),
-        torch.cat(all_labels, dim=0).cpu().numpy(),
+        np.concatenate(all_features, axis=0),
+        np.concatenate(all_labels, axis=0),
     )
+
+
+def pool_features(query_features, support_features):
+    if len(support_features.shape) > 2:
+        support_features = torch.flatten(
+            F.adaptive_avg_pool2d(support_features, (1, 1)), start_dim=1
+        )
+        query_features = torch.flatten(
+            F.adaptive_avg_pool2d(query_features, (1, 1)), start_dim=1
+        )
+    return query_features, support_features

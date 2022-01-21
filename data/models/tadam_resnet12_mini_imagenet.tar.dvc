@@ -1,0 +1,4 @@
+outs:
+- md5: 28deb213fbfd3c126dba09139a129089
+  size: 49766661
+  path: tadam_resnet12_mini_imagenet.tar

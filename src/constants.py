@@ -22,17 +22,4 @@ NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 
 TRAINED_MODELS_DIR = DATA_ROOT_DIR / "models"
 FEATURES_DIR = DATA_ROOT_DIR / "features"
 TB_LOGS_DIR = DATA_ROOT_DIR / "tb_logs"
-
-
-# Models
-BACKBONES = {
-    "resnet12": resnet12,
-    "resnet18": resnet18,
-    "resnet34": resnet34,
-    "resnet12i": resnet12imagenet,
-    "resnet18i": resnet18imagenet,
-    "tadam_res12": tadam_res12,
-}
-FEW_SHOT_METHODS = {
-    "protonet": PrototypicalNetworks,
-}
+PREDICTIONS_DIR = DATA_ROOT_DIR / "predictions"

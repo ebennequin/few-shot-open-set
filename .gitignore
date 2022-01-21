@@ -141,6 +141,8 @@ data/tiered_imagenet/tb_logs
 data/cifar/data
 data/features
 
+dvc_plots
+
 # streamlit
 streamlit_cache
 

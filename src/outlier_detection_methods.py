@@ -1,3 +1,4 @@
+import inspect
 import math
 from typing import Dict
 
@@ -17,6 +18,7 @@ from src.utils.outlier_detectors import (
     get_shannon_entropy,
     compute_outlier_scores_with_renyi_divergence,
 )
+from src.utils.utils import pool_features
 
 
 class AbstractOutlierDetector(nn.Module):
@@ -67,13 +69,9 @@ class AbstractOutlierDetector(nn.Module):
         )
 
         # Average pooling
-        if len(support_features.shape) > 2:
-            support_features = torch.flatten(
-                F.adaptive_avg_pool2d(support_features, (1, 1)), start_dim=1
-            )
-            query_features = torch.flatten(
-                F.adaptive_avg_pool2d(query_features, (1, 1)), start_dim=1
-            )
+        query_features, support_features = pool_features(
+            query_features, support_features
+        )
 
         # Post-pooling transforms
         support_features, query_features = self.postpool_feature_transformer(
@@ -81,6 +79,13 @@ class AbstractOutlierDetector(nn.Module):
         )
 
         return support_features, query_features
+
+    @classmethod
+    def from_args(cls, args: Dict):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args.items() if k in signature.parameters.keys()}
+        )
 
 
 class RenyiEntropyOutlierDetector(AbstractOutlierDetector):

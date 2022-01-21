@@ -1,0 +1,16 @@
+vars:
+  - params.yaml
+
+stages:
+  compute_features:
+    foreach: ${grid}
+    do:
+      wdir: ../..
+      cmd: PYTHONPATH=. python pipelines/compute_features/compute_features.py
+        ${key}
+        ${item.weights}
+      deps:
+        - pipelines/compute_features/compute_features.py
+        - ${item.weights}
+      outs:
+        - data/features/${key}.pickle

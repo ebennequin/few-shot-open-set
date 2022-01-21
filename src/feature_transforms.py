@@ -1,7 +1,10 @@
+import inspect
+
 from abc import abstractmethod
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Union
 
 import torch.nn.functional as F
+from numpy import ndarray
 from torch import Tensor, nn
 import torch
 
@@ -15,6 +18,13 @@ class AbstractFeatureTransformer(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         raise NotImplementedError(
             "All feature transformers must implement a forward method."
+        )
+
+    @classmethod
+    def from_args(cls, args: Dict):
+        signature = inspect.signature(cls.__init__)
+        return cls(
+            **{k: v for k, v in args.items() if k in signature.parameters.keys()}
         )
 
 
@@ -185,14 +195,14 @@ class BaseSetCentering(AbstractFeatureTransformer):
     features: Tensor shape [N, hidden_dim, *]
     """
 
-    def __init__(self, average_train_features: Tensor):
+    def __init__(self, average_train_features: Union[Tensor, ndarray]):
         super().__init__()
-        self.average_train_features = average_train_features
+        self.average_train_features = torch.tensor(average_train_features)
 
     def forward(
         self, support_features: Tensor, query_features: Tensor
     ) -> Tuple[Tensor, Tensor]:
-        if len(self.average_train_features.size()) != len(support_features.size()):
+        if len(self.average_train_features.shape) != len(support_features.shape):
             self.average_train_features = self.average_train_features.squeeze(
                 -1
             ).squeeze(-1)

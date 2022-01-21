@@ -1,0 +1,55 @@
+stages:
+  detect_outliers:
+    foreach: ${grid}
+    do:
+      wdir: ../..
+      cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py
+          ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - setting
+            - method
+      deps:
+        - pipelines/inference/detect_outliers.py
+        - data/features/${item}.pickle
+      outs:
+        - data/predictions/${item}/outliers.csv
+
+  classify_queries:
+    foreach: ${grid}
+    do:
+      wdir: ../..
+      cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py
+          ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - setting
+            - method
+      deps:
+        - pipelines/inference/classify_queries.py
+        - data/features/${item}.pickle
+      outs:
+        - data/predictions/${item}/classifications.csv
+
+  compute_metrics:
+    foreach: ${grid}
+    do:
+      wdir: ../..
+      cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py
+        ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - objective
+      deps:
+        - pipelines/inference/compute_metrics.py
+        - data/predictions/${item}/outliers.csv
+        - data/predictions/${item}/classifications.csv
+      metrics:
+        - data/predictions/${item}/metrics.json
+      plots:
+        - data/predictions/${item}/roc_curve.csv:
+            title: ROC
+            x: false_positive_rate
+            y: true_positive_rate
+
+

@@ -33,7 +33,8 @@ class FeaturesDataset(Dataset):
                     {
                         "label": k,
                         "features": list(
-                            torch.from_numpy(v) - self.features_centered_on,
+                            torch.from_numpy(v).type(torch.float)
+                            - self.features_centered_on,
                         ),
                     }
                 )

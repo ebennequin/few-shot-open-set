@@ -1,6 +1,3 @@
-vars:
-  - params.yaml
-
 stages:
   detect_outliers:
     foreach: ${grid}
@@ -8,6 +5,10 @@ stages:
       wdir: ../..
       cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py
           ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - setting
+            - method
       deps:
         - pipelines/inference/detect_outliers.py
         - data/features/${item}.pickle
@@ -20,6 +21,10 @@ stages:
       wdir: ../..
       cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py
           ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - setting
+            - method
       deps:
         - pipelines/inference/classify_queries.py
         - data/features/${item}.pickle
@@ -32,6 +37,9 @@ stages:
       wdir: ../..
       cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py
         ${item}
+      params:
+        - pipelines/inference/params.yaml:
+            - objective
       deps:
         - pipelines/inference/compute_metrics.py
         - data/predictions/${item}/outliers.csv

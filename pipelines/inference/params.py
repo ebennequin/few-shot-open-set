@@ -15,28 +15,28 @@ with open(PARAMETERS_FILE) as file:
 
 # Problem settings
 
-RANDOM_SEED = params["random_seed"]
-N_WAY = params["n_way"]
-N_SHOT = params["n_shot"]
-N_QUERY = params["n_query"]
-N_TASKS = params["n_tasks"]
-N_WORKERS = params["n_workers"]
+RANDOM_SEED = params["setting"]["random_seed"]
+N_WAY = params["setting"]["n_way"]
+N_SHOT = params["setting"]["n_shot"]
+N_QUERY = params["setting"]["n_query"]
+N_TASKS = params["setting"]["n_tasks"]
+N_WORKERS = params["setting"]["n_workers"]
 
 # Problem solvers
 
-DETECTOR = locate(DETECTORS_ROOT + params["detector"])
-DETECTOR_ARGS = params["detector_args"]
-CLASSIFIER = locate(CLASSIFIERS_ROOT + params["classifier"])
-CLASSIFIER_ARGS = params["classifier_args"]
+DETECTOR = locate(DETECTORS_ROOT + params["method"]["detector"])
+DETECTOR_ARGS = params["method"]["detector_args"]
+CLASSIFIER = locate(CLASSIFIERS_ROOT + params["method"]["classifier"])
+CLASSIFIER_ARGS = params["method"]["classifier_args"]
 PREPOOL_TRANSFORMERS = [
     locate(TRANSFORMERS_ROOT + transformer)
-    for transformer in params["prepool_transformers"]
+    for transformer in params["method"]["prepool_transformers"]
 ]
 POSTPOOL_TRANSFORMERS = [
     locate(TRANSFORMERS_ROOT + transformer)
-    for transformer in params["postpool_transformers"]
+    for transformer in params["method"]["postpool_transformers"]
 ]
-TRANSFORMERS_ARGS = params["transformers_args"]
+TRANSFORMERS_ARGS = params["method"]["transformers_args"]
 
 # Metrics
 OBJECTIVE = params["objective"]

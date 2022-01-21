@@ -3,28 +3,30 @@ grid:
   - tiered_imagenet
 
 # Problem settings
-random_seed: 0
-n_way: 5
-n_shot: 5
-n_query: 10
-n_tasks: 10
-n_workers: 12
+setting:
+  random_seed: 0
+  n_way: 5
+  n_shot: 5
+  n_query: 10
+  n_tasks: 10
+  n_workers: 12
 
 # Problem solvers
-detector: RenyiEntropyOutlierDetector
-detector_args:
-  n_neighbors: 3
-  method: mean
-classifier: SimpleShot
-classifier_args:
-  softmax_temperature: 1.0
-prepool_transformers:
-  - BaseSetCentering
-postpool_transformers:
-  - Normalize
-transformers_args:
-  beta: 0.5
-  norm: 2.0
+method:
+  detector: blabla
+  detector_args:
+    n_neighbors: 3
+    method: mean
+  classifier: SimpleShot
+  classifier_args:
+    softmax_temperature: 1.0
+  prepool_transformers:
+    - BaseSetCentering
+  postpool_transformers:
+    - Normalize
+  transformers_args:
+    beta: 0.5
+    norm: 2.0
 
 # Metrics params
 objective: 0.9

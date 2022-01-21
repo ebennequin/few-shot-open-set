@@ -17,7 +17,7 @@ from pipelines.inference.params import (
     DETECTOR,
     DETECTOR_ARGS,
 )
-from src.constants import FEATURES_DIR, OUTLIER_PREDICTIONS_CSV
+from src.constants import FEATURES_DIR, OUTLIER_PREDICTIONS_CSV, PREDICTIONS_DIR
 from src.feature_transforms import SequentialFeatureTransformer
 from src.utils.data_fetchers import get_test_features, get_features_data_loader
 from src.utils.outlier_detectors import detect_outliers
@@ -81,8 +81,10 @@ def main(dataset: str):
     outliers_df = detect_outliers(outlier_detector, data_loader, N_WAY, N_QUERY)
 
     # Saving results
-    outliers_df.to_csv(OUTLIER_PREDICTIONS_CSV)
-    logger.info(f"Predictions dumped to {OUTLIER_PREDICTIONS_CSV}.")
+    output_file = PREDICTIONS_DIR / dataset / "outliers.csv"
+    output_file.parent.mkdir(exist_ok=True)
+    outliers_df.to_csv(output_file)
+    logger.info(f"Predictions dumped to {output_file}.")
 
 
 if __name__ == "__main__":

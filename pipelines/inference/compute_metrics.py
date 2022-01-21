@@ -39,9 +39,13 @@ from src.utils.utils import set_random_seed
 
 
 def main(dataset: str):
+    dataset_predictions_dir = PREDICTIONS_DIR / dataset
+
     # Classification metrics
 
-    classification_predictions_df = pd.read_csv(CLASSIFICATION_PREDICTIONS_CSV)
+    classification_predictions_df = pd.read_csv(
+        dataset_predictions_dir / "classifications.csv"
+    )
     accuracy = (
         (
             classification_predictions_df.true_label
@@ -53,7 +57,7 @@ def main(dataset: str):
 
     # Outlier detection metrics
 
-    outlier_predictions_df = pd.read_csv(OUTLIER_PREDICTIONS_CSV)
+    outlier_predictions_df = pd.read_csv(dataset_predictions_dir / "outliers.csv")
 
     fp_rate, tp_rate, _ = roc_curve(
         outlier_predictions_df.outlier, outlier_predictions_df.outlier_score
@@ -77,13 +81,14 @@ def main(dataset: str):
         "recall_for_precision": recall_at_precision_objective,
     }
 
+    metrics_path = dataset_predictions_dir / "metrics.json"
     logger.info(f"Metrics: {json.dumps(metrics, indent=4)}")
-    logger.info(f"Metrics dumped to {METRICS_JSON}.")
 
-    with open(METRICS_JSON, "w") as stream:
+    with open(metrics_path, "w") as stream:
         json.dump(metrics, stream, indent=4)
+    logger.info(f"Metrics dumped to {metrics_path}.")
 
-    roc_file_path = PREDICTIONS_DIR / "roc_curve.csv"
+    roc_file_path = dataset_predictions_dir / "roc_curve.csv"
     pd.DataFrame(
         {
             "false_positive_rate": fp_rate,

@@ -1,4 +1,6 @@
-dataset: mini_imagenet
+grid:
+  - mini_imagenet
+  - tiered_imagenet
 
 # Problem settings
 random_seed: 0

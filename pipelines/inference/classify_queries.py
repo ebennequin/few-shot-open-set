@@ -25,6 +25,7 @@ from src.constants import (
     FEATURES_DIR,
     OUTLIER_PREDICTIONS_CSV,
     CLASSIFICATION_PREDICTIONS_CSV,
+    PREDICTIONS_DIR,
 )
 from src.feature_transforms import SequentialFeatureTransformer
 from src.few_shot_methods import AbstractFewShotMethod
@@ -87,8 +88,10 @@ def main(dataset: str):
     predictions_df = classify_queries(few_shot_classifier, data_loader, N_WAY, N_QUERY)
 
     # Saving results
-    predictions_df.to_csv(CLASSIFICATION_PREDICTIONS_CSV)
-    logger.info(f"Predictions dumped to {CLASSIFICATION_PREDICTIONS_CSV}.")
+    output_file = PREDICTIONS_DIR / dataset / "classifications.csv"
+    output_file.parent.mkdir(exist_ok=True)
+    predictions_df.to_csv(output_file)
+    logger.info(f"Predictions dumped to {output_file}.")
 
 
 def classify_queries(

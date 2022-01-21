@@ -8,8 +8,8 @@ stages:
       md5: 28deb213fbfd3c126dba09139a129089
       size: 49766661
     - path: pipelines/compute_features/compute_features.py
-      md5: 16d0b50d9071dadef47e7b43384930fd
-      size: 2835
+      md5: 28d957210ebe7609ebf9d57cf3e54c53
+      size: 2820
     outs:
     - path: data/features/mini_imagenet.pickle
       md5: f0a320542b15f255e9512dc251696939
@@ -22,8 +22,8 @@ stages:
       md5: 32f8ce9b85cd65333a4df2bc96ea1937
       size: 49766661
     - path: pipelines/compute_features/compute_features.py
-      md5: 16d0b50d9071dadef47e7b43384930fd
-      size: 2835
+      md5: 28d957210ebe7609ebf9d57cf3e54c53
+      size: 2820
     outs:
     - path: data/features/tiered_imagenet.pickle
       md5: d65457a931298a9ae4258bfe3f385167

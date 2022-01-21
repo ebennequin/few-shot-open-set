@@ -11,7 +11,6 @@ from torch import nn
 
 from pipelines.compute_features.params import BATCH_SIZE, BACKBONE, DEVICE, N_WORKERS
 from src.constants import (
-    BACKBONES,
     FEATURES_DIR,
 )
 from src.utils.data_fetchers import get_classic_loader

@@ -17,9 +17,9 @@ from pipelines.inference.params import (
     DETECTOR,
     DETECTOR_ARGS,
 )
-from src.constants import FEATURES_DIR, OUTLIER_PREDICTIONS_CSV, PREDICTIONS_DIR
+from src.constants import FEATURES_DIR, PREDICTIONS_DIR
 from src.feature_transforms import SequentialFeatureTransformer
-from src.utils.data_fetchers import get_test_features, get_features_data_loader
+from src.utils.data_fetchers import get_features_data_loader
 from src.utils.outlier_detectors import detect_outliers
 from src.utils.utils import set_random_seed
 

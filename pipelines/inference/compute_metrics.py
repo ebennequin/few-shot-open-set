@@ -1,41 +1,16 @@
 import json
-import pickle
 
 import pandas as pd
 import typer
 from loguru import logger
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
-from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 from pipelines.inference.params import (
-    RANDOM_SEED,
-    N_WAY,
-    N_SHOT,
-    N_QUERY,
-    N_TASKS,
-    N_WORKERS,
-    CLASSIFIER,
-    CLASSIFIER_ARGS,
-    TRANSFORMERS_ARGS,
-    PREPOOL_TRANSFORMERS,
-    POSTPOOL_TRANSFORMERS,
-    DETECTOR,
-    DETECTOR_ARGS,
     OBJECTIVE,
 )
 from src.constants import (
-    FEATURES_DIR,
-    OUTLIER_PREDICTIONS_CSV,
-    CLASSIFICATION_PREDICTIONS_CSV,
-    METRICS_JSON,
     PREDICTIONS_DIR,
 )
-from src.feature_transforms import SequentialFeatureTransformer
-from src.few_shot_methods import AbstractFewShotMethod
-from src.utils.data_fetchers import get_test_features, get_features_data_loader
-from src.utils.plots_and_metrics import plot_roc
-from src.utils.utils import set_random_seed
 
 
 def main(dataset: str):

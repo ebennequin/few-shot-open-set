@@ -27,16 +27,3 @@ PREDICTIONS_DIR = DATA_ROOT_DIR / "predictions"
 OUTLIER_PREDICTIONS_CSV = PREDICTIONS_DIR / "outliers.csv"
 CLASSIFICATION_PREDICTIONS_CSV = PREDICTIONS_DIR / "classifications.csv"
 METRICS_JSON = PREDICTIONS_DIR / "metrics.json"
-
-# Models
-BACKBONES = {
-    "resnet12": resnet12,
-    "resnet18": resnet18,
-    "resnet34": resnet34,
-    "resnet12i": resnet12imagenet,
-    "resnet18i": resnet18imagenet,
-    "tadam_res12": tadam_res12,
-}
-FEW_SHOT_METHODS = {
-    "protonet": PrototypicalNetworks,
-}

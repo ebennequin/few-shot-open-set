@@ -18,13 +18,9 @@ from pipelines.inference.params import (
     TRANSFORMERS_ARGS,
     PREPOOL_TRANSFORMERS,
     POSTPOOL_TRANSFORMERS,
-    DETECTOR,
-    DETECTOR_ARGS,
 )
 from src.constants import (
     FEATURES_DIR,
-    OUTLIER_PREDICTIONS_CSV,
-    CLASSIFICATION_PREDICTIONS_CSV,
     PREDICTIONS_DIR,
 )
 from src.feature_transforms import SequentialFeatureTransformer

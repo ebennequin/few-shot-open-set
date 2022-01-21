@@ -4,6 +4,7 @@ from typing import List, Dict
 
 import click
 import yaml
+from loguru import logger
 
 
 @click.option(
@@ -43,6 +44,7 @@ def main(file, pipeline):
     with open(file, "r") as stream:
         grid_params = yaml.safe_load(stream)
 
+    logger.info(f"Queuing {len(grid_params['grid'])} experiments...")
     for experiment in grid_params["grid"]:
         if "untracked_files" in grid_params:
             index_files(grid_params["untracked_files"])

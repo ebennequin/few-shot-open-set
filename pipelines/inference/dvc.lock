@@ -24,8 +24,8 @@ stages:
       size: 2560
     outs:
     - path: data/predictions/outliers.csv
-      md5: 6d35406e1183b3e28c4e565d3c71e239
-      size: 20031
+      md5: 301e58f86074f616d0d251ea33e3b53a
+      size: 22036
   compute_metrics:
     cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py mini_imagenet
     deps:
@@ -33,12 +33,15 @@ stages:
       md5: e28c955be1f289a99a20bbc158964b56
       size: 25951
     - path: data/predictions/outliers.csv
-      md5: 6d35406e1183b3e28c4e565d3c71e239
-      size: 20031
+      md5: 301e58f86074f616d0d251ea33e3b53a
+      size: 22036
     - path: pipelines/inference/compute_metrics.py
-      md5: a4d51d3e1c3cbf06f817d52cacb60deb
-      size: 2329
+      md5: a3cfd501ddf6bdacc9399fc31e66d171
+      size: 2575
     outs:
     - path: data/predictions/metrics.json
       md5: 0ff691e214a3e92e3cd6b3384667b768
       size: 128
+    - path: data/predictions/roc_curve.csv
+      md5: e3ef429db39e0ef2d3f386aee5400829
+      size: 4825

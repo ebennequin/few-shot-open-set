@@ -23,9 +23,10 @@ TRAINED_MODELS_DIR = DATA_ROOT_DIR / "models"
 FEATURES_DIR = DATA_ROOT_DIR / "features"
 TB_LOGS_DIR = DATA_ROOT_DIR / "tb_logs"
 
-OUTLIER_PREDICTIONS_CSV = DATA_ROOT_DIR / "predictions" / "outliers.csv"
-CLASSIFICATION_PREDICTIONS_CSV = DATA_ROOT_DIR / "predictions" / "classifications.csv"
-METRICS_JSON = DATA_ROOT_DIR / "predictions" / "metrics.json"
+PREDICTIONS_DIR = DATA_ROOT_DIR / "predictions"
+OUTLIER_PREDICTIONS_CSV = PREDICTIONS_DIR / "outliers.csv"
+CLASSIFICATION_PREDICTIONS_CSV = PREDICTIONS_DIR / "classifications.csv"
+METRICS_JSON = PREDICTIONS_DIR / "metrics.json"
 
 # Models
 BACKBONES = {

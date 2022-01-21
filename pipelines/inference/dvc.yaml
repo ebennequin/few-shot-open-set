@@ -29,4 +29,10 @@ stages:
       - data/predictions/classifications.csv
     metrics:
       - data/predictions/metrics.json
+    plots:
+      - data/predictions/roc_curve.csv:
+          title: ROC
+          x: false_positive_rate
+          y: true_positive_rate
+
 

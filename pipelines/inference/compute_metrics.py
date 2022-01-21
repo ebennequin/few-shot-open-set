@@ -29,6 +29,7 @@ from src.constants import (
     OUTLIER_PREDICTIONS_CSV,
     CLASSIFICATION_PREDICTIONS_CSV,
     METRICS_JSON,
+    PREDICTIONS_DIR,
 )
 from src.feature_transforms import SequentialFeatureTransformer
 from src.few_shot_methods import AbstractFewShotMethod
@@ -76,10 +77,20 @@ def main(dataset: str):
         "recall_for_precision": recall_at_precision_objective,
     }
 
-    logger.info(json.dumps(metrics, indent=4))
+    logger.info(f"Metrics: {json.dumps(metrics, indent=4)}")
+    logger.info(f"Metrics dumped to {METRICS_JSON}.")
 
     with open(METRICS_JSON, "w") as stream:
         json.dump(metrics, stream, indent=4)
+
+    roc_file_path = PREDICTIONS_DIR / "roc_curve.csv"
+    pd.DataFrame(
+        {
+            "false_positive_rate": fp_rate,
+            "true_positive_rate": tp_rate,
+        }
+    ).to_csv(roc_file_path, index=False)
+    logger.info(f"ROC dumped to {roc_file_path}.")
 
 
 if __name__ == "__main__":

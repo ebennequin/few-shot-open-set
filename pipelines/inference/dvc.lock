@@ -7,8 +7,8 @@ stages:
       md5: f0a320542b15f255e9512dc251696939
       size: 384033495
     - path: pipelines/inference/classify_queries.py
-      md5: d3fada67fa49dffe55d0a46db2a5e915
-      size: 3658
+      md5: abf40cf845c8eb63f0fca8fd2639d0d7
+      size: 3683
     outs:
     - path: data/predictions/classifications.csv
       md5: e28c955be1f289a99a20bbc158964b56
@@ -26,3 +26,19 @@ stages:
     - path: data/predictions/outliers.csv
       md5: 6d35406e1183b3e28c4e565d3c71e239
       size: 20031
+  compute_metrics:
+    cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py mini_imagenet
+    deps:
+    - path: data/predictions/classifications.csv
+      md5: e28c955be1f289a99a20bbc158964b56
+      size: 25951
+    - path: data/predictions/outliers.csv
+      md5: 6d35406e1183b3e28c4e565d3c71e239
+      size: 20031
+    - path: pipelines/inference/compute_metrics.py
+      md5: a4d51d3e1c3cbf06f817d52cacb60deb
+      size: 2329
+    outs:
+    - path: data/predictions/metrics.json
+      md5: 0ff691e214a3e92e3cd6b3384667b768
+      size: 128

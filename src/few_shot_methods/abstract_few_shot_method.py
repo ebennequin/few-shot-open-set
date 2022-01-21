@@ -53,10 +53,12 @@ class AbstractFewShotMethod(nn.Module):
                 in the task, representing the soft predictions of the method for query samples.
         """
         support_features, query_features = self.transform_features(
-            support_features, query_features
+            support_features=support_features, query_features=query_features
         )
         return self.classify_support_and_queries(
-            support_features, support_labels, query_features
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
         )
 
     def classify_support_and_queries(

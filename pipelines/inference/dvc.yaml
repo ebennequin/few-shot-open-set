@@ -8,3 +8,14 @@ stages:
       - data/features/${dataset}.pickle
     outs:
       - data/predictions/outliers.csv
+
+  classify_queries:
+    wdir: ../..
+    cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py
+        ${dataset}
+    deps:
+      - pipelines/inference/classify_queries.py
+      - data/features/${dataset}.pickle
+    outs:
+      - data/predictions/classifications.csv
+

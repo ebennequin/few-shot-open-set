@@ -5,11 +5,11 @@ random_seed: 0
 n_way: 5
 n_shot: 5
 n_query: 10
-n_tasks: 500
+n_tasks: 10
 n_workers: 12
 
 # Problem solvers
-detector: KNNOutlierDetector
+detector: RenyiEntropyOutlierDetector
 detector_args:
   n_neighbors: 3
   method: mean

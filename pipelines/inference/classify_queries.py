@@ -1,6 +1,10 @@
 import pickle
+
+import pandas as pd
 import typer
 from loguru import logger
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from pipelines.inference.params import (
     RANDOM_SEED,
@@ -17,10 +21,14 @@ from pipelines.inference.params import (
     DETECTOR,
     DETECTOR_ARGS,
 )
-from src.constants import FEATURES_DIR, OUTLIER_PREDICTIONS_CSV
+from src.constants import (
+    FEATURES_DIR,
+    OUTLIER_PREDICTIONS_CSV,
+    CLASSIFICATION_PREDICTIONS_CSV,
+)
 from src.feature_transforms import SequentialFeatureTransformer
+from src.few_shot_methods import AbstractFewShotMethod
 from src.utils.data_fetchers import get_test_features, get_features_data_loader
-from src.utils.outlier_detectors import detect_outliers
 from src.utils.utils import set_random_seed
 
 
@@ -41,8 +49,7 @@ def main(dataset: str):
         n_workers=N_WORKERS,
     )
 
-    logger.info(f"Building model: {DETECTOR.__name__}")
-    few_shot_classifier = CLASSIFIER.from_args(CLASSIFIER_ARGS)
+    logger.info(f"Building model: {CLASSIFIER.__name__}")
 
     prepool_transformer = SequentialFeatureTransformer(
         [
@@ -68,21 +75,55 @@ def main(dataset: str):
         ]
     )
 
-    outlier_detector = DETECTOR.from_args(
+    few_shot_classifier = CLASSIFIER.from_args(
         dict(
             prepool_feature_transformer=prepool_transformer,
             postpool_transformer=postpool_transformer,
-            few_shot_classifier=few_shot_classifier,
-            **DETECTOR_ARGS,
+            **CLASSIFIER_ARGS,
         )
     )
 
     logger.info(f"Running inference on {N_TASKS} tasks...")
-    outliers_df = detect_outliers(outlier_detector, data_loader, N_WAY, N_QUERY)
+    predictions_df = classify_queries(few_shot_classifier, data_loader, N_WAY, N_QUERY)
 
     # Saving results
-    outliers_df.to_csv(OUTLIER_PREDICTIONS_CSV)
-    logger.info(f"Predictions dumped to {OUTLIER_PREDICTIONS_CSV}.")
+    predictions_df.to_csv(CLASSIFICATION_PREDICTIONS_CSV)
+    logger.info(f"Predictions dumped to {CLASSIFICATION_PREDICTIONS_CSV}.")
+
+
+def classify_queries(
+    few_shot_classifier: AbstractFewShotMethod,
+    data_loader: DataLoader,
+    n_way: int,
+    n_query: int,
+):
+    predictions_df_list = []
+    for task_id, (
+        support_features,
+        support_labels,
+        query_features,
+        query_labels,
+        _,
+    ) in tqdm(enumerate(data_loader)):
+        _, query_predictions = few_shot_classifier(
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
+        )
+        predicted_labels = query_predictions.max(dim=1)
+        predictions_df_list.append(
+            pd.DataFrame(
+                {
+                    "task": task_id,
+                    "outlier": (n_way * n_query) * [False] + (n_way * n_query) * [True],
+                    "true_label": query_labels,
+                    "predicted_label": predicted_labels.indices,
+                    "prediction_confidence": predicted_labels.values,
+                }
+            )
+        )
+
+    return pd.concat(predictions_df_list, ignore_index=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,113 @@
+knn:
+  current_params:
+    n_neighbors: 10
+    method: 'mean'
+  tuning:
+    hparams2tune: ['n_neighbors', 'method']
+    hparam_values: [[3], ['mean', 'median']]
+
+abod:
+  current_params:
+    n_neighbors: 10
+    method: 'fast'
+  tuning:
+    hparams2tune: ['n_neighbors']
+    hparam_values: [[3, 5, 7, 9, 11, 13, 15]]
+
+pca:
+  current_params:
+    n_components: 'mle'
+    svd_solver: 'full'
+    standardization: True
+  tuning:
+    hparams2tune: ['n_components']
+    hparam_values: [[3, 5, 7, 10, 15, 20]]
+
+ocsvm:
+  current_params:
+    kernel: 'rbf'
+  tuning:
+    hparams2tune: ['kernel']
+    hparam_values: [['linear', 'poly', 'rbf', 'sigmoid']]
+
+rod:
+  current_params:
+    parallel_execution: False
+  tuning:
+    hparams2tune: ['parallel_execution']
+    hparam_values: [[False]]
+
+sod:
+  current_params:
+    n_neighbors: 20
+    ref_set: 15 # number of shared nearest neighbors to create the reference set. Must be smaller than n_neighbors
+    alpha: 0.8 # pecifies the lower limit for selecting subspace. 0.8 is set as default as suggested in the original paper.
+  tuning:
+    hparams2tune: ['n_neighbors', 'alpha']
+    hparam_values: [[20], [0.2, 0.5, 0.8]]
+
+iforest:
+  current_params:
+    n_estimators: 100
+    max_features: 1.0 # The number of features to draw from X to train each base estimator.
+  tuning:
+    hparams2tune: ['max_features']
+    hparam_values: [[0.1, 0.3, 0.5, 0.8]]
+
+feature_bagging:
+  current_params:
+    n_estimators: 10
+    max_features: 1.0
+    combination: 'average' # could be max
+  tuning:
+    hparams2tune: ['n_estimators', 'max_features']
+    hparam_values: [[10, 100], [0.5, 0.8, 1.0]]
+
+sos:
+  current_params:
+    perplexity: 4.5 #  The perplexity parameter is similar to the parameter k in kNN algorithm (the number of nearest neighbors). The range of perplexity can be any real number between 1 and n-1, where n is the number of samples.
+    metric: 'euclidian'
+  tuning:
+    hparams2tune: ['perplexity', 'metric']
+    hparam_values: [[5, 10, 15], ['braycurtis', 'canberra', 'chebyshev', 'minkowski']]
+
+lof:
+  current_params:
+    n_neighbors: 20
+    algorithm: 'auto'  # Algorithm used to compute the nearest neighbors
+    metric: 'minkowski'
+  tuning:
+    hparams2tune: ['n_neighbors', 'metric']
+    hparam_values: [[5, 10, 15, 20], ['cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan']]
+
+ecod:
+  current_params:
+    n_jobs: 1
+  tuning:
+    hparams2tune: ['n_jobs']
+    hparam_values: [[1]]
+
+cof:
+  current_params:
+    n_neighbors: 20
+    method: 'fast'
+  tuning:
+    hparams2tune: ['n_neighbors']
+    hparam_values: [[3, 5, 10, 15]]
+
+copod:
+  current_params:
+    n_jobs: 1
+  tuning:
+    hparams2tune: ['n_jobs']
+    hparam_values: [[1]]
+
+ae:
+  current_params:
+    hidden_neurons: 16
+    l2_regularizer: 0.1
+    validation_size: 0
+    verbose: 0
+  tuning:
+    hparams2tune: ['hidden_neurons']
+    hparam_values: [[[16, 8, 16]]]

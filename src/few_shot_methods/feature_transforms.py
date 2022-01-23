@@ -21,7 +21,7 @@ def react(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
-    c = torch.quantile(feat_s, 0.9)
+    c = torch.quantile(feat_s, 0.95)
     return feat_s.clamp(max=c), feat_q.clamp(max=c)
 
 

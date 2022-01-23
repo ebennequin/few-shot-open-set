@@ -8,7 +8,6 @@ import seaborn as sns
 import torchvision
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
-import streamlit as st
 import argparse
 
 def plot_episode(support_images, query_images):
@@ -33,7 +32,7 @@ def plot_episode(support_images, query_images):
     plt.show()
 
 
-def plot_roc(metrics: dict, title: str, plot: bool) -> float:
+def plot_roc(metrics: dict, title: str) -> float:
     """
     Plot the ROC curve from outlier prediction scores and ground truth, and returns
     Args:
@@ -78,7 +77,7 @@ def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
         objective: two of the metrics are the maximum precision (resp. recall) possible for a fixed
             recall (resp. precision) threshold
     """
-    roc_auc = plot_roc(metrics, title=title, plot=args.streamlit)
+    roc_auc = plot_roc(metrics, title=title)
     acc = (metrics['query_labels'] == metrics['predictions']).float().mean(-1).mean(-1)
     print(f"ROC AUC: {roc_auc}")
     print(f"Accuracy: {acc}")
@@ -97,7 +96,7 @@ def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
 
     # plot_twin_hist(outliers_df, title=title, plot=args.streamlit)
 
-    return roc_auc
+    return roc_auc, acc
 
 
 def update_csv(args: argparse.Namespace,

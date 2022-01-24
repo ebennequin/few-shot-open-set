@@ -37,13 +37,13 @@ def tensor_product(left_tensor: torch.Tensor, right_tensor: torch.Tensor):
     ).permute((1, 2, 0))
 
 
-def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, device="cuda") -> Tuple[ndarray, ndarray]:
+def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layer: int, device="cuda") -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
         if split == 'val' or split == 'test':
             all_features = []
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
-                feat = feature_extractor(images.to(device)).cpu()
+                feat = feature_extractor(images.to(device), layer=layer).cpu()
                 all_features.append(feat)
                 all_labels.append(labels)
 
@@ -56,7 +56,7 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
             avg_feat = 0.
             N = 0.
             for images, labels in tqdm(loader, unit="batch"):
-                avg_feat += feature_extractor(images.to(device)).sum(0)
+                avg_feat += feature_extractor(images.to(device), layer=layer).sum(0)
                 N += len(images)
             avg_feat /= N
             return avg_feat.cpu(), None

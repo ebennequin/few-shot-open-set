@@ -24,6 +24,7 @@ def main(
     output_file: Path = None,
     batch_size: int = 256,
     device: str = "cuda",
+    layer: int = 4,
 ):
     """
     Compute all features of given dataset images with the given model and dump them in given
@@ -48,6 +49,7 @@ def main(
         state_dict = strip_prefix(state_dict, "backbone.")
 
     missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
+    print(f"Loaded weights from {weights}")
     print(f"Missing keys {missing_keys}")
     print(f"Unexpected keys {unexpected}")
     feature_extractor.eval()
@@ -56,10 +58,16 @@ def main(
     data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
 
     logger.info("Computing features...")
-    features, labels = compute_features(feature_extractor, data_loader, device=device, split=split)
+    features, labels = compute_features(feature_extractor,
+                                        data_loader,
+                                        device=device,
+                                        split=split,
+                                        layer=layer)
 
-    if output_file is None:
-        output_file = FEATURES_DIR / dataset / split / weights.with_suffix(".pickle").name
+    # if output_file is None:
+    weights = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
+    logger.info(weights)
+    output_file = FEATURES_DIR / dataset / split / weights
     output_file.parent.mkdir(parents=True, exist_ok=True)
     if split == 'test' or split == 'val':
         logger.info("Packing by class...")

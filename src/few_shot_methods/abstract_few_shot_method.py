@@ -1,4 +1,3 @@
-import argparse
 import inspect
 
 import torch
@@ -7,6 +6,7 @@ from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple, List
 from .feature_transforms import __dict__ as ALL_FEATURE_TRANSFORMS
+from .aggregations import ALL_AGGREG
 
 
 class AbstractFewShotMethod(nn.Module):
@@ -64,14 +64,22 @@ class AbstractFewShotMethod(nn.Module):
 
         # Pre-pooling transforms
         for transf in self.prepool_transforms:
-            support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+            for layer in support_features:
+                support_features[layer], query_features[layer] = ALL_FEATURE_TRANSFORMS[transf](
+                                                                    support_features[layer],
+                                                                    query_features[layer],
+                                                                    average_train_features=self.average_train_features[layer])
 
         # Average pooling
-        support_features, query_features = support_features.mean((-2, -1)), query_features.mean((-2, -1))
+        if self.pool:
+            support_features, query_features = support_features.mean((-2, -1)), query_features.mean((-2, -1))
 
-        # Post-pooling transforms
-        for transf in self.postpool_transforms:
-            support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+            # Post-pooling transforms
+            for transf in self.postpool_transforms:
+                support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+
+        # Aggregate features
+        support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
         
         return support_features, query_features
 

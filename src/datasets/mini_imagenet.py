@@ -61,11 +61,9 @@ class MiniImageNet(VisionDataset):
             )
         )
 
-        self.images = \
-            torch.stack([
-                self.load_image(image_path)
-                for image_path in tqdm(data_df.image_paths)
-            ], 0)
+        self.images = [
+                image_path for image_path in tqdm(data_df.image_paths)
+            ]
 
         self.class_list = data_df.class_name.unique()
         self.id_to_class = dict(enumerate(self.class_list))
@@ -78,7 +76,7 @@ class MiniImageNet(VisionDataset):
     def __getitem__(self, item):
 
         img, label = (
-            self.images[item],
+            self.load_image(self.images[item]),
             self.labels[item],
         )
 

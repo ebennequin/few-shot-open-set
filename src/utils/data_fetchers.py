@@ -102,6 +102,7 @@ def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=6
         batch_size=batch_size,
         num_workers=n_workers,
         pin_memory=True,
+        shuffle=False,
     )
 
 
@@ -121,8 +122,8 @@ def get_features_data_loader(
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 
-def get_test_features(backbone, dataset, training_method) -> Tuple[Dict, Dict, ndarray]:
-    pickle_basename = f"{backbone}_{dataset}_{training_method}.pickle"
+def get_test_features(backbone, dataset, training_method, layer) -> Tuple[Dict, Dict, ndarray]:
+    pickle_basename = f"{backbone}_{dataset}_{training_method}_{layer}.pickle"
     features_path = Path("data/features") / dataset / "test" / pickle_basename
     avg_train_features_path = Path("data/features") / dataset / "train" / pickle_basename
 

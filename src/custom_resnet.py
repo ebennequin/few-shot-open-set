@@ -162,11 +162,14 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+    def forward(self, x, layer):
+        for i in range(1, 5):
+            x = eval(f'self.layer{i}')(x)
+            if layer == i:
+                return x
+        # x = self.layer2(x)
+        # x = self.layer3(x)
+        # x = self.layer4(x)
         # if self.keep_avg_pool:
         #     x = self.avgpool(x)
         # x = x.view(x.size(0), -1)

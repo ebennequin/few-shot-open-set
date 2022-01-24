@@ -2,9 +2,19 @@ knn:
   current_params:
     n_neighbors: 10
     method: 'mean'
+    distance: 'minkowski'
   tuning:
-    hparams2tune: ['n_neighbors', 'method']
-    hparam_values: [[3], ['mean', 'median']]
+    hparams2tune: ['n_neighbors']
+    hparam_values: [[5, 10, 15]]
+
+local_knn:
+  current_params:
+    n_neighbors: 10
+    method: 'mean'
+    distance: 'min_distance'
+  tuning:
+    hparams2tune: ['distance', 'n_neighbors', 'method']
+    hparam_values: [['min_distance'], [1, 5], ['mean', 'largest']]
 
 abod:
   current_params:

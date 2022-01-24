@@ -23,25 +23,21 @@ class FeaturesDataset(Dataset):
                 images with this label
             features_to_center_on: a 1-dim feature vector of length feature_dimension
         """
-        self.data = pd.concat(
-            [
-                pd.DataFrame(
-                    {
-                        "label": k,
-                        "features": list(
-                            v,
-                        ),
-                    }
-                )
-                for k, v in features_dict.items()
-            ],
-            ignore_index=True,
-        )
-        self.labels = list(self.data.label)
+        self.labels = []
+        self.data = []
+        for class_ in features_dict:
+            all_features = list(features_dict[class_].values())
+            n_samples = len(all_features[0])
+            assert all([len(x) == n_samples for x in all_features])
+            self.labels += [class_] * n_samples
+            for sample_tuple in zip(*all_features):
+                sample_dic = {i: x for i, x in enumerate(sample_tuple)}
+                self.data.append(sample_dic)
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item: int) -> Tuple[torch.Tensor, int]:
-        item_data = self.data.loc[int(item)]
-        return item_data.features, item_data.label
+        # item_data = self.data.loc[int(item)]
+        # return item_data.features, item_data.label
+        return self.data[item], self.labels[item]

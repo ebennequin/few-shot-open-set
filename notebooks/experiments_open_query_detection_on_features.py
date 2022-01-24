@@ -6,7 +6,7 @@ and infer various outlier detection methods en them.
 import argparse
 import logging
 from collections import defaultdict
-from src.outlier_detection_methods import FewShotDetector, NaiveAggregator
+from src.outlier_detection_methods import FewShotDetector, NaiveAggregator, local_knn
 from src.utils.utils import (
     set_random_seed,
 )
@@ -24,6 +24,7 @@ from src.utils.outlier_detectors import (
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_features_data_loader, get_test_features
+import torch
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,11 +38,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_tasks", type=int, default=500)
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
-    parser.add_argument("--pool", type=bool, default=True)
+    parser.add_argument("--pool", action='store_true')
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
     parser.add_argument("--training", type=str, default="classic")
+    parser.add_argument("--layers", type=str, default="4")
 
     # Detector
     parser.add_argument("--outlier_detectors", type=str, default="knn_3")
@@ -69,7 +71,7 @@ def parse_args() -> argparse.Namespace:
         "--postpool_transforms",
         nargs='+',
         type=str,
-        default="l2_norm",
+        default='l2_norm',
         help="What type of transformation to apply after spatial pooling.",
     )
     parser.add_argument(
@@ -129,6 +131,7 @@ def parse_args() -> argparse.Namespace:
 
 
 all_detectors = {'knn': pyod.models.knn.KNN,
+                 'local_knn': local_knn,
                  'abod': pyod.models.abod.ABOD,
                  'pca': pyod.models.pca.PCA,
                  'rod': pyod.models.rod.ROD,
@@ -156,10 +159,14 @@ def merge_from_dict(args, dict_: Dict):
 def main(args):
     set_random_seed(args.random_seed)
 
-    features, _, average_train_features = get_test_features(
-        args.backbone, args.dataset, args.training
-    )
-
+    layers = args.layers.split('-')
+    feature_dic = defaultdict(dict)
+    for layer in layers:
+        features, _, average_train_features = get_test_features(
+            args.backbone, args.dataset, args.training, layer
+        )
+        for class_ in features:
+            feature_dic[class_][layer] = features[class_]
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
@@ -171,7 +178,7 @@ def main(args):
     if args.mode == 'benchmark':
 
         data_loader = get_features_data_loader(
-                            features,
+                            feature_dic,
                             args.n_way,
                             args.n_shot,
                             args.n_query,
@@ -181,15 +188,10 @@ def main(args):
 
         # Obtaining the detectors
         current_detectors = [all_detectors[x](**eval(f'args.{x}.default')) for x in current_detectors]
-
-        # final_detector = SUOD(base_estimators=current_detectors,
-        #                       n_jobs=2,
-        #                       combination='average',
-        #                       verbose=False)
         final_detector = NaiveAggregator(current_detectors)
-
         fewshot_detector = FewShotDetector(few_shot_classifier, final_detector)
 
+        # Doing OOD detection
         outliers_df, acc = detect_outliers(
             fewshot_detector, data_loader, args.n_way, args.n_query
         )
@@ -227,7 +229,7 @@ def main(args):
             set_random_seed(args.random_seed)
 
             data_loader = get_features_data_loader(
-                features,
+                feature_dic,
                 args.n_way,
                 args.n_shot,
                 args.n_query,

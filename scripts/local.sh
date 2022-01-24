@@ -1,8 +1,8 @@
 
-shot=5
+shot=1
 
 # Trying detectors individually
-for detector in knn ; do
+for detector in local_knn ; do
     python3 -m notebooks.experiments_open_query_detection_on_features \
         --exp_name "individual detectors - ${shot}" \
         --mode 'tune' \
@@ -11,7 +11,6 @@ for detector in knn ; do
         --n_shot ${shot} \
         --outlier_detectors ${detector} \
         --prepool_transform  base_centering \
-        --pool False \
         --backbone resnet12 \
         --training feat \
         --dataset mini_imagenet \

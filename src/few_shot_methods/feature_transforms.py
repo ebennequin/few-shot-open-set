@@ -124,8 +124,9 @@ def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tenso
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
-    # print(feat_s.size(), average_train_features.size())
     # average_train_features = average_train_features.unsqueeze(0)
-    if len(average_train_features.size()) != len(feat_s.size()):
-        average_train_features = average_train_features.squeeze(-1).squeeze(-1)
-    return (feat_s - average_train_features), (feat_q - average_train_features)
+    if len(average_train_features.size()) > len(feat_s.size()):
+        mean = average_train_features.squeeze(-1).squeeze(-1)
+    elif len(average_train_features.size()) < len(feat_s.size()):
+        mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
+    return (feat_s - mean), (feat_q - mean)

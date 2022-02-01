@@ -94,7 +94,6 @@ class FewShotDetector(AbstractOutlierDetector):
 
         # Transforming features
         support_features, query_features = self.few_shot_classifier.transform_features(support_features.copy(), query_features.copy())
-
         # Doing OOD detection
         self.detector.fit(support_features)
         outlier_scores = torch.from_numpy(self.detector.decision_function(support_features, query_features))  # [?,]

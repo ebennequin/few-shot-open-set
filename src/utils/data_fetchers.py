@@ -134,7 +134,6 @@ def get_test_features(backbone, dataset, training_method, layer) -> Tuple[Dict, 
     with open(avg_train_features_path, "rb") as stream:
         train_features = pickle.load(stream)
         assert len(train_features) == 2
-        average_train_features = train_features[0].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-        std_train_features = train_features[1].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-
+        average_train_features = train_features[0].unsqueeze(0)
+        std_train_features = train_features[1].unsqueeze(0)
     return features, train_features, average_train_features, std_train_features

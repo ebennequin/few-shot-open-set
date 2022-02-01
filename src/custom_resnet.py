@@ -179,16 +179,9 @@ class ResNet(nn.Module):
         for i in range(1, 5):
             feats = eval(f'self.layer{i}')(x)
             if int(block) == i:
-                pooled = feats[int(layer)].mean((-2, -1))
-                return pooled[:, :, None, None]
+                return feats[int(layer)]
             x = feats[-1]
 
-        # x = self.layer2(x)
-        # x = self.layer3(x)
-        # x = self.layer4(x)
-        # if self.keep_avg_pool:
-        #     x = self.avgpool(x)
-        # x = x.view(x.size(0), -1)
         return x
 
 

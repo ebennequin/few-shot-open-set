@@ -137,20 +137,21 @@ def parse_args() -> argparse.Namespace:
 
 
 all_detectors = {'knn': pyod.models.knn.KNN,
-                 'local_knn': local_knn,
-                 'abod': pyod.models.abod.ABOD,
-                 'pca': pyod.models.pca.PCA,
-                 'rod': pyod.models.rod.ROD,
-                 'sod': pyod.models.sod.SOD,
-                 'ocsvm': pyod.models.ocsvm.OCSVM,
-                 'iforest': pyod.models.iforest.IForest,
-                 'feature_bagging': pyod.models.feature_bagging.FeatureBagging,
-                 'sos': pyod.models.sos.SOS,
-                 'lof': pyod.models.lof.LOF,
-                 'ecod': pyod.models.ecod.ECOD,
-                 'copod': pyod.models.copod.COPOD,
-                 'cof': pyod.models.cof.COF,
-                 'ae': pyod.models.auto_encoder.AutoEncoder}
+                 # 'local_knn': local_knn,
+                 # 'abod': pyod.models.abod.ABOD,
+                 # 'pca': pyod.models.pca.PCA,
+                 # 'rod': pyod.models.rod.ROD,
+                 # 'sod': pyod.models.sod.SOD,
+                 # 'ocsvm': pyod.models.ocsvm.OCSVM,
+                 # 'iforest': pyod.models.iforest.IForest,
+                 # 'feature_bagging': pyod.models.feature_bagging.FeatureBagging,
+                 # 'sos': pyod.models.sos.SOS,
+                 # 'lof': pyod.models.lof.LOF,
+                 # 'ecod': pyod.models.ecod.ECOD,
+                 # 'copod': pyod.models.copod.COPOD,
+                 # 'cof': pyod.models.cof.COF,
+                 # 'ae': pyod.models.auto_encoder.AutoEncoder
+                 }
 
 
 def merge_from_dict(args, dict_: Dict):

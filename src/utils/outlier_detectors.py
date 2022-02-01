@@ -78,7 +78,7 @@ def detect_outliers(outlier_detector, data_loader, n_way, n_query):
         for i, (label_q) in enumerate(query_labels):
             feats = {k: v[i][None, ...] for k, v in query_features.items()}
             outlier_scores[i], predictions[i] = outlier_detector(
-                            support_features, support_labels, feats, label_q[None, ...]
+                        support_features, support_labels, feats, label_q[None, ...]
                         )
         accs.append((predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean())
         predictions = predictions[:n_way * n_query]

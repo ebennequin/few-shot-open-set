@@ -56,6 +56,17 @@ def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
 
 
+def semi_inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, h, w]
+    """
+    assert len(feat_s.size()) >= 4
+    dims = (0, 2, 3)
+    mean = torch.mean(feat_s, dim=dims, keepdim=True)
+    var = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
+    return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
+
+
 def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, h, w]
@@ -96,11 +107,25 @@ def power(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return feat_s, feat_q
 
 
+def base_bn(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor,
+            std_train_features: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    # print(feat_s.size(), feat_q.size(), average_train_features.size())
+    if len(average_train_features.size()) != len(feat_s.size()):
+        average_train_features = average_train_features.squeeze(-1).squeeze(-1)
+        std_train_features = std_train_features.squeeze(-1).squeeze(-1)
+    return (feat_s - average_train_features) / (std_train_features + 1e-10).sqrt(), \
+           (feat_q - average_train_features) / (std_train_features + 1e-10).sqrt()
+
+
 def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
-    average_train_features = average_train_features.unsqueeze(0)
+    # print(feat_s.size(), average_train_features.size())
+    # average_train_features = average_train_features.unsqueeze(0)
     if len(average_train_features.size()) != len(feat_s.size()):
         average_train_features = average_train_features.squeeze(-1).squeeze(-1)
     return (feat_s - average_train_features), (feat_q - average_train_features)

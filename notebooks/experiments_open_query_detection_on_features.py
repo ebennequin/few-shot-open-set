@@ -64,14 +64,20 @@ def parse_args() -> argparse.Namespace:
         "--prepool_transforms",
         type=str,
         nargs='+',
-        default='trivial',
+        default=['trivial'],
         help="What type of transformation to apply before spatial pooling.",
     )
     parser.add_argument(
         "--postpool_transforms",
         nargs='+',
         type=str,
-        default='l2_norm',
+        default=['l2_norm'],
+        help="What type of transformation to apply after spatial pooling.",
+    )
+    parser.add_argument(
+        "--aggreg",
+        type=str,
+        default='concat',
         help="What type of transformation to apply after spatial pooling.",
     )
     parser.add_argument(
@@ -161,17 +167,19 @@ def main(args):
 
     layers = args.layers.split('-')
     feature_dic = defaultdict(dict)
-    for layer in layers:
-        features, _, average_train_features = get_test_features(
+    average_train_features = {}
+    std_train_features = {}
+    for i, layer in enumerate(layers):
+        features, _, average_train_features[i], std_train_features[i] = get_test_features(
             args.backbone, args.dataset, args.training, layer
         )
         for class_ in features:
-            feature_dic[class_][layer] = features[class_]
+            feature_dic[class_.item()][layer] = features[class_]
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
         if class_.__name__ == args.inference_method
-    ][0].from_cli_args(args, average_train_features)
+    ][0].from_cli_args(args, average_train_features, std_train_features)
 
     current_detectors = args.outlier_detectors.split('-')
 
@@ -192,12 +200,12 @@ def main(args):
         fewshot_detector = FewShotDetector(few_shot_classifier, final_detector)
 
         # Doing OOD detection
-        outliers_df, acc = detect_outliers(
+        metrics, acc = detect_outliers(
             fewshot_detector, data_loader, args.n_way, args.n_query
         )
 
         # Saving results
-        save_results(args, outliers_df)
+        save_results(args, metrics)
 
     elif args.mode == 'tune':
 

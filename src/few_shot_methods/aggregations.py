@@ -11,7 +11,7 @@ def concat(support_features: Tensor, query_features: dict):
         assert torch.all([x.size()[-2:] == spatial_resolution for x in all_support_features])
         assert torch.all([x.size()[-2:] == spatial_resolution for x in all_query_features])
 
-    return torch.concatenate(all_support_features, dim=1), torch.concatenate(all_query_features, dim=1)
+    return torch.cat(all_support_features, dim=1), torch.cat(all_query_features, dim=1)
 
 
 def l2_bar(support_features: Tensor, query_features: dict):

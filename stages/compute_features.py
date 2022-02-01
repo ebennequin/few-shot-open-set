@@ -18,13 +18,13 @@ from src.utils.utils import compute_features
 
 def main(
     backbone: str,
-    dataset: str,
+    dataset_name: str,
     weights: Path,
     split: str = "test",
     output_file: Path = None,
     batch_size: int = 256,
     device: str = "cuda",
-    layer: int = 4,
+    layer: str = '4',
 ):
     """
     Compute all features of given dataset images with the given model and dump them in given
@@ -38,8 +38,13 @@ def main(
         batch_size: the batch size
         device: what device to train the model on
     """
+    logger.info("Fetching data...")
+    train_dataset, _ = get_classic_loader(dataset_name, split='train', batch_size=batch_size)
+    dataset, data_loader = get_classic_loader(dataset_name, split=split, batch_size=batch_size)
+
     logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone]().to(device)
+    num_classes = len(np.unique(train_dataset.labels))
+    feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
     state_dict = torch.load(weights, map_location=device)
     if "state_dict" in state_dict:
         state_dict = strip_prefix(state_dict["state_dict"], "module.")
@@ -54,9 +59,6 @@ def main(
     print(f"Unexpected keys {unexpected}")
     feature_extractor.eval()
 
-    logger.info("Fetching data...")
-    data_loader = get_classic_loader(dataset, split=split, batch_size=batch_size)
-
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor,
                                         data_loader,
@@ -67,7 +69,7 @@ def main(
     # if output_file is None:
     weights = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
     logger.info(weights)
-    output_file = FEATURES_DIR / dataset / split / weights
+    output_file = FEATURES_DIR / dataset_name / split / weights
     output_file.parent.mkdir(parents=True, exist_ok=True)
     if split == 'test' or split == 'val':
         logger.info("Packing by class...")

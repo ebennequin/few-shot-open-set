@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple, List
 from .feature_transforms import __dict__ as ALL_FEATURE_TRANSFORMS
-from .aggregations import ALL_AGGREG
+from .aggregations import __dict__ as ALL_AGGREG
 
 
 class AbstractFewShotMethod(nn.Module):
@@ -18,8 +18,10 @@ class AbstractFewShotMethod(nn.Module):
         self,
         prepool_transforms: List[str],
         postpool_transforms: List[str],
+        aggreg: str,
         pool: bool,
         average_train_features: Tensor,
+        std_train_features: Tensor,
         softmax_temperature: float = 1.0,
     ):
         super().__init__()
@@ -27,7 +29,9 @@ class AbstractFewShotMethod(nn.Module):
         self.prepool_transforms = prepool_transforms
         self.postpool_transforms = postpool_transforms
         self.average_train_features = average_train_features
+        self.std_train_features = std_train_features
         self.pool = pool
+        self.aggreg = aggreg
         self.prototypes: Tensor
 
     def forward(
@@ -63,20 +67,25 @@ class AbstractFewShotMethod(nn.Module):
         """
 
         # Pre-pooling transforms
-        for transf in self.prepool_transforms:
-            for layer in support_features:
+        for layer in support_features:
+            for transf in self.prepool_transforms:
                 support_features[layer], query_features[layer] = ALL_FEATURE_TRANSFORMS[transf](
                                                                     support_features[layer],
                                                                     query_features[layer],
-                                                                    average_train_features=self.average_train_features[layer])
+                                                                    average_train_features=self.average_train_features[layer],
+                                                                    std_train_features=self.std_train_features[layer])
 
-        # Average pooling
-        if self.pool:
-            support_features, query_features = support_features.mean((-2, -1)), query_features.mean((-2, -1))
+            # Average pooling
+            if self.pool:
+                support_features[layer], query_features[layer] = support_features[layer].mean((-2, -1)), query_features[layer].mean((-2, -1))
 
-            # Post-pooling transforms
-            for transf in self.postpool_transforms:
-                support_features, query_features = ALL_FEATURE_TRANSFORMS[transf](support_features, query_features, average_train_features=self.average_train_features)
+                # Post-pooling transforms
+                for transf in self.postpool_transforms:
+                    support_features[layer], query_features[layer] = ALL_FEATURE_TRANSFORMS[transf](
+                                                                        support_features[layer],
+                                                                        query_features[layer],
+                                                                        average_train_features=self.average_train_features[layer],
+                                                                        std_train_features=self.std_train_features[layer])
 
         # Aggregate features
         support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
@@ -84,8 +93,10 @@ class AbstractFewShotMethod(nn.Module):
         return support_features, query_features
 
     @classmethod
-    def from_cli_args(cls, args, average_train_features):
+    def from_cli_args(cls, args, average_train_features, std_train_features):
         signature = inspect.signature(cls.__init__)
         return cls(
-            **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()}, average_train_features=average_train_features
+            **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()},
+            average_train_features=average_train_features,
+            std_train_features=std_train_features
         )

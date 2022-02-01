@@ -5,6 +5,7 @@ import torch
 from loguru import logger
 from numpy import ndarray
 from torch import nn
+from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -53,10 +54,28 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
 
             )
         else:
-            avg_feat = 0.
-            N = 0.
+            mean = 0.
+            var = 0.
+            N = 1.
             for images, labels in tqdm(loader, unit="batch"):
-                avg_feat += feature_extractor(images.to(device), layer=layer).sum(0)
-                N += len(images)
-            avg_feat /= N
-            return avg_feat.cpu(), None
+                feats = feature_extractor(images.to(device), layer=layer).mean((-2, -1))
+                for new_sample in feats:
+                    if N == 1:
+                        mean = new_sample
+                        var = 0.
+                    else:
+                        var = incremental_var(var, mean, new_sample, N)  # [d,]
+                        mean = incremental_mean(mean, new_sample, N)  # [d,]
+                    N += 1
+            feats = torch.stack([mean, var], 0)  # [2, d]
+            return feats.cpu(), None
+
+
+def incremental_mean(old_mean: Tensor, new_sample: Tensor, n: int):
+    new_mean = 1 / n * (new_sample + (n-1) * old_mean)
+    return new_mean
+
+
+def incremental_var(old_var: Tensor, old_mean: Tensor, new_sample: Tensor, n: int):
+    new_var = (n - 2) / (n - 1) * (old_var) + 1 / n * (new_sample - old_mean) ** 2
+    return new_var

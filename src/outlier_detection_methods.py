@@ -70,7 +70,6 @@ class NaiveAggregator(object):
 
     def decision_function(self, support_features, query_features):
         n_clf = len(self.detectors)
-        # train_scores = np.zeros([support_features.shape[0], n_clf])  # [Q, n_clf]
         test_scores = np.zeros([query_features.shape[0], n_clf])  # [Q, n_clf]
         for i, detector in enumerate(self.detectors):
             # train_scores[:, i] = detector.decision_scores_  # [Q, ]
@@ -94,7 +93,7 @@ class FewShotDetector(AbstractOutlierDetector):
     ) -> torch.Tensor:
 
         # Transforming features
-        support_features, query_features = self.few_shot_classifier.transform_features(support_features, query_features)
+        support_features, query_features = self.few_shot_classifier.transform_features(support_features.copy(), query_features.copy())
 
         # Doing OOD detection
         self.detector.fit(support_features)

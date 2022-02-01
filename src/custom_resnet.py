@@ -6,6 +6,7 @@ import torch.nn.functional as F
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
 
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -68,6 +69,7 @@ class DropBlock(nn.Module):
         block_mask = 1 - padded_mask#[:height, :width]
         return block_mask
 
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -94,13 +96,18 @@ class BasicBlock(nn.Module):
 
         residual = x
 
+        feats = []
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
+        feats.append(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
         out = self.relu(out)
+
+        feats.append(out)
 
         out = self.conv3(out)
         out = self.bn3(out)
@@ -119,26 +126,31 @@ class BasicBlock(nn.Module):
                 out = self.DropBlock(out, gamma=gamma)
             else:
                 out = F.dropout(out, p=self.drop_rate, training=self.training, inplace=True)
+        feats.append(out)
 
-        return out
+        return feats
 
 
 class ResNet(nn.Module):
 
-    def __init__(self, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.1, dropblock_size=5):
+    def __init__(self, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.1, dropblock_size=5, num_classes=64):
         self.inplanes = 3
         super(ResNet, self).__init__()
+
+        self.num_classes = num_classes
 
         self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
         self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
         self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size)
         self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size)
-        if avg_pool:
-            self.avgpool = nn.AvgPool2d(5, stride=1)
+        # if avg_pool:
+        #     self.avgpool = nn.AvgPool2d(1, stride=1)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.keep_prob = keep_prob
         self.keep_avg_pool = avg_pool
         self.dropout = nn.Dropout(p=1 - self.keep_prob, inplace=False)
         self.drop_rate = drop_rate
+        self.fc = nn.Linear(640, self.num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -163,10 +175,14 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, layer):
+        block, layer = layer.split('_')
         for i in range(1, 5):
-            x = eval(f'self.layer{i}')(x)
-            if layer == i:
-                return x
+            feats = eval(f'self.layer{i}')(x)
+            if int(block) == i:
+                pooled = feats[int(layer)].mean((-2, -1))
+                return pooled[:, :, None, None]
+            x = feats[-1]
+
         # x = self.layer2(x)
         # x = self.layer3(x)
         # x = self.layer4(x)

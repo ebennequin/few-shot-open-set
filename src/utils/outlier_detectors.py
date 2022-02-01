@@ -73,25 +73,20 @@ def detect_outliers(outlier_detector, data_loader, n_way, n_query):
     metrics = defaultdict(list)
     for support_features, support_labels, query_features, query_labels, _ in tqdm(data_loader):
         outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
-        outlier_scores, predictions = outlier_detector(
-                        support_features, support_labels, query_features, query_labels
-                    )
+        outlier_scores = torch.zeros(2 * n_way * n_query)
+        predictions = torch.zeros(2 * n_way * n_query)
+        for i, (label_q) in enumerate(query_labels):
+            feats = {k: v[i][None, ...] for k, v in query_features.items()}
+            outlier_scores[i], predictions[i] = outlier_detector(
+                            support_features, support_labels, feats, label_q[None, ...]
+                        )
         accs.append((predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean())
         predictions = predictions[:n_way * n_query]
         query_labels = query_labels[:n_way * n_query]
 
         for metric_name in ['outliers', 'outlier_scores', 'predictions', 'query_labels']:
             metrics[metric_name].append(eval(metric_name))
-        # outlier_detection_df_list.append(
-        #     pd.DataFrame(
-        #         {
-        #             "outlier": outliers,
-        #             "outlier_score": out_score,
-        #             "predictions": predictions,
-        #             "labels": query_labels,
-        #         }
-        #     )
-        # )
+
     for metric_name in metrics:
         metrics[metric_name] = torch.stack(metrics[metric_name], 0)
 

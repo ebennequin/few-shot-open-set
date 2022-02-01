@@ -2,10 +2,10 @@ knn:
   current_params:
     n_neighbors: 10
     method: 'mean'
-    distance: 'minkowski'
+    metric: 'minkowski'
   tuning:
-    hparams2tune: ['n_neighbors']
-    hparam_values: [[5, 10, 15]]
+    hparams2tune: ['n_neighbors', 'method']
+    hparam_values: [[10, 15], ['mean']]
 
 local_knn:
   current_params:

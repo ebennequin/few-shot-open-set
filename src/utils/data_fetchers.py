@@ -5,7 +5,6 @@ import pickle
 from pathlib import Path
 from typing import Tuple, Dict
 
-import torch
 from easyfsl.data_tools import TaskSampler
 from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
@@ -97,7 +96,7 @@ def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=6
     else:
         raise NotImplementedError("I don't know this dataset.")
 
-    return DataLoader(
+    return train_set, DataLoader(
         train_set,
         batch_size=batch_size,
         num_workers=n_workers,
@@ -134,7 +133,8 @@ def get_test_features(backbone, dataset, training_method, layer) -> Tuple[Dict, 
     # feature vector
     with open(avg_train_features_path, "rb") as stream:
         train_features = pickle.load(stream)
-        average_train_features = train_features.unsqueeze(0)
-        dims = (-2, -1)
+        assert len(train_features) == 2
+        average_train_features = train_features[0].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+        std_train_features = train_features[1].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
 
-    return features, train_features, average_train_features.mean(dims, keepdim=True)
+    return features, train_features, average_train_features, std_train_features

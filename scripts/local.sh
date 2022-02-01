@@ -10,7 +10,8 @@ for detector in local_knn ; do
         --n_tasks 500 \
         --n_shot ${shot} \
         --outlier_detectors ${detector} \
-        --prepool_transform  base_centering \
+        --prepool_transform  base_centering l2_norm \
+        --postpool_transform  trivial \
         --backbone resnet12 \
         --training feat \
         --dataset mini_imagenet \

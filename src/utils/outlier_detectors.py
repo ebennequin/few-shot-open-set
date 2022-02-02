@@ -73,13 +73,13 @@ def detect_outliers(outlier_detector, data_loader, n_way, n_query):
     metrics = defaultdict(list)
     for support_features, support_labels, query_features, query_labels, _ in tqdm(data_loader):
         outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
-        outlier_scores = torch.zeros(2 * n_way * n_query)
-        predictions = torch.zeros(2 * n_way * n_query)
-        for i, (label_q) in enumerate(query_labels):
-            feats = {k: v[i][None, ...] for k, v in query_features.items()}
-            outlier_scores[i], predictions[i] = outlier_detector(
-                        support_features, support_labels, feats, label_q[None, ...]
-                        )
+        # outlier_scores = torch.zeros(2 * n_way * n_query)
+        # predictions = torch.zeros(2 * n_way * n_query)
+        # for i, (label_q) in enumerate(query_labels):
+        #     feats = {k: v[i][None, ...] for k, v in query_features.items()}
+        outlier_scores, predictions = outlier_detector(
+                    support_features, support_labels, query_features, query_labels
+                    )
         accs.append((predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean())
         predictions = predictions[:n_way * n_query]
         query_labels = query_labels[:n_way * n_query]

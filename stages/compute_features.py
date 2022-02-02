@@ -9,11 +9,10 @@ import torch
 import typer
 
 from src.constants import (
-    BACKBONES,
     FEATURES_DIR,
 )
 from src.utils.data_fetchers import get_classic_loader
-from src.utils.utils import compute_features
+from src.utils.utils import compute_features, load_model
 
 
 def main(
@@ -39,25 +38,10 @@ def main(
         device: what device to train the model on
     """
     logger.info("Fetching data...")
-    train_dataset, _ = get_classic_loader(dataset_name, split='train', batch_size=batch_size)
     dataset, data_loader = get_classic_loader(dataset_name, split=split, batch_size=batch_size)
 
     logger.info("Building model...")
-    num_classes = len(np.unique(train_dataset.labels))
-    feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
-    state_dict = torch.load(weights, map_location=device)
-    if "state_dict" in state_dict:
-        state_dict = strip_prefix(state_dict["state_dict"], "module.")
-    elif "params" in state_dict:
-        state_dict = strip_prefix(state_dict["params"], "encoder.")
-    else:
-        state_dict = strip_prefix(state_dict, "backbone.")
-
-    missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
-    print(f"Loaded weights from {weights}")
-    print(f"Missing keys {missing_keys}")
-    print(f"Unexpected keys {unexpected}")
-    feature_extractor.eval()
+    feature_extractor = load_model(backbone, weights, dataset_name, device)
 
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor,
@@ -85,15 +69,6 @@ def main(
         with open(output_file, "wb") as stream:
             cpickle.dump(features, stream, protocol=-1)
     logger.info(f"Dumped features in {output_file}")
-
-
-def strip_prefix(state_dict: OrderedDict, prefix: str):
-    return OrderedDict(
-        [
-            (k[len(prefix):] if k.startswith(prefix) else k, v)
-            for k, v in state_dict.items()
-        ]
-    )
 
 
 if __name__ == "__main__":

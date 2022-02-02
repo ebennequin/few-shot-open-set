@@ -1,4 +1,4 @@
-DATASETS=mini_imagenet
+DATASETS=mini_imagenet tiered_imagenet
 DETECTORS=knn
 SHOTS=1 5
 PREPOOL=base_centering
@@ -19,8 +19,8 @@ dev-install:
 
 extract:
 		training="feat.pth" ;\
-		for layer in 4_2; do \
-		    for dataset in mini_imagenet; do \
+		for layer in 4_0 4_1 4_2; do \
+		    for dataset in $(DATASETS); do \
 		        for split in train test; do \
 		            for arch in resnet12; do \
 		                python -m stages.compute_features $${arch} $${dataset} data/models/$${arch}_$${dataset}_$${training} --split $${split} --layer $${layer} ;\
@@ -34,8 +34,8 @@ run:
 		for dataset in $(DATASETS); do \
 			for detector in $(DETECTORS); do \
 				for shot in $(SHOTS); do \
-				    python3 -m notebooks.experiments_open_query_detection_on_features \
-				        --exp_name '$(EXP) $${shot}-$${dataset}' \
+				    python3 -m src.main_features \
+				        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
 				        --mode 'tune' \
 				        --inference_method SimpleShot \
 				        --n_tasks 500 \
@@ -56,6 +56,43 @@ run:
 			done ;\
 		done ;\
 
+run_scratch:
+	for dataset in $(DATASETS); do \
+		for detector in $(DETECTORS); do \
+			for shot in $(SHOTS); do \
+			    python3 -m src.main \
+			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+			        --mode 'tune' \
+			        --inference_method SimpleShot \
+			        --n_tasks 500 \
+			        --n_shot $${shot} \
+			        --layers $(LAYERS) \
+			        --outlier_detectors $${detector} \
+			        --prepool_transform  $(PREPOOL) \
+			        --postpool_transform  $(POSTPOOL) \
+			        --pool \
+			        --aggreg l2_bar \
+			        --backbone resnet12 \
+			        --training feat \
+			        --dataset $${dataset} \
+			        --simu_hparams 'current_sequence' \
+			        --combination_size $(COMBIN) \
+			        --override ;\
+		    done ;\
+		done ;\
+	done ;\
+
 baseline:
 		make EXP=baseline run ;\
 		make EXP=baseline PREPOOL='base_bn' run ;\
+
+
+coupling:
+	make COMBIN=3 SHOTS=5 EXP=coupling run ;\
+
+
+layer_mixing:
+	make EXP=layer_mixing COMBIN=3 LAYERS='4_0-4_1-4_2' run ;\
+
+cutmix:
+	make EXP=cutmix PREPOOL='trivial' run_scratch ;\

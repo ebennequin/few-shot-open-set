@@ -5,7 +5,7 @@ knn:
     metric: 'minkowski'
   tuning:
     hparams2tune: ['n_neighbors', 'method']
-    hparam_values: [[1, 3, 5, 7, 10, 12, 15], ['mean']]
+    hparam_values: {1: [[1, 2, 3, 4], ['mean', 'largest', 'median']], 5: [[1, 5, 10, 15], ['mean', 'largest', 'median']]}
 
 local_knn:
   current_params:

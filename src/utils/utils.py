@@ -8,6 +8,13 @@ from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from pathlib import Path
+from src.constants import (
+    BACKBONES,
+)
+from types import SimpleNamespace
+from src.utils.data_fetchers import get_classic_loader
+from collections import OrderedDict
 
 
 def set_random_seed(seed: int):
@@ -38,6 +45,15 @@ def tensor_product(left_tensor: torch.Tensor, right_tensor: torch.Tensor):
     ).permute((1, 2, 0))
 
 
+def merge_from_dict(args, dict_: Dict):
+    for key, value in dict_.items():
+        if isinstance(value, dict) and not any([isinstance(key, int) for key in value.keys()]):
+            setattr(args, key, SimpleNamespace())
+            merge_from_dict(getattr(args, key), value)
+        else:
+            setattr(args, key, value)
+
+
 def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layer: int, device="cuda") -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
         if split == 'val' or split == 'test':
@@ -58,7 +74,7 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
             var = 0.
             N = 1.
             for images, labels in tqdm(loader, unit="batch"):
-                feats = feature_extractor(images.to(device), layer=layer).mean((-2, -1))
+                feats = feature_extractor(images.to(device), layer=layer)
                 for new_sample in feats:
                     if N == 1:
                         mean = new_sample
@@ -79,3 +95,36 @@ def incremental_mean(old_mean: Tensor, new_sample: Tensor, n: int):
 def incremental_var(old_var: Tensor, old_mean: Tensor, new_sample: Tensor, n: int):
     new_var = (n - 2) / (n - 1) * (old_var) + 1 / n * (new_sample - old_mean) ** 2
     return new_var
+
+
+def strip_prefix(state_dict: OrderedDict, prefix: str):
+    return OrderedDict(
+        [
+            (k[len(prefix):] if k.startswith(prefix) else k, v)
+            for k, v in state_dict.items()
+        ]
+    )
+
+
+def load_model(backbone: str, weights: Path, dataset_name, device: torch.device):
+    logger.info("Fetching data...")
+    train_dataset, _ = get_classic_loader(dataset_name, split='train', batch_size=10)
+
+    logger.info("Building model...")
+    num_classes = len(np.unique(train_dataset.labels))
+    feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
+    state_dict = torch.load(weights, map_location=device)
+    if "state_dict" in state_dict:
+        state_dict = strip_prefix(state_dict["state_dict"], "module.")
+    elif "params" in state_dict:
+        state_dict = strip_prefix(state_dict["params"], "encoder.")
+    else:
+        state_dict = strip_prefix(state_dict, "backbone.")
+
+    missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
+    print(f"Loaded weights from {weights}")
+    print(f"Missing keys {missing_keys}")
+    print(f"Unexpected keys {unexpected}")
+    feature_extractor.eval()
+
+    return feature_extractor

@@ -4,11 +4,11 @@ and infer various outlier detection methods en them.
 """
 
 import argparse
-import logging
 from collections import defaultdict
 from src.outlier_detection_methods import FewShotDetector, NaiveAggregator, local_knn
 from src.utils.utils import (
     set_random_seed,
+    merge_from_dict
 )
 from typing import Dict
 from types import SimpleNamespace
@@ -24,7 +24,6 @@ from src.utils.outlier_detectors import (
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_features_data_loader, get_test_features
-import torch
 
 
 def parse_args() -> argparse.Namespace:
@@ -154,15 +153,6 @@ all_detectors = {'knn': pyod.models.knn.KNN,
                  }
 
 
-def merge_from_dict(args, dict_: Dict):
-    for key, value in dict_.items():
-        if isinstance(value, dict):
-            setattr(args, key, SimpleNamespace())
-            merge_from_dict(getattr(args, key), value)
-        else:
-            setattr(args, key, value)
-
-
 def main(args):
     set_random_seed(args.random_seed)
 
@@ -215,7 +205,7 @@ def main(args):
         for x in current_detectors:
             detector_args = vars(eval(f'args.{x}.current_params'))  # take default args
             params2tune = eval(f'args.{x}.tuning.hparams2tune')
-            values2tune = eval(f'args.{x}.tuning.hparam_values')
+            values2tune = eval(f'args.{x}.tuning.hparam_values')[args.n_shot]
             values_combinations = itertools.product(*values2tune)
             for some_combin in values_combinations:
                 # Override default args
@@ -255,7 +245,7 @@ def main(args):
             #                                        n_jobs=1, combination='average',
             #                                        verbose=False)
             final_detector = NaiveAggregator(d_sequence)
-            fewshot_detector = FewShotDetector(few_shot_classifier, final_detector)
+            fewshot_detector = FewShotDetector(few_shot_classifier, final_detector, model=None, on_features=True)
 
             outliers_df, acc = detect_outliers(
                 fewshot_detector, data_loader, args.n_way, args.n_query

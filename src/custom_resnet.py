@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-
+from typing import List
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
@@ -174,15 +174,20 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, layer):
-        block, layer = layer.split('_')
-        for i in range(1, 5):
-            feats = eval(f'self.layer{i}')(x)
-            if int(block) == i:
-                return feats[int(layer)]
-            x = feats[-1]
-
-        return x
+    def forward(self, x, layers: List[str]):
+        """
+        layers: List[str]
+        """
+        all_feats = {}
+        for block in range(1, 5):
+            layer_feats = eval(f'self.layer{block}')(x)
+            x = layer_feats[-1]
+            pooled_maps = [self.avgpool(f) for f in layer_feats]
+            for block_layer, pooled_map in enumerate(pooled_maps):
+                layer_name = f'{block}_{block_layer}'
+                if layer_name in layers:
+                    all_feats[layer_name] = pooled_map
+        return all_feats
 
 
 def resnet12(**kwargs):

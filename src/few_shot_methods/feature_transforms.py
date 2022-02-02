@@ -101,8 +101,8 @@ def power(feat_s: Tensor, feat_q: Tensor, **kwargs):
     feat: Tensor shape [N, hidden_dim, *]
     """
     beta = 0.5
-    feat_s = torch.pow(feat_s + 1e-6, beta)
-    feat_q = torch.pow(feat_q + 1e-6, beta)
+    feat_s = torch.pow(feat_s + 1e-10, beta)
+    feat_q = torch.pow(feat_q + 1e-10, beta)
 
     return feat_s, feat_q
 
@@ -113,9 +113,12 @@ def base_bn(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor,
     feat: Tensor shape [N, hidden_dim, *]
     """
     # print(feat_s.size(), feat_q.size(), average_train_features.size())
-    if len(average_train_features.size()) != len(feat_s.size()):
+    if len(average_train_features.size()) > len(feat_s.size()):
         average_train_features = average_train_features.squeeze(-1).squeeze(-1)
         std_train_features = std_train_features.squeeze(-1).squeeze(-1)
+    elif len(average_train_features.size()) < len(feat_s.size()):
+        average_train_features = average_train_features.unsqueeze(-1).unsqueeze(-1)
+        std_train_features = std_train_features.unsqueeze(-1).unsqueeze(-1)
     return (feat_s - average_train_features) / (std_train_features + 1e-10).sqrt(), \
            (feat_q - average_train_features) / (std_train_features + 1e-10).sqrt()
 
@@ -129,4 +132,6 @@ def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tenso
         mean = average_train_features.squeeze(-1).squeeze(-1)
     elif len(average_train_features.size()) < len(feat_s.size()):
         mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
+    else:
+        mean = average_train_features
     return (feat_s - mean), (feat_q - mean)

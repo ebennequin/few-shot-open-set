@@ -21,7 +21,7 @@ class SimpleShot(AbstractFewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-
+        # print(support_features.size(), support_labels.size())
         self.prototypes = compute_prototypes(support_features, support_labels)
 
         return (

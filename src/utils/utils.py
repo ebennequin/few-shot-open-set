@@ -54,13 +54,13 @@ def merge_from_dict(args, dict_: Dict):
             setattr(args, key, value)
 
 
-def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layer: int, device="cuda") -> Tuple[ndarray, ndarray]:
+def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layer: str, device="cuda") -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
         if split == 'val' or split == 'test':
             all_features = []
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
-                feat = feature_extractor(images.to(device), layer=layer).cpu()
+                feat = feature_extractor(images.to(device), layers=layer)[layer].cpu()
                 all_features.append(feat)
                 all_labels.append(labels)
 
@@ -74,7 +74,7 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
             var = 0.
             N = 1.
             for images, labels in tqdm(loader, unit="batch"):
-                feats = feature_extractor(images.to(device), layer=layer)
+                feats = feature_extractor(images.to(device), layers=layer)[layer].cpu()
                 for new_sample in feats:
                     if N == 1:
                         mean = new_sample

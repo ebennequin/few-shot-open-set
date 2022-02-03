@@ -1,4 +1,4 @@
-DATASETS=mini_imagenet tiered_imagenet
+DATASETS=mini_imagenet
 DETECTORS=knn
 SHOTS=1 5
 PREPOOL=base_centering
@@ -57,34 +57,35 @@ run:
 		done ;\
 
 run_scratch:
-	for dataset in $(DATASETS); do \
-		for detector in $(DETECTORS); do \
-			for shot in $(SHOTS); do \
-			    python3 -m src.main \
-			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
-			        --mode 'tune' \
-			        --inference_method SimpleShot \
-			        --n_tasks 500 \
-			        --n_shot $${shot} \
-			        --layers $(LAYERS) \
-			        --outlier_detectors $${detector} \
-			        --prepool_transform  $(PREPOOL) \
-			        --postpool_transform  $(POSTPOOL) \
-			        --pool \
-			        --aggreg l2_bar \
-			        --backbone resnet12 \
-			        --training feat \
-			        --dataset $${dataset} \
-			        --simu_hparams 'current_sequence' \
-			        --combination_size $(COMBIN) \
-			        --override ;\
-		    done ;\
+		for dataset in $(DATASETS); do \
+			for detector in $(DETECTORS); do \
+				for shot in $(SHOTS); do \
+				    python3 -m src.main \
+				        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+				        --mode 'tune' \
+				        --inference_method SimpleShot \
+				        --n_tasks 500 \
+				        --n_shot $${shot} \
+				        --layers $(LAYERS) \
+				        --outlier_detectors $${detector} \
+				        --prepool_transform  $(PREPOOL) \
+				        --postpool_transform  $(POSTPOOL) \
+				        --augmentations $(AUGMENTATIONS) \
+				        --pool \
+				        --aggreg l2_bar \
+				        --backbone resnet12 \
+				        --training feat \
+				        --dataset $${dataset} \
+				        --simu_hparams 'current_sequence' \
+				        --combination_size $(COMBIN) \
+				        --override ;\
+			    done ;\
+			done ;\
 		done ;\
-	done ;\
 
 baseline:
-		make EXP=baseline run ;\
 		make EXP=baseline PREPOOL='base_bn' run ;\
+# 		make EXP=baseline run ;\
 
 
 coupling:
@@ -95,4 +96,5 @@ layer_mixing:
 	make EXP=layer_mixing COMBIN=3 LAYERS='4_0-4_1-4_2' run ;\
 
 cutmix:
-	make EXP=cutmix PREPOOL='trivial' run_scratch ;\
+	make EXP=cutmix SHOTS=5 PREPOOL='base_centering' AUGMENTATIONS='mixup' run_scratch ;\
+# 	make EXP=cutmix SHOTS=5 PREPOOL='base_bn' AUGMENTATIONS='cutmix' run_scratch ;\

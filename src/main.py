@@ -22,7 +22,7 @@ from src.utils.outlier_detectors import (
     detect_outliers,
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
-from src.utils.data_fetchers import get_task_loader
+from src.utils.data_fetchers import get_task_loader, get_test_features
 import torch
 
 
@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
     parser.add_argument("--training", type=str, default="classic")
-    parser.add_argument("--layers", type=str, default="4")
+    parser.add_argument("--layers", type=str, default="4_2")
 
     # Detector
     parser.add_argument("--outlier_detectors", type=str, default="knn_3")
@@ -157,21 +157,28 @@ all_detectors = {'knn': pyod.models.knn.KNN,
 def main(args):
     set_random_seed(args.random_seed)
 
-    average_train_features = defaultdict(list)
-    std_train_features = defaultdict(list)
-    few_shot_classifier = [
-        class_
-        for class_ in ALL_FEW_SHOT_CLASSIFIERS
-        if class_.__name__ == args.inference_method
-    ][0].from_cli_args(args, average_train_features, std_train_features)
-
     logger.info("Building model...")
     weights = Path('data') / 'models' / f'{args.backbone}_{args.dataset}_{args.training}.pth'
     feature_extractor = load_model(backbone=args.backbone,
                                    weights=weights,
                                    dataset_name=args.dataset,
                                    device='cuda')
+
+    logger.info("Loading mean/std from base set ...")
+
+    average_train_features = {}
+    std_train_features = {}
+    for layer in args.layers.split('-'):
+        _, _, average_train_features[layer], std_train_features[layer] = get_test_features(
+            args.backbone, args.dataset, args.training, layer)
     current_detectors = args.outlier_detectors.split('-')
+
+    logger.info("Creating few-shot classifier ...")
+    few_shot_classifier = [
+        class_
+        for class_ in ALL_FEW_SHOT_CLASSIFIERS
+        if class_.__name__ == args.inference_method
+    ][0].from_cli_args(args, average_train_features, std_train_features)
 
     if args.mode == 'tune':
 

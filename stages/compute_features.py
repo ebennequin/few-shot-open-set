@@ -23,7 +23,7 @@ def main(
     output_file: Path = None,
     batch_size: int = 256,
     device: str = "cuda",
-    layer: str = '4',
+    layer: str = '4_2',
 ):
     """
     Compute all features of given dataset images with the given model and dump them in given

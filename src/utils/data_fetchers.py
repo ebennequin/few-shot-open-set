@@ -3,7 +3,7 @@ Utils for quick fetching of Dataset or DataLoader objects.
 """
 import pickle
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 
 from easyfsl.data_tools import TaskSampler
 from numpy import ndarray
@@ -128,7 +128,7 @@ def get_features_data_loader(
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 
-def get_test_features(backbone, dataset, training_method, layer) -> Tuple[Dict, Dict, ndarray]:
+def get_test_features(backbone, dataset, training_method, layer, path: Optional[Path] = None) -> Tuple[Dict, Dict, ndarray]:
     pickle_basename = f"{backbone}_{dataset}_{training_method}_{layer}.pickle"
     features_path = Path("data/features") / dataset / "test" / pickle_basename
     avg_train_features_path = Path("data/features") / dataset / "train" / pickle_basename

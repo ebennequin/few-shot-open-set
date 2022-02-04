@@ -38,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
     parser.add_argument("--pool", action='store_true')
+    parser.add_argument("--image_size", type=int, default=84)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -164,16 +165,16 @@ def main(args):
                                    dataset_name=args.dataset,
                                    device='cuda')
 
-    logger.info("Loading mean/std from base set ...")
-
-    average_train_features = {}
-    std_train_features = {}
-    for layer in args.layers.split('-'):
-        _, _, average_train_features[layer], std_train_features[layer] = get_test_features(
-            args.backbone, args.dataset, args.training, layer)
-    current_detectors = args.outlier_detectors.split('-')
-
+    # logger.info("Loading mean/std from base set ...")
+    average_train_features = defaultdict(list)
+    std_train_features = defaultdict(list)
+    # average_train_features = {}
+    # std_train_features = {}
+    # for layer in args.layers.split('-'):
+    #     _, _, average_train_features[layer], std_train_features[layer] = get_test_features(
+    #         args.backbone, args.dataset, args.training, layer)
     logger.info("Creating few-shot classifier ...")
+    current_detectors = args.outlier_detectors.split('-')
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
@@ -216,6 +217,7 @@ def main(args):
             set_random_seed(args.random_seed)
 
             data_loader = get_task_loader(args.dataset,
+                                          args.image_size,
                                           args.n_way,
                                           args.n_shot,
                                           args.n_query,

@@ -6,6 +6,8 @@ POSTPOOL=l2_norm
 LAYERS=4_2
 COMBIN=1
 EXP=default
+RESOLUTION=84
+AUGMENTATIONS=trivial
 
 lint:
 		pylint easyfsl
@@ -67,6 +69,7 @@ run_scratch:
 				        --n_tasks 500 \
 				        --n_shot $${shot} \
 				        --layers $(LAYERS) \
+				        --image_size $(RESOLUTION) \
 				        --outlier_detectors $${detector} \
 				        --prepool_transform  $(PREPOOL) \
 				        --postpool_transform  $(POSTPOOL) \
@@ -87,14 +90,21 @@ baseline:
 		make EXP=baseline PREPOOL='base_bn' run ;\
 # 		make EXP=baseline run ;\
 
+without_relu:
+
+
 
 coupling:
 	make COMBIN=3 SHOTS=5 EXP=coupling run ;\
 
-
 layer_mixing:
-	make EXP=layer_mixing COMBIN=3 LAYERS='4_0-4_1-4_2' run ;\
+	make EXP=layer_mixing PREPOOL=layer_norm LAYERS='4_1' run_scratch ;\
+
+
+resolution:
+	make PREPOOL=trivial EXP=resolution SHOTS=1 LAYERS='4_0' RESOLUTION=224 run_scratch ;\
 
 cutmix:
-	make EXP=cutmix SHOTS=5 PREPOOL='base_centering' AUGMENTATIONS='mixup' run_scratch ;\
+	make EXP=cutmix SHOTS=5 PREPOOL='inductive_batch_norm' AUGMENTATIONS='mixup' run_scratch ;\
 # 	make EXP=cutmix SHOTS=5 PREPOOL='base_bn' AUGMENTATIONS='cutmix' run_scratch ;\
+

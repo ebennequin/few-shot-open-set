@@ -10,7 +10,7 @@ def cutmix(images, alpha=1.0, repeat: int = 1):
 
     final_images = []
     for i in range(repeat):
-        indices = torch.randperm(images.size(0))
+        indices = (torch.arange(images.size(0)) + 1) % images.size(0)
         shuffled_images = images[indices]
         # shuffled_targets = targets[indices]
 
@@ -37,10 +37,12 @@ def mixup(images, alpha=1.0, repeat: int = 1):
     '''Returns mixed inputs, pairs of targets, and lambda'''
     final_images = []
     for i in range(repeat):
-        lam = np.random.beta(alpha, alpha)
-        batch_size = images.size()[0]
-        index = torch.randperm(batch_size).cuda()
-        mixed_x = lam * images + (1 - lam) * images[index, :]
+        # lam = np.random.beta(alpha, alpha)
+        lam = 0.5
+        # batch_size = images.size()[0]
+        # index = torch.randperm(batch_size).cuda()
+        index = (torch.arange(images.size(0)) + 1) % images.size(0)
+        mixed_x = lam * images + (1 - lam) * images[index]
         final_images.append(mixed_x)
 
     return torch.cat(final_images, 0)

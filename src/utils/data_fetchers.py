@@ -42,39 +42,42 @@ def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
     )
 
 
-def get_cifar_set(split):
+def get_cifar_set(split, image_size):
     return FewShotCIFAR100(
         root=CIFAR_ROOT_DIR,
+        image_size=image_size,
         specs_file=CIFAR_SPECS_DIR / f"{split}.json",
         training=False,
     )
 
 
-def get_mini_imagenet_set(split):
+def get_mini_imagenet_set(split, image_size):
     return MiniImageNet(
         root=MINI_IMAGENET_ROOT_DIR,
+        image_size=image_size,
         specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}_images.csv",
         training=False,
     )
 
 
-def get_tiered_imagenet_set(split):
+def get_tiered_imagenet_set(split, image_size):
     return TieredImageNet(
         root=TIERED_IMAGENET_ROOT_DIR,
+        image_size=image_size,
         specs_file=TIERED_IMAGENET_SPECS_DIR / f"{split}.json",
         training=False,
     )
 
 
 def get_task_loader(
-    dataset_name, n_way, n_shot, n_query, n_tasks, split="test", n_workers=12
+    dataset_name, image_size, n_way, n_shot, n_query, n_tasks, split="test", n_workers=12
 ):
     if dataset_name == "cifar":
-        dataset = get_cifar_set(split)
+        dataset = get_cifar_set(split, image_size)
     elif dataset_name == "mini_imagenet":
-        dataset = get_mini_imagenet_set(split)
+        dataset = get_mini_imagenet_set(split, image_size)
     elif dataset_name == "tiered_imagenet":
-        dataset = get_tiered_imagenet_set(split)
+        dataset = get_tiered_imagenet_set(split, image_size)
     else:
         raise NotImplementedError("I don't know this dataset.")
 
@@ -88,21 +91,21 @@ def get_task_loader(
     return create_dataloader(dataset, sampler, n_workers)
 
 
-def get_dataset(dataset_name, split):
+def get_dataset(dataset_name, image_size, split):
     if dataset_name == "cifar":
-        dataset = get_cifar_set(split)
+        dataset = get_cifar_set(split, image_size)
     elif dataset_name == "mini_imagenet":
-        dataset = get_mini_imagenet_set(split)
+        dataset = get_mini_imagenet_set(split, image_size)
     elif dataset_name == "tiered_imagenet":
-        dataset = get_tiered_imagenet_set(split)
+        dataset = get_tiered_imagenet_set(split, image_size)
     else:
         raise NotImplementedError("I don't know this dataset.")
     return dataset
 
 
-def get_classic_loader(dataset_name, split="train", batch_size=1024, n_workers=6):
+def get_classic_loader(dataset_name, image_size, split="train", batch_size=1024, n_workers=6):
 
-    dataset = get_dataset(dataset_name, split)
+    dataset = get_dataset(dataset_name, image_size, split)
     return dataset, DataLoader(
         dataset,
         batch_size=batch_size,

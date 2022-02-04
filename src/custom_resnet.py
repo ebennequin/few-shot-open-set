@@ -115,6 +115,9 @@ class BasicBlock(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(x)
         out += residual
+
+        feats.append(out)
+
         out = self.relu(out)
         out = self.maxpool(out)
 
@@ -182,7 +185,7 @@ class ResNet(nn.Module):
         for block in range(1, 5):
             layer_feats = eval(f'self.layer{block}')(x)
             x = layer_feats[-1]
-            pooled_maps = [self.avgpool(f) for f in layer_feats]
+            pooled_maps = [f for f in layer_feats]
             for block_layer, pooled_map in enumerate(pooled_maps):
                 layer_name = f'{block}_{block_layer}'
                 if layer_name in layers:

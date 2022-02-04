@@ -110,17 +110,17 @@ class FewShotDetector(AbstractOutlierDetector):
             support_features = support
             query_features = query
         else:
-            augmented = support.clone()
-            for aug in self.augmentations:
-                augmented = AUGMENTATIONS[aug](augmented)
-            all_images = torch.cat([support, query, augmented], 0)
+            # augmented = support.clone()
+            # for aug in self.augmentations:
+            #     augmented = AUGMENTATIONS[aug](augmented)
+            all_images = torch.cat([support, query], 0)
             with torch.no_grad():
                 all_images = all_images.cuda()
                 all_features = self.model(all_images, self.layers)  # []
             support_features = {k: v[:support.size(0)].cpu() for k, v in all_features.items()}
-            query_features = {k: v[support.size(0):support.size(0) + query.size(0)].cpu() for k, v in all_features.items()}
-            augmented_features = {k: v[support.size(0) + query.size(0):].cpu() for k, v in all_features.items()}
-            support_features = {k: torch.cat([v1, v2]) for (k, v1), v2 in zip(support_features.items(), augmented_features.values())}
+            query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
+            # augmented_features = {k: v[support.size(0) + query.size(0):].cpu() for k, v in all_features.items()}
+            # support_features = {k: torch.cat([v1, v2]) for (k, v1), v2 in zip(support_features.items(), augmented_features.values())}
 
         # Transforming features
         support_features, query_features = self.few_shot_classifier.transform_features(support_features.copy(), query_features.copy())

@@ -22,6 +22,7 @@ def main(
     split: str = "test",
     output_file: Path = None,
     batch_size: int = 256,
+    image_size: int = 84,
     device: str = "cuda",
     layer: str = '4_2',
 ):
@@ -38,7 +39,7 @@ def main(
         device: what device to train the model on
     """
     logger.info("Fetching data...")
-    dataset, data_loader = get_classic_loader(dataset_name, split=split, batch_size=batch_size)
+    dataset, data_loader = get_classic_loader(dataset_name, split=split, image_size=image_size, batch_size=batch_size)
 
     logger.info("Building model...")
     feature_extractor = load_model(backbone, weights, dataset_name, device)

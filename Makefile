@@ -3,7 +3,7 @@ DETECTORS=knn
 SHOTS=1 5
 PREPOOL=base_centering
 POSTPOOL=l2_norm
-LAYERS=4_2
+LAYERS=4_3
 COMBIN=1
 EXP=default
 RESOLUTION=84
@@ -87,8 +87,8 @@ run_scratch:
 		done ;\
 
 baseline:
-		make EXP=baseline PREPOOL='base_bn' run ;\
-# 		make EXP=baseline run ;\
+		make EXP=baseline run ;\
+# 		make EXP=baseline PREPOOL='base_centering' run ;\
 
 without_relu:
 

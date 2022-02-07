@@ -108,7 +108,7 @@ class OpenQuerySampler(TaskSampler):
             # TODO: allow customizable shape of the open query task
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
-            open_set_labels = all_labels[self.n_way :]
+            open_set_labels = all_labels[self.n_way:]
             yield torch.cat(
                 [
                     torch.tensor(

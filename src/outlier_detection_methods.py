@@ -70,6 +70,7 @@ class NaiveAggregator(object):
             detector.fit(support_features)
 
     def decision_function(self, support_features, query_features):
+        print(support_features[0][:10])
         n_clf = len(self.detectors)
         test_scores = np.zeros([query_features.shape[0], n_clf])  # [Q, n_clf]
         for i, detector in enumerate(self.detectors):

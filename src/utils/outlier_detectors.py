@@ -71,12 +71,8 @@ def compute_outlier_scores_with_renyi_divergence(
 def detect_outliers(outlier_detector, data_loader, n_way, n_query):
     accs = []
     metrics = defaultdict(list)
-    for support_features, support_labels, query_features, query_labels, _ in tqdm(data_loader):
+    for support_features, support_labels, query_features, query_labels, true_class_ids in tqdm(data_loader):
         outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
-        # outlier_scores = torch.zeros(2 * n_way * n_query)
-        # predictions = torch.zeros(2 * n_way * n_query)
-        # for i, (label_q) in enumerate(query_labels):
-        #     feats = {k: v[i][None, ...] for k, v in query_features.items()}
         outlier_scores, predictions = outlier_detector(
                     support_features, support_labels, query_features, query_labels
                     )

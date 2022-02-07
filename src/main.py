@@ -168,11 +168,7 @@ def main(args):
     # logger.info("Loading mean/std from base set ...")
     average_train_features = defaultdict(list)
     std_train_features = defaultdict(list)
-    # average_train_features = {}
-    # std_train_features = {}
-    # for layer in args.layers.split('-'):
-    #     _, _, average_train_features[layer], std_train_features[layer] = get_test_features(
-    #         args.backbone, args.dataset, args.training, layer)
+
     logger.info("Creating few-shot classifier ...")
     current_detectors = args.outlier_detectors.split('-')
     few_shot_classifier = [

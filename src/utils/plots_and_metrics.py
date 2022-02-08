@@ -9,6 +9,7 @@ import torchvision
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 import argparse
+from loguru import logger
 
 
 def plot_episode(support_images, query_images):
@@ -78,10 +79,11 @@ def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
         objective: two of the metrics are the maximum precision (resp. recall) possible for a fixed
             recall (resp. precision) threshold
     """
-    roc_auc = plot_roc(metrics, title=title)
-    acc = (metrics['query_labels'] == metrics['predictions']).float().mean(-1).mean(-1)
-    print(f"ROC AUC: {roc_auc}")
-    print(f"Accuracy: {acc}")
+
+    acc = metrics['acc'].mean().item()
+    roc_auc = metrics['auc'].mean().item()
+    logger.info(f"ROC AUC: {np.round(roc_auc, 4)}")
+    logger.info(f"Accuracy: {acc}")
 
     # precisions, recalls, _ = precision_recall_curve(
     #     outliers_df.outlier, -outliers_df.outlier_score

@@ -14,7 +14,7 @@ from src.constants import (
 )
 from types import SimpleNamespace
 from src.utils.data_fetchers import get_classic_loader
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 
 def set_random_seed(seed: int):
@@ -54,37 +54,42 @@ def merge_from_dict(args, dict_: Dict):
             setattr(args, key, value)
 
 
-def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layer: str, device="cuda") -> Tuple[ndarray, ndarray]:
+def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda") -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
         if split == 'val' or split == 'test':
-            all_features = []
+            all_features = defaultdict(list)
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
-                feat = feature_extractor(images.to(device), layers=layer)[layer].cpu()
-                all_features.append(feat)
+                feat = feature_extractor(images.to(device), layers=layers)
+                for layer in feat:
+                    all_features[layer].append(feat[layer].cpu())
                 all_labels.append(labels)
 
+            for layer in layers:
+                all_features[layer] = torch.cat(all_features[layer], dim=0)
             return (
-                torch.cat(all_features, dim=0),
+                all_features,
                 torch.cat(all_labels, dim=0),
 
             )
         else:
-            mean = 0.
-            var = 0.
+            mean = defaultdict(float)
+            var = defaultdict(float)
             N = 1.
             for images, labels in tqdm(loader, unit="batch"):
-                feats = feature_extractor(images.to(device), layers=layer)[layer].cpu()
-                for new_sample in feats:
-                    if N == 1:
-                        mean = new_sample
-                        var = 0.
-                    else:
-                        var = incremental_var(var, mean, new_sample, N)  # [d,]
-                        mean = incremental_mean(mean, new_sample, N)  # [d,]
-                    N += 1
-            feats = torch.stack([mean, var], 0)  # [2, d]
-            return feats.cpu(), None
+                feats = feature_extractor(images.to(device), layers=layers)
+                for layer in layers:
+                    for new_sample in feats[layer].cpu():
+                        if N == 1:
+                            mean[layer] = new_sample
+                        else:
+                            var[layer] = incremental_var(var[layer], mean[layer], new_sample, N)  # [d,]
+                            mean[layer] = incremental_mean(mean[layer], new_sample, N)  # [d,]
+                        N += 1
+            train_feats = {}
+            for layer in layers:
+                train_feats[layer] = torch.stack([mean[layer], var[layer]], 0)  # [2, d]
+            return train_feats, None
 
 
 def incremental_mean(old_mean: Tensor, new_sample: Tensor, n: int):

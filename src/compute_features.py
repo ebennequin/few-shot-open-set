@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=str, default="mini_imagenet")
     parser.add_argument("--backbone", type=str, default="resnet12")
     parser.add_argument("--training", type=str, default="feat")
-    parser.add_argument("--layer", type=str, default="4_2")
+    parser.add_argument("--layers", type=str, nargs='+')
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--device", type=str, default="cuda")
@@ -45,27 +45,27 @@ def main(args):
                                         data_loader,
                                         device=args.device,
                                         split=args.split,
-                                        layer=args.layer)
+                                        layers=args.layers)
 
     # if output_file is None:
-    weights = Path(weights.stem + f'_{args.layer}').with_suffix(f".pickle").name
-    logger.info(weights)
-    output_file = FEATURES_DIR / dataset / args.split / weights
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    if args.split == 'test' or args.split == 'val':
-        logger.info("Packing by class...")
-        packed_features = {
-            class_integer_label: features[labels == class_integer_label]
-            for class_integer_label in labels.unique()
-        }
+    for layer in features:
+        pickle_name = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
+        output_file = FEATURES_DIR / args.dataset / args.split / pickle_name
+        output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_file, "wb") as stream:
-            cpickle.dump(packed_features, stream, protocol=-1)
-    else:
-        logger.info("Dumping average feature map...")
-        with open(output_file, "wb") as stream:
-            cpickle.dump(features, stream, protocol=-1)
-    logger.info(f"Dumped features in {output_file}")
+        if args.split == 'test' or args.split == 'val':
+            logger.info("Packing by class...")
+            packed_features = {
+                class_integer_label: features[layer][labels == class_integer_label]
+                for class_integer_label in labels.unique()
+            }
+            with open(output_file, "wb") as stream:
+                cpickle.dump(packed_features, stream, protocol=-1)
+        else:
+            logger.info("Dumping average feature map...")
+            with open(output_file, "wb") as stream:
+                cpickle.dump(features[layer], stream, protocol=-1)
+        logger.info(f"Dumped features in {output_file}")
 
 
 if __name__ == "__main__":

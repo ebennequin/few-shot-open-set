@@ -5,23 +5,21 @@ and infer various outlier detection methods en them.
 
 import argparse
 from collections import defaultdict
-from src.outlier_detection_methods import FewShotDetector, NaiveAggregator, local_knn
 from src.utils.utils import (
     set_random_seed,
     merge_from_dict
 )
-from typing import Dict
-from types import SimpleNamespace
-import pandas as pd
+import torch
+from tqdm import tqdm
+from sklearn.metrics import roc_curve, precision_recall_curve
+from sklearn.metrics import auc as auc_fn
+
 import yaml
 import numpy as np
 import itertools
 from pathlib import Path
-import pyod
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
-from src.utils.outlier_detectors import (
-    detect_outliers,
-)
+from src.detectors import ALL_DETECTORS
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_features_data_loader, get_test_features
 
@@ -135,24 +133,6 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-all_detectors = {'knn': pyod.models.knn.KNN,
-                 # 'local_knn': local_knn,
-                 # 'abod': pyod.models.abod.ABOD,
-                 # 'pca': pyod.models.pca.PCA,
-                 # 'rod': pyod.models.rod.ROD,
-                 # 'sod': pyod.models.sod.SOD,
-                 # 'ocsvm': pyod.models.ocsvm.OCSVM,
-                 # 'iforest': pyod.models.iforest.IForest,
-                 # 'feature_bagging': pyod.models.feature_bagging.FeatureBagging,
-                 # 'sos': pyod.models.sos.SOS,
-                 # 'lof': pyod.models.lof.LOF,
-                 # 'ecod': pyod.models.ecod.ECOD,
-                 # 'copod': pyod.models.copod.COPOD,
-                 # 'cof': pyod.models.cof.COF,
-                 # 'ae': pyod.models.auto_encoder.AutoEncoder
-                 }
-
-
 def main(args):
     set_random_seed(args.random_seed)
 
@@ -174,31 +154,8 @@ def main(args):
 
     current_detectors = args.outlier_detectors.split('-')
 
-    if args.mode == 'benchmark':
 
-        data_loader = get_features_data_loader(
-                            feature_dic,
-                            args.n_way,
-                            args.n_shot,
-                            args.n_query,
-                            args.n_tasks,
-                            args.n_workers,
-        )
-
-        # Obtaining the detectors
-        current_detectors = [all_detectors[x](**eval(f'args.{x}.default')) for x in current_detectors]
-        final_detector = NaiveAggregator(current_detectors)
-        fewshot_detector = FewShotDetector(few_shot_classifier, final_detector)
-
-        # Doing OOD detection
-        metrics, acc = detect_outliers(
-            fewshot_detector, data_loader, args.n_way, args.n_query
-        )
-
-        # Saving results
-        save_results(args, metrics)
-
-    elif args.mode == 'tune':
+    if args.mode == 'tune':
 
         # For each detector type, create all relevant detectors
         detectors_to_try = defaultdict(list)
@@ -211,7 +168,7 @@ def main(args):
                 # Override default args
                 for k, v in zip(params2tune, some_combin):
                     detector_args[k] = v
-                detectors_to_try[x].append(all_detectors[x](**detector_args))
+                detectors_to_try[x].append(ALL_DETECTORS[x](**detector_args))
 
         # print(detectors_to_try)
 
@@ -244,15 +201,18 @@ def main(args):
             # final_detector = pyod.models.suod.SUOD(base_estimators=d_sequence,
             #                                        n_jobs=1, combination='average',
             #                                        verbose=False)
-            final_detector = NaiveAggregator(d_sequence)
-            fewshot_detector = FewShotDetector(few_shot_classifier, final_detector, model=None, on_features=True)
+            outlier_detectors = ALL_DETECTORS['aggregator'](d_sequence)
 
-            outliers_df, acc = detect_outliers(
-                fewshot_detector, data_loader, args.n_way, args.n_query
-            )
+            metrics = detect_outliers(layers=layers,
+                                      few_shot_classifier=few_shot_classifier,
+                                      detector=outlier_detectors,
+                                      data_loader=data_loader,
+                                      n_way=args.n_way,
+                                      n_query=args.n_query,
+                                      on_features=True)
 
             # Saving results
-            save_results(args, outliers_df)
+            save_results(args, metrics)
 
 
 def save_results(args, outliers_df):
@@ -261,6 +221,60 @@ def save_results(args, outliers_df):
     res_root.mkdir(exist_ok=True, parents=True)
     metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4)}
     update_csv(args, metrics, path=res_root / 'out.csv')
+
+
+def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
+
+    metrics = defaultdict(list)
+    for support, support_labels, query, query_labels, true_class_ids in tqdm(data_loader):
+
+        # ====== Extract features ======
+        if on_features:
+            support_features = support
+            query_features = query
+        else:
+            all_images = torch.cat([support, query], 0)
+            with torch.no_grad():
+                all_images = all_images.cuda()
+                all_features = model(all_images, layers)  # []
+            support_features = {k: v[:support.size(0)].cpu() for k, v in all_features.items()}
+            query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
+
+        # ====== Transforming features ======
+        support_features, query_features = few_shot_classifier.transform_features(support_features.copy(), query_features.copy())
+
+        # ====== OOD detection ======
+
+        detector.fit(support_features)
+        outlier_scores = torch.from_numpy(detector.decision_function(support_features, query_features))  # [?,]
+
+        # ====== Few-shot classifier ======
+
+        # Obtaining predictions from few-shot classifier
+        if not few_shot_classifier.pool:
+            support_features = support_features.mean((-2, -1))
+            query_features = query_features.mean((-2, -1))
+
+        _, probs_q = few_shot_classifier(support_features, query_features, support_labels)
+        predictions = probs_q.argmax(-1)
+
+        # ====== Tracking metrics ======
+
+        acc = (predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean()
+        outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
+        fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), outlier_scores.numpy())
+        precision, recall, _ = precision_recall_curve(outliers.numpy(), outlier_scores.numpy())
+        auc = auc_fn(fp_rate, tp_rate)
+        predictions = predictions[:n_way * n_query]
+        query_labels = query_labels[:n_way * n_query]
+
+        for metric_name in ['auc', 'acc']:
+            metrics[metric_name].append(eval(metric_name))
+
+    for metric_name in metrics:
+        metrics[metric_name] = torch.Tensor(metrics[metric_name])
+
+    return metrics
 
 
 if __name__ == "__main__":

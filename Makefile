@@ -1,6 +1,7 @@
 DATASETS=mini_imagenet
 DETECTORS=knn
 SHOTS=1 5
+N_TASKS=1000
 PREPOOL=base_centering
 POSTPOOL=l2_norm
 LAYERS=4_4
@@ -11,40 +12,28 @@ AUGMENTATIONS=trivial
 BACKBONE=resnet12
 TRAINING="feat"
 
-lint:
-		pylint easyfsl
-
-test:
-		pytest easyfsl
-
-dev-install:
-	pip install -r dev_requirements.txt
-
 
 extract:
-	for layer in $(LAYERS); do \
-	    for dataset in $(DATASETS); do \
-	        for split in train test; do \
+		for dataset in $(DATASETS); do \
+		    for split in train test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--dataset $${dataset} \
 					--training $(TRAINING) \
 					--split $${split} \
-					--layer $${layer} ;\
-	        done \
-	    done \
-	done \
-wdawd
+					--layers $(LAYERS) ;\
+		    done \
+		done \
 
 run:
 	for dataset in $(DATASETS); do \
 		for detector in $(DETECTORS); do \
 			for shot in $(SHOTS); do \
-			    python3 -m src.main_features \
+			    python3 -m src.inference_features \
 			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
 			        --mode 'tune' \
 			        --inference_method SimpleShot \
-			        --n_tasks 500 \
+			        --n_tasks $(N_TASKS) \
 			        --n_shot $${shot} \
 			        --layers $(LAYERS) \
 			        --outlier_detectors $${detector} \
@@ -53,7 +42,7 @@ run:
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
-			        --training feat \
+			        --training $(TRAINING) \
 			        --dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
 			        --combination_size $(COMBIN) \
@@ -66,7 +55,7 @@ run_scratch:
 	for dataset in $(DATASETS); do \
 		for detector in $(DETECTORS); do \
 			for shot in $(SHOTS); do \
-			    python3 -m src.main \
+			    python3 -m src.inference \
 			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
 			        --mode 'tune' \
 			        --inference_method SimpleShot \
@@ -91,14 +80,14 @@ run_scratch:
 	done ;\
 
 baseline:
-	make EXP=baseline run_scratch ;\
+	make EXP=baseline run ;\
 
 
 coupling:
 	make COMBIN=3 SHOTS="1 5" EXP=coupling run ;\
 
 layer_mixing:
-	make EXP=layer_mixing PREPOOL=layer_norm LAYERS='4_1' run_scratch ;\
+	make EXP=layer_mixing PREPOOL=base_centering run ;\
 
 
 resolution:

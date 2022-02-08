@@ -44,7 +44,7 @@ class MiniImageNet(VisionDataset):
                 ]
         else:
             transforms_list = [
-                  transforms.Resize(92),
+                  transforms.Resize(int(256 / 224 * image_size)),
                   transforms.CenterCrop(image_size),
                   transforms.ToTensor(),
                 ]

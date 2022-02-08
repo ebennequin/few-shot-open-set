@@ -11,17 +11,17 @@ from tqdm import tqdm
 import json
 import numpy as np
 
-# NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-NORMALIZE = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
-                                 np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
+NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+# NORMALIZE = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+#                                  np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
 
 
 class TieredImageNet(VisionDataset):
     def __init__(
         self,
+        args,
         root: Path,
         specs_file: Path,
-        image_size: int = 84,
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):

@@ -100,27 +100,27 @@ class BasicBlock(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = self.relu(out)
         feats.append(out)
+        out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
-        out = self.relu(out)
-
         feats.append(out)
+        out = self.relu(out)
 
         out = self.conv3(out)
         out = self.bn3(out)
 
+        feats.append(out)
         if self.downsample is not None:
             residual = self.downsample(x)
         out += residual
-
         feats.append(out)
 
         out = self.relu(out)
         out = self.maxpool(out)
 
+        feats.append(out)
         if self.drop_rate > 0:
             if self.drop_block == True:
                 feat_size = out.size()[2]
@@ -129,7 +129,6 @@ class BasicBlock(nn.Module):
                 out = self.DropBlock(out, gamma=gamma)
             else:
                 out = F.dropout(out, p=self.drop_rate, training=self.training, inplace=True)
-        feats.append(out)
 
         return feats
 

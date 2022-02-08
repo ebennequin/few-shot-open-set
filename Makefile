@@ -21,7 +21,7 @@ dev-install:
 
 extract:
 		training="feat.pth" ;\
-		for layer in 4_0 4_1 4_2 4_3; do \
+		for layer in 4_0 4_1 4_2 4_3 4_4; do \
 		    for dataset in $(DATASETS); do \
 		        for split in train test; do \
 		            for arch in resnet12; do \
@@ -95,7 +95,7 @@ without_relu:
 
 
 coupling:
-	make COMBIN=3 SHOTS=5 EXP=coupling run ;\
+	make COMBIN=3 SHOTS="1 5" EXP=coupling run ;\
 
 layer_mixing:
 	make EXP=layer_mixing PREPOOL=layer_norm LAYERS='4_1' run_scratch ;\

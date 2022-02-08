@@ -73,7 +73,6 @@ class AbstractFewShotMethod(nn.Module):
                                                                     query_features[layer],
                                                                     average_train_features=self.average_train_features[layer],
                                                                     std_train_features=self.std_train_features[layer])
-                print(support_features[layer][0, 0, :5, :5])
 
             # Average pooling
             if self.pool:
@@ -87,7 +86,6 @@ class AbstractFewShotMethod(nn.Module):
                                                                         average_train_features=self.average_train_features[layer],
                                                                         std_train_features=self.std_train_features[layer])
 
-            print(support_features[layer][0, :10])
         # Aggregate features
         support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
         

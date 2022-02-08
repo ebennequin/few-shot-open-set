@@ -9,81 +9,161 @@ from torchvision.datasets import VisionDataset
 from torchvision import transforms
 from tqdm import tqdm
 
-NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+import numpy as np
+import os.path as osp
 
 
 class MiniImageNet(VisionDataset):
-    def __init__(
-        self,
-        root: Path,
-        specs_file: Path,
-        image_size: int = 84,
-        target_transform: Optional[Callable] = None,
-        training: bool = False,
-    ):
+    """ Usage:
+    """
+    def __init__(self,
+                 args,
+                 root: Path,
+                 specs_file: Path,
+                 target_transform: Optional[Callable] = None,
+                 training: bool = False,
+                 augment: bool = False):
 
-        # self.loading_transform = transforms.Compose(
-        #     [
-        #         transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
-        #         transforms.ToTensor(),
-        #         NORMALIZE,
-        #     ]
-        # )
+        self.IMAGE_PATH1 = osp.join(root, 'images')
+        self.SPLIT_PATH = osp.join(root, 'splits')
 
-        transform = (
-            transforms.Compose(
-                [
-                    transforms.RandomResizedCrop(image_size),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    NORMALIZE,
+        split = specs_file.stem
+
+        csv_path = osp.join(self.SPLIT_PATH, split + '.csv')
+
+        self.data, self.labels = self.parse_csv(csv_path, split)
+        self.num_class = len(set(self.labels))
+
+        image_size = 84
+        if augment and split == 'train':
+            transforms_list = [
+                  transforms.RandomResizedCrop(image_size),
+                  transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                  transforms.RandomHorizontalFlip(),
+                  transforms.ToTensor(),
                 ]
-            )
-            if training
-            else transforms.Compose(
-                [
-                    transforms.Resize(int(image_size*256/224)),
-                    transforms.CenterCrop(image_size),
-                    transforms.ToTensor(),
-                    NORMALIZE,
+        else:
+            transforms_list = [
+                  transforms.Resize(92),
+                  transforms.CenterCrop(image_size),
+                  transforms.ToTensor(),
                 ]
-            )
-        )
 
-        super(MiniImageNet, self).__init__(
-            str(root), transform=transform, target_transform=target_transform
-        )
+        if args.backbone == 'resnet12':
+            self.transform = transforms.Compose(
+                transforms_list + [
+                    transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
+                ])
+        elif args.backbone == 'wrn2810' or args.backbone == 'resnet18':
+            self.transform = transforms.Compose(
+                 transforms_list + [
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225]
+                                         )
+                                    ])
 
-        # Get images and labels
-        data_df = pd.read_csv(specs_file).assign(
-            image_paths=lambda df: df.apply(
-                lambda row: root / row["class_name"] / row["image_name"], axis=1
-            )
-        )
+    def parse_csv(self, csv_path, split):
+        lines = [x.strip() for x in open(csv_path, 'r').readlines()][1:]
 
-        self.images = [
-                image_path for image_path in tqdm(data_df.image_paths)
-            ]
+        data = []
+        label = []
+        lb = -1
 
-        self.class_list = data_df.class_name.unique()
-        self.id_to_class = dict(enumerate(self.class_list))
-        self.class_to_id = {v: k for k, v in self.id_to_class.items()}
-        self.labels = list(data_df.class_name.map(self.class_to_id))
+        self.wnids = []
+
+        for l in tqdm(lines, ncols=64):
+            name, wnid = l.split(',')
+            path = osp.join(self.IMAGE_PATH1, name)
+            if wnid not in self.wnids:
+                self.wnids.append(wnid)
+                lb += 1
+            data.append( path )
+            label.append(lb)
+
+        return data, label
 
     def __len__(self):
-        return len(self.images)
+        return len(self.data)
 
-    def __getitem__(self, item):
+    def __getitem__(self, i):
+        data, label = self.data[i], self.labels[i]
+        image = self.transform(Image.open(data).convert('RGB'))
 
-        img, label = (
-            self.load_image(self.images[item]),
-            self.labels[item],
-        )
+        return image, label
 
-        if self.target_transform is not None:
-            label = self.target_transform(label)
+# class MiniImageNet(VisionDataset):
+#     def __init__(
+#         self,
+#         root: Path,
+#         specs_file: Path,
+#         image_size: int = 84,
+#         target_transform: Optional[Callable] = None,
+#         training: bool = False,
+#     ):
 
-        return img, label
+#         # self.loading_transform = transforms.Compose(
+#         #     [
+#         #         transforms.Resize([int(image_size * 1.4), int(image_size * 1.4)]),
+#         #         transforms.ToTensor(),
+#         #         NORMALIZE,
+#         #     ]
+#         # )
 
-    def load_image(self, filename):
-        return self.transform(Image.open(filename).convert("RGB"))
+#         transform = (
+#             transforms.Compose(
+#                 [
+#                     transforms.RandomResizedCrop(image_size),
+#                     transforms.RandomHorizontalFlip(),
+#                     transforms.ToTensor(),
+#                     NORMALIZE,
+#                 ]
+#             )
+#             if training
+#             else transforms.Compose(
+#                 [
+#                     transforms.Resize(int(image_size*256/224)),
+#                     transforms.CenterCrop(image_size),
+#                     transforms.ToTensor(),
+#                     NORMALIZE,
+#                 ]
+#             )
+#         )
+
+#         super(MiniImageNet, self).__init__(
+#             str(root), transform=transform, target_transform=target_transform
+#         )
+
+#         # Get images and labels
+#         data_df = pd.read_csv(specs_file).assign(
+#             image_paths=lambda df: df.apply(
+#                 lambda row: root / row["class_name"] / row["image_name"], axis=1
+#             )
+#         )
+
+#         self.images = [
+#                 image_path for image_path in tqdm(data_df.image_paths)
+#             ]
+
+#         self.class_list = data_df.class_name.unique()
+#         self.id_to_class = dict(enumerate(self.class_list))
+#         self.class_to_id = {v: k for k, v in self.id_to_class.items()}
+#         self.labels = list(data_df.class_name.map(self.class_to_id))
+
+#     def __len__(self):
+#         return len(self.images)
+
+#     def __getitem__(self, item):
+
+#         img, label = (
+#             self.load_image(self.images[item]),
+#             self.labels[item],
+#         )
+
+#         if self.target_transform is not None:
+#             label = self.target_transform(label)
+
+#         return img, label
+
+#     def load_image(self, filename):
+#         return self.transform(Image.open(filename).convert("RGB"))

@@ -1,9 +1,8 @@
-import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from torch.autograd import Variable
-
+from typing import List
+from torch import Tensor
 import sys
 import numpy as np
 
@@ -37,12 +36,17 @@ class wide_basic(nn.Module):
                 nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=True),
             )
 
-    def forward(self, x):
+    def forward(self, feats: List[Tensor]):
+        x = feats[-1]
+        new_feats = []
         out = self.dropout(self.conv1(F.relu(self.bn1(x))))
+        new_feats.append(out)
         out = self.conv2(F.relu(self.bn2(out)))
+        new_feats.append(out)
         out += self.shortcut(x)
+        new_feats.append(out)
 
-        return out
+        return new_feats
 
 
 class Wide_ResNet(nn.Module):
@@ -73,17 +77,24 @@ class Wide_ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = F.relu(self.bn1(out))
-        out = F.adaptive_avg_pool2d(out, (5, 5))
-        # out = F.avg_pool2d(out, 21)
-        # out = out.view(out.size(0), -1)
-        
-        return out
+    def forward(self, x, layers: List[str]):
+        """
+        layers: List[str]
+        """
+        all_feats = {}
+        x = self.conv1(x)
+        layer_feats = [x]
+        for block in range(1, 4):
+            layer_feats = eval(f'self.layer{block}')(layer_feats)
+            pooled_maps = [f.mean((-2, -1), keepdim=True) for f in layer_feats]
+            for block_layer, pooled_map in enumerate(pooled_maps):
+                layer_name = f'{block}_{block_layer}'
+                if layer_name in layers:
+                    all_feats[layer_name] = pooled_map
+        if "last" in layers:
+            pooled_map = F.relu(self.bn1(layer_feats[-1])).mean((-2, -1), keepdim=True)
+            all_feats["last"] = pooled_map
+        return all_feats
 
 
 def wrn2810(**kwargs):

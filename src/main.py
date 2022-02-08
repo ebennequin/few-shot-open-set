@@ -22,7 +22,7 @@ from src.utils.outlier_detectors import (
     detect_outliers,
 )
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
-from src.utils.data_fetchers import get_task_loader, get_test_features
+from src.utils.data_fetchers import get_task_loader, get_train_features
 import torch
 
 
@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
-    parser.add_argument("--training", type=str, default="classic")
+    parser.add_argument("--training", type=str, default="feat")
     parser.add_argument("--layers", type=str, default="4_2")
 
     # Detector
@@ -166,8 +166,13 @@ def main(args):
                                    device='cuda')
 
     # logger.info("Loading mean/std from base set ...")
-    average_train_features = defaultdict(list)
-    std_train_features = defaultdict(list)
+    average_train_features = {}
+    std_train_features = {}
+    layers = args.layers.split('-')
+    for layer in layers:
+        average_train_features[layer], std_train_features[layer] = get_train_features(
+            args.backbone, args.dataset, args.training, layer
+        )
 
     logger.info("Creating few-shot classifier ...")
     current_detectors = args.outlier_detectors.split('-')
@@ -212,8 +217,8 @@ def main(args):
 
             set_random_seed(args.random_seed)
 
-            data_loader = get_task_loader(args.dataset,
-                                          args.image_size,
+            data_loader = get_task_loader(args,
+                                          args.dataset,
                                           args.n_way,
                                           args.n_shot,
                                           args.n_query,

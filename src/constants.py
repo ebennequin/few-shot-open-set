@@ -13,7 +13,7 @@ TIERED_IMAGENET_SPECS_DIR = Path("data") / "tiered_imagenet" / "specs"
 
 CIFAR_ROOT_DIR = Path("data") / "cifar" / "data"
 MINI_IMAGENET_ROOT_DIR = Path('/ssd/dataset/natural/original/mini_imagenet')
-TIERED_IMAGENET_ROOT_DIR = Path("data") / "tiered_imagenet"
+TIERED_IMAGENET_ROOT_DIR = Path("data") / "tiered_imagenet" / "images"
 
 
 # Stage outputs

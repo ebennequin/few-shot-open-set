@@ -1,5 +1,6 @@
 import numpy as np
 from src.detectors import AbstractDetector
+import inspect
 
 
 class NaiveAggregator(AbstractDetector):
@@ -8,9 +9,12 @@ class NaiveAggregator(AbstractDetector):
         self.detectors = detectors
         self.standardize = False
 
-    def fit(self, support_features):
+    def fit(self, support_features, support_labels):
         for detector in self.detectors:
-            detector.fit(support_features)
+            if "support_labels" in inspect.getfullargspec(detector.fit).args:
+                detector.fit(support_features, support_labels=support_labels)
+            else:
+                detector.fit(support_features)
 
     def decision_function(self, support_features, query_features):
         n_clf = len(self.detectors)

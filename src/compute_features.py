@@ -19,7 +19,8 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--dataset", type=str, default="mini_imagenet")
     parser.add_argument("--backbone", type=str, default="resnet12")
-    parser.add_argument("--training", type=str, default="feat")
+    parser.add_argument("--model_source", type=str, default="feat")
+    parser.add_argument("--training", type=str, default="standard")
     parser.add_argument("--layers", type=str, nargs='+')
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
@@ -30,7 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(args):
-    weights = TRAINED_MODELS_DIR / f"{args.backbone}_{args.dataset}_{args.training}.pth"
+    weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.dataset}_{args.model_source}.pth"
     logger.info("Fetching data...")
     dataset, data_loader = get_classic_loader(args,
                                               dataset_name=args.dataset,
@@ -50,7 +51,7 @@ def main(args):
     # if output_file is None:
     for layer in features:
         pickle_name = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
-        output_file = FEATURES_DIR / args.dataset / args.split / pickle_name
+        output_file = FEATURES_DIR / args.dataset / args.split / args.training / pickle_name
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         if args.split == 'test' or args.split == 'val':

@@ -18,7 +18,6 @@ class AbstractFewShotMethod(nn.Module):
         self,
         prepool_transforms: List[str],
         postpool_transforms: List[str],
-        aggreg: str,
         pool: bool,
         average_train_features: Tensor,
         std_train_features: Tensor,
@@ -31,7 +30,6 @@ class AbstractFewShotMethod(nn.Module):
         self.average_train_features = average_train_features
         self.std_train_features = std_train_features
         self.pool = pool
-        self.aggreg = aggreg
         self.prototypes: Tensor
 
     def forward(
@@ -87,7 +85,7 @@ class AbstractFewShotMethod(nn.Module):
                                                                         std_train_features=self.std_train_features[layer])
 
         # Aggregate features
-        support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
+        # support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
         
         return support_features, query_features
 

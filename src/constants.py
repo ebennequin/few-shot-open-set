@@ -5,7 +5,7 @@ from easyfsl.methods import PrototypicalNetworks
 from src.models.resnet import resnet18, resnet34
 from src.models.wide_resnet import wrn2810
 from src.models.custom_resnet import resnet12
-
+from src.models.snatcher_f import SnaTCHerF
 # Data
 CIFAR_SPECS_DIR = Path("data") / "cifar" / "specs"
 MINI_IMAGENET_SPECS_DIR = Path('/ssd/dataset/natural/original/mini_imagenet/splits')
@@ -29,6 +29,11 @@ BACKBONES = {
     "resnet34": resnet34,
     "wrn2810": wrn2810,
 }
+
+MISC_MODULES = {
+    "snatcher_f": SnaTCHerF
+}
+
 FEW_SHOT_METHODS = {
     "protonet": PrototypicalNetworks,
 }

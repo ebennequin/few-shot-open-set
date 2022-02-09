@@ -5,25 +5,36 @@ and infer various outlier detection methods en them.
 
 import argparse
 from loguru import logger
-from collections import defaultdict
-from src.outlier_detection_methods import FewShotDetector, NaiveAggregator, local_knn
 from src.utils.utils import (
     set_random_seed, load_model, merge_from_dict
 )
-from typing import Dict
-from types import SimpleNamespace
-import yaml
-import numpy as np
-import itertools
-from pathlib import Path
-import pyod
-from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
-from src.utils.outlier_detectors import (
-    detect_outliers,
-)
-from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
-from src.utils.data_fetchers import get_task_loader, get_test_features
 import torch
+import yaml
+from typing import Dict
+from pathlib import Path
+import numpy as np
+import pyod
+import json
+from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
+from torch import Tensor
+from src.utils.data_fetchers import get_task_loader, get_classic_loader
+from src.detectors import ALL_DETECTORS
+from tqdm import tqdm
+from collections import defaultdict
+from .inference_features import detect_outliers
+from .losses import _CrossEntropy
+from .plot import main as plot_fn
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,164 +51,137 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pool", action='store_true')
     parser.add_argument("--image_size", type=int, default=84)
 
+    # Training
+    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--max_updates_per_epoch", type=int, default=1e6)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--milestones", type=int, nargs='+', default=[75, 150, 300])
+    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--label_smoothing", type=float, default=0.1)
+
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
-    parser.add_argument("--training", type=str, default="classic")
-    parser.add_argument("--layers", type=str, default="4_2")
-
-    # Detector
-    parser.add_argument("--outlier_detectors", type=str, default="knn_3")
-    parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Method
     parser.add_argument("--inference_method", type=str, default="SimpleShot")
     parser.add_argument("--softmax_temperature", type=float, default=1.0)
-    parser.add_argument(
-        "--inference_lr",
-        type=float,
-        default=1e-3,
-        help="Learning rate used for methods that perform \
-                        gradient-based inference.",
-    )
-
-    parser.add_argument("--augmentations", type=str, default="trivial")
-    parser.add_argument(
-        "--prepool_transforms",
-        type=str,
-        nargs='+',
-        default=['trivial'],
-        help="What type of transformation to apply before spatial pooling.",
-    )
-    parser.add_argument(
-        "--postpool_transforms",
-        nargs='+',
-        type=str,
-        default=['l2_norm'],
-        help="What type of transformation to apply after spatial pooling.",
-    )
-    parser.add_argument(
-        "--aggreg",
-        type=str,
-        default='concat',
-        help="What type of transformation to apply after spatial pooling.",
-    )
-    parser.add_argument(
-        "--inference_steps",
-        type=float,
-        default=10,
-        help="Steps used for gradient-based inferences.",
-    )
+    parser.add_argument("--prepool_transforms", type=str, nargs='+', default=['trivial'])
+    parser.add_argument("--postpool_transforms", nargs='+', type=str, default=['l2_norm'])
 
     # Logging / Saving results
 
-    parser.add_argument(
-        "--exp_name",
-        type=str,
-        default='default',
-        help="Name the experiment for easy grouping.")
-    parser.add_argument(
-        "--general_hparams",
-        type=str,
-        nargs='+',
-        default=['backbone', 'dataset', 'outlier_detectors', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
-        help="Important params that will appear in .csv result file.",
-        )
-    parser.add_argument(
-        "--simu_hparams",
-        type=str,
-        nargs='*',
-        default=[],
-        help="Important params that will appear in .csv result file.",
-        )
-    parser.add_argument(
-            "--override",
-            action='store_true',
-            help='Whether to override results already present in the .csv out file.')
+    parser.add_argument("--exp_name", type=str)
+    parser.add_argument("--log_freq", type=int, default=50)
+    parser.add_argument("--general_hparams", type=str, nargs='+',
+                        default=['backbone', 'dataset', 'outlier_detectors', 'inference_method',
+                                 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+                        )
+    parser.add_argument("--simu_hparams", type=str, nargs='*', default=[])
+    parser.add_argument("--override", action='store_true')
 
-    # Tuning
-    parser.add_argument(
-            "--combination_size",
-            type=int,
-            default=2)
-    parser.add_argument(
-            "--mode",
-            type=str,
-            default='benchmark')
-    parser.add_argument(
-            "--debug",
-            action='store_true')
+    # Misc
+    parser.add_argument("--debug", type=str2bool)
 
     args = parser.parse_args()
 
     if args.debug:
         args.n_tasks = 5
-    with open(args.detector_config_file) as f:
-        parsed_yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
-    merge_from_dict(args, parsed_yaml_dict)
+        args.epochs = 3
+        args.max_updates_per_epoch = 5
     return args
-
-
-all_detectors = {'knn': pyod.models.knn.KNN}
 
 
 def main(args):
     set_random_seed(args.random_seed)
+    save_dir = Path('results') / 'training' / args.exp_name
+    save_dir.mkdir(exist_ok=True, parents=True)
+
+    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
+    with open(save_dir / 'config.json', 'w') as f:
+        json.dump(vars(args), f)
 
     logger.info("Building model...")
-    weights = Path('data') / 'models' / f'{args.backbone}_{args.dataset}_{args.training}.pth'
-    feature_extractor = load_model(backbone=args.backbone,
-                                   weights=weights,
+    feature_extractor = load_model(args=args,
+                                   backbone=args.backbone,
+                                   weights=None,
                                    dataset_name=args.dataset,
                                    device='cuda')
 
-    # logger.info("Loading mean/std from base set ...")
-    average_train_features = {}
-    std_train_features = {}
-    layers = args.layers.split('-')
-    for layer in layers:
-        _, _, average_train_features[layer], std_train_features[layer] = get_test_features(
-            args.backbone, args.dataset, args.training, layer
-        )
+    logger.info("Defining optimizer and schedulers")
+    optimizer = torch.optim.SGD(feature_extractor.parameters(), lr=args.lr,
+                                momentum=0.9, nesterov=True, weight_decay=0.0005)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.milestones, gamma=0.1)
+
+    logger.info("Creating data loader  ...")
+    train_dataset, train_loader = get_classic_loader(args, args.dataset, shuffle=True, training=True,
+                                                     split='train', batch_size=args.batch_size)
+    num_classes = len(np.unique(train_dataset.labels))
+    val_loader = get_task_loader(args, "val", args.dataset, args.n_way, args.n_shot,
+                                 args.n_query, args.n_tasks, args.n_workers)
 
     logger.info("Creating few-shot classifier for validation ...")
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
         if class_.__name__ == args.inference_method
-    ][0].from_cli_args(args, average_train_features, std_train_features)
+    ][0].from_cli_args(args, defaultdict(list), defaultdict(list))
 
-    logger.info("Creating data loader  ...")
-    val_loader = get_task_loader(args.dataset,
-                                 args.image_size,
-                                 args.n_way,
-                                 args.n_shot,
-                                 args.n_query,
-                                 args.n_tasks,
-                                 split="val",
-                                 n_workers=6)
-    detector_sequence = []
-    final_detector = NaiveAggregator(detector_sequence)
-    fewshot_detector = FewShotDetector(few_shot_classifier=few_shot_classifier,
-                                       detector=final_detector,
-                                       model=feature_extractor,
-                                       layers=args.layers.split('-'),
-                                       augmentations=[],
-                                       on_features=False)
+    logger.info("Creating outlier detector for validation  ...")
+    detector_sequence = [ALL_DETECTORS['knn'](n_neighbors=3, method='mean')]
+    final_detector = ALL_DETECTORS['aggregator'](detector_sequence)
 
-    outliers_df, acc = detect_outliers(
-        fewshot_detector, data_loader, args.n_way, args.n_query
-    )
+    logger.info("Defining metrics ...")
+    updates_per_epoch = min(len(train_loader), args.max_updates_per_epoch)
+    logs_per_epoch = (updates_per_epoch // args.log_freq + 1)
+    metrics: Dict[str, Tensor] = {"train_loss": torch.zeros(args.epochs * logs_per_epoch,
+                                                            dtype=torch.float32),
+                                  "val_acc": torch.zeros(args.epochs,
+                                                         dtype=torch.float32),
+                                  "val_auc": torch.zeros(args.epochs,
+                                                         dtype=torch.float32)}
 
-    # Saving results
-    save_results(args, outliers_df)
+    layer = feature_extractor.last_layer_name
+    loss_fn = _CrossEntropy(args, num_classes)
+    best_val_acc = 0.
 
+    logger.info("Starting training ...")
+    feature_extractor.train()
 
-def save_results(args, outliers_df):
-    roc_auc, acc = show_all_metrics_and_plots(args, outliers_df, title='')
-    res_root = Path('results') / args.exp_name
-    res_root.mkdir(exist_ok=True, parents=True)
-    metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4)}
-    update_csv(args, metrics, path=res_root / 'out.csv')
+    for i in tqdm(range(args.epochs)):
+        for j, (images, labels) in enumerate(tqdm(train_loader, unit="batch")):
+
+            images, labels = images.cuda(), labels.cuda()
+            feat = feature_extractor(images, layers=layer)[layer].view(images.size(0), -1)
+            logits = feature_extractor.fc(feat)
+            loss = loss_fn(logits, labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if j % args.log_freq == 0:
+                metrics['train_loss'][logs_per_epoch * i + j // args.log_freq] = loss.item()
+            if j == updates_per_epoch - 1:
+                break
+
+        scheduler.step()
+
+        val_metrics = detect_outliers([layer], few_shot_classifier, final_detector, val_loader,
+                                      args.n_way, args.n_query, False, feature_extractor)
+        metrics['val_acc'][i] = val_metrics['acc'].mean().item()
+        metrics['val_auc'][i] = val_metrics['auc'].mean().item()
+
+        logger.info("Epoch {}: Val acc = {:.2f}  Val AUC = {:.2f}".format(
+            i, 100 * metrics['val_acc'][i], 100 * metrics['val_auc'][i]))
+
+        for k, array in metrics.items():
+            np.save(save_dir / f'{k}.npy', array)
+
+        if metrics['val_acc'][i] > best_val_acc:
+            best_val_acc = metrics['val_acc'][i]
+            metrics['val_acc'][i]
+            torch.save(feature_extractor.state_dict(), save_dir / 'model_best.pth')
+        plot_fn(folder=save_dir)
 
 
 if __name__ == "__main__":

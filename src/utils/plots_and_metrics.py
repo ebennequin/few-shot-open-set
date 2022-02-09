@@ -82,8 +82,8 @@ def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
 
     acc = metrics['acc'].mean().item()
     roc_auc = metrics['auc'].mean().item()
-    logger.info(f"ROC AUC: {np.round(roc_auc, 4)}")
-    logger.info(f"Accuracy: {acc}")
+    logger.info(f"ROC AUC: {np.round(100 * roc_auc, 2)}")
+    logger.info(f"Accuracy: {np.round(100 * acc, 2)}")
 
     # precisions, recalls, _ = precision_recall_curve(
     #     outliers_df.outlier, -outliers_df.outlier_score

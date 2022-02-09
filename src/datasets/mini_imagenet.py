@@ -22,7 +22,7 @@ class MiniImageNet(VisionDataset):
                  specs_file: Path,
                  target_transform: Optional[Callable] = None,
                  training: bool = False,
-                 augment: bool = False):
+                 ):
 
         self.IMAGE_PATH1 = osp.join(root, 'images')
         self.SPLIT_PATH = osp.join(root, 'splits')
@@ -35,7 +35,7 @@ class MiniImageNet(VisionDataset):
         self.num_class = len(set(self.labels))
 
         image_size = 84
-        if augment and split == 'train':
+        if training:
             transforms_list = [
                   transforms.RandomResizedCrop(image_size),
                   transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),

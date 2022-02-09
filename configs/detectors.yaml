@@ -1,3 +1,10 @@
+snatcher_f:
+  current_params:
+    temperature: 10
+  tuning:
+    hparams2tune: ['temperature']
+    hparam_values: {1: [[64.]], 5: [[64.]]}
+
 knn:
   current_params:
     n_neighbors: 10
@@ -5,7 +12,7 @@ knn:
     metric: 'minkowski'
   tuning:
     hparams2tune: ['n_neighbors', 'method']
-    hparam_values: {1: [[1, 2, 4], ['mean']], 5: [[1, 3, 5, 10, 15], ['mean']]}
+    hparam_values: {1: [[1, 2, 4], ['largest']], 5: [[1, 3, 5, 10, 15], ['largest']]}
 
 local_knn:
   current_params:

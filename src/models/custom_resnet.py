@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from typing import List
+from torch.distributions import Bernoulli
+
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
@@ -140,6 +142,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
 
         self.num_classes = num_classes
+        self.last_layer_name = "4_4"
 
         self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
         self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
@@ -184,7 +187,7 @@ class ResNet(nn.Module):
         for block in range(1, 5):
             layer_feats = eval(f'self.layer{block}')(x)
             x = layer_feats[-1]
-            pooled_maps = [f for f in layer_feats]
+            pooled_maps = [f.mean((-2, -1), keepdim=True) for f in layer_feats]
             for block_layer, pooled_map in enumerate(pooled_maps):
                 layer_name = f'{block}_{block_layer}'
                 if layer_name in layers:

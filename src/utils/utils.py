@@ -1,5 +1,5 @@
 import random
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 import numpy as np
 import torch
 from loguru import logger
@@ -111,25 +111,29 @@ def strip_prefix(state_dict: OrderedDict, prefix: str):
     )
 
 
-def load_model(args, backbone: str, weights: Path, dataset_name, device: torch.device):
+def load_model(args, backbone: str, weights: Optional[Path], dataset_name, device: torch.device,
+               num_classes: int = None):
     logger.info("Fetching data...")
-    train_dataset, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)
+    if num_classes is None:
+        train_dataset, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)
+        num_classes = len(np.unique(train_dataset.labels))
 
     logger.info("Building model...")
-    num_classes = len(np.unique(train_dataset.labels))
     feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
-    state_dict = torch.load(weights, map_location=device)
-    if "state_dict" in state_dict:
-        state_dict = strip_prefix(state_dict["state_dict"], "module.")
-    elif "params" in state_dict:
-        state_dict = strip_prefix(state_dict["params"], "encoder.")
-    else:
-        state_dict = strip_prefix(state_dict, "backbone.")
 
-    missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
-    print(f"Loaded weights from {weights}")
-    print(f"Missing keys {missing_keys}")
-    print(f"Unexpected keys {unexpected}")
-    feature_extractor.eval()
+    if weights is not None:
+        state_dict = torch.load(weights, map_location=device)
+        if "state_dict" in state_dict:
+            state_dict = strip_prefix(state_dict["state_dict"], "module.")
+        elif "params" in state_dict:
+            state_dict = strip_prefix(state_dict["params"], "encoder.")
+        else:
+            state_dict = strip_prefix(state_dict, "backbone.")
+
+        missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
+        print(f"Loaded weights from {weights}")
+        print(f"Missing keys {missing_keys}")
+        print(f"Unexpected keys {unexpected}")
+        feature_extractor.eval()
 
     return feature_extractor

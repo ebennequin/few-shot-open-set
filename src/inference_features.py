@@ -14,6 +14,8 @@ from tqdm import tqdm
 from sklearn.metrics import roc_curve, precision_recall_curve
 from sklearn.metrics import auc as auc_fn
 
+from loguru import logger
+import inspect
 import yaml
 import numpy as np
 import itertools
@@ -21,7 +23,7 @@ from pathlib import Path
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.detectors import ALL_DETECTORS
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
-from src.utils.data_fetchers import get_features_data_loader, get_test_features
+from src.utils.data_fetchers import get_task_loader, get_test_features
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,14 +38,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
     parser.add_argument("--pool", action='store_true')
+    parser.add_argument("--device", type=str, default='cuda')
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
-    parser.add_argument("--training", type=str, default="classic")
+    parser.add_argument("--model_source", type=str, default="feat")
+    parser.add_argument("--training", type=str, default="standard")
     parser.add_argument("--layers", type=str, default="4")
 
     # Detector
-    parser.add_argument("--outlier_detectors", type=str, default="knn_3")
+    parser.add_argument("--outlier_detectors", type=str)
     parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Method
@@ -142,7 +146,7 @@ def main(args):
     std_train_features = {}
     for i, layer in enumerate(layers):
         features, _, average_train_features[i], std_train_features[i] = get_test_features(
-            args.backbone, args.dataset, args.training, layer
+            args.backbone, args.dataset, args.training, args.model_source, layer
         )
         for class_ in features:
             feature_dic[class_.item()][layer] = features[class_]
@@ -153,7 +157,6 @@ def main(args):
     ][0].from_cli_args(args, average_train_features, std_train_features)
 
     current_detectors = args.outlier_detectors.split('-')
-
 
     if args.mode == 'tune':
 
@@ -168,6 +171,8 @@ def main(args):
                 # Override default args
                 for k, v in zip(params2tune, some_combin):
                     detector_args[k] = v
+                if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
+                    detector_args['args'] = args
                 detectors_to_try[x].append(ALL_DETECTORS[x](**detector_args))
 
         # print(detectors_to_try)
@@ -182,16 +187,12 @@ def main(args):
 
         for detector_sequence in sequences_to_try:
 
+            logger.info(detector_sequence)
+
             set_random_seed(args.random_seed)
 
-            data_loader = get_features_data_loader(
-                feature_dic,
-                args.n_way,
-                args.n_shot,
-                args.n_query,
-                args.n_tasks,
-                args.n_workers,
-            )
+            data_loader = get_task_loader(args, "test", args.dataset, args.n_way, args.n_shot,
+                                          args.n_query, args.n_tasks, args.n_workers, feature_dic)
 
             d_sequence = []
             for d in detector_sequence:
@@ -215,8 +216,8 @@ def main(args):
             save_results(args, metrics)
 
 
-def save_results(args, outliers_df):
-    roc_auc, acc = show_all_metrics_and_plots(args, outliers_df, title='')
+def save_results(args, metrics):
+    roc_auc, acc = show_all_metrics_and_plots(args, metrics, title='')
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
     metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4)}
@@ -244,19 +245,18 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
         support_features, query_features = few_shot_classifier.transform_features(support_features.copy(), query_features.copy())
 
         # ====== OOD detection ======
-
-        detector.fit(support_features)
-        outlier_scores = torch.from_numpy(detector.decision_function(support_features, query_features))  # [?,]
+        outlier_scores = []
+        for layer in support_features:
+            detector.fit(support_features[layer], support_labels)
+            outlier_scores.append(torch.from_numpy(detector.decision_function(support_features[layer], query_features[layer])))  # [?,]
+        outlier_scores = torch.stack(outlier_scores, 0).mean(0)
 
         # ====== Few-shot classifier ======
-
-        # Obtaining predictions from few-shot classifier
-        if not few_shot_classifier.pool:
-            support_features = support_features.mean((-2, -1))
-            query_features = query_features.mean((-2, -1))
-
-        _, probs_q = few_shot_classifier(support_features, query_features, support_labels)
-        predictions = probs_q.argmax(-1)
+        all_probs = []
+        for layer in support_features:
+            all_probs.append(few_shot_classifier(support_features[layer], query_features[layer], support_labels)[1])
+        all_probs = torch.stack(all_probs, 0).mean(0)
+        predictions = all_probs.argmax(-1)
 
         # ====== Tracking metrics ======
 

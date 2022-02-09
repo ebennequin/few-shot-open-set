@@ -53,6 +53,7 @@ class Wide_ResNet(nn.Module):
     def __init__(self, depth, widen_factor, dropout_rate):
         super(Wide_ResNet, self).__init__()
         self.in_planes = 16
+        self.last_layer_name = 'last'
 
         assert ((depth-4) % 6 == 0), 'Wide-resnet depth should be 6n+4'
         n = int((depth-4) / 6)

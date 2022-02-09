@@ -10,8 +10,26 @@ EXP=default
 RESOLUTION=84
 AUGMENTATIONS=trivial
 BACKBONE=resnet12
-TRAINING="feat"
+MODEL_SRC="feat"
+TRAINING=standard
+DEBUG=False
 
+train:
+	for dataset in $(DATASETS); do \
+		for shot in $(SHOTS); do \
+		    python3 -m src.pretrain \
+		        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+		        --inference_method SimpleShot \
+		        --n_tasks $(N_TASKS) \
+		        --n_shot $${shot} \
+		        --prepool_transform  $(PREPOOL) \
+		        --postpool_transform  $(POSTPOOL) \
+		        --pool \
+		        --backbone $(BACKBONE) \
+		        --dataset $${dataset} \
+		        --debug $(DEBUG) ;\
+	    done ;\
+	done ;\
 
 extract:
 		for dataset in $(DATASETS); do \
@@ -19,7 +37,8 @@ extract:
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--dataset $${dataset} \
-					--training $(TRAINING) \
+			        --model_source $(MODEL_SRC) \
+			        --training $(TRAINING) \
 					--split $${split} \
 					--layers $(LAYERS) ;\
 		    done \
@@ -42,6 +61,7 @@ run:
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
+			        --model_source $(MODEL_SRC) \
 			        --training $(TRAINING) \
 			        --dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
@@ -70,7 +90,7 @@ run_scratch:
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
-			        --training feat \
+			        --model_source feat \
 			        --dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
 			        --combination_size $(COMBIN) \
@@ -82,18 +102,15 @@ run_scratch:
 baseline:
 	make EXP=baseline run ;\
 
-
-coupling:
-	make COMBIN=3 SHOTS="1 5" EXP=coupling run ;\
-
 layer_mixing:
-	make EXP=layer_mixing PREPOOL=base_centering run ;\
+	make EXP=layer_mixing COMBIN=3 run ;\
 
 
 resolution:
 	make PREPOOL=trivial EXP=resolution SHOTS=1 LAYERS='4_0' RESOLUTION=224 run_scratch ;\
 
-cutmix:
-	make EXP=cutmix SHOTS=5 PREPOOL='inductive_batch_norm' AUGMENTATIONS='mixup' run_scratch ;\
-# 	make EXP=cutmix SHOTS=5 PREPOOL='base_bn' AUGMENTATIONS='cutmix' run_scratch ;\
+snatcher:
+	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
 
+experimental_training:
+	make PREPOOL=trivial EXP=experimental train ;\

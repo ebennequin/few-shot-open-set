@@ -12,9 +12,12 @@ from pathlib import Path
 from src.constants import (
     BACKBONES,
 )
+import os
 from types import SimpleNamespace
 from src.utils.data_fetchers import get_classic_loader
 from collections import OrderedDict, defaultdict
+import argparse
+import torch.distributed as dist
 
 
 def set_random_seed(seed: int):
@@ -115,7 +118,7 @@ def load_model(args, backbone: str, weights: Optional[Path], dataset_name, devic
                num_classes: int = None):
     logger.info("Fetching data...")
     if num_classes is None:
-        train_dataset, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)
+        train_dataset, _, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)
         num_classes = len(np.unique(train_dataset.labels))
 
     logger.info("Building model...")
@@ -137,3 +140,46 @@ def load_model(args, backbone: str, weights: Optional[Path], dataset_name, devic
         feature_extractor.eval()
 
     return feature_extractor
+
+
+def main_process(args: argparse.Namespace) -> bool:
+    if args.distributed:
+        rank = dist.get_rank()
+        if rank == 0:
+            return True
+        else:
+            return False
+    else:
+        return True
+
+
+def setup(args: argparse.Namespace,
+          rank: int,
+          world_size: int) -> None:
+    """
+    Used for distributed learning
+    """
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = str(args.port)
+
+    # initialize the process group
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+
+
+def cleanup() -> None:
+    """
+    Used for distributed learning
+    """
+    dist.destroy_process_group()
+
+
+def find_free_port() -> int:
+    """
+    Used for distributed learning
+    """
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port

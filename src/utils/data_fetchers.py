@@ -8,15 +8,8 @@ from typing import Tuple, Dict, Optional
 from easyfsl.data_tools import TaskSampler
 from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
-from src.constants import (
-    CIFAR_ROOT_DIR,
-    CIFAR_SPECS_DIR,
-    MINI_IMAGENET_ROOT_DIR,
-    MINI_IMAGENET_SPECS_DIR,
-    TIERED_IMAGENET_ROOT_DIR,
-    TIERED_IMAGENET_SPECS_DIR,
-)
 from src.datasets import FewShotCIFAR100, MiniImageNet, FeaturesDataset, TieredImageNet
 from src.open_query_sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
@@ -44,27 +37,27 @@ def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
 
 def get_cifar_set(args, split, training):
     return FewShotCIFAR100(
-        root=CIFAR_ROOT_DIR,
+        root=Path(args.data_dir) / 'cifar',
         args=args,
-        specs_file=CIFAR_SPECS_DIR / f"{split}.json",
+        split=split,
         training=training,
     )
 
 
 def get_mini_imagenet_set(args, split, training):
     return MiniImageNet(
-        root=MINI_IMAGENET_ROOT_DIR,
+        root=Path(args.data_dir) / 'mini_imagenet',
         args=args,
-        specs_file=MINI_IMAGENET_SPECS_DIR / f"{split}.csv",
+        split=split,
         training=training,
     )
 
 
 def get_tiered_imagenet_set(args, split, training):
     return TieredImageNet(
-        root=TIERED_IMAGENET_ROOT_DIR,
+        root=Path(args.data_dir) / 'tiered_imagenet',
         args=args,
-        specs_file=TIERED_IMAGENET_SPECS_DIR / f"{split}.json",
+        split=split,
         training=training,
     )
 
@@ -81,16 +74,14 @@ def get_dataset(dataset_name, args, split, training):
     return dataset
 
 
-def get_classic_loader(args, dataset_name, training=False, shuffle=False, split="train", batch_size=1024, n_workers=6):
+def get_classic_loader(args, dataset_name, training=False, shuffle=False, split="train", batch_size=1024, world_size=1, n_workers=6):
 
     dataset = get_dataset(dataset_name, args, split, training)
-    return dataset, DataLoader(
-        dataset,
-        batch_size=batch_size,
-        num_workers=n_workers,
-        pin_memory=True,
-        shuffle=shuffle,
-    )
+    sampler = DistributedSampler(dataset) if (world_size > 1) else None
+    batch_size = int(args.batch_size / world_size) if (world_size > 1) else batch_size
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=n_workers,
+                             sampler=sampler, pin_memory=True, shuffle=shuffle)
+    return dataset, sampler, data_loader
 
 
 def get_task_loader(args, split, dataset_name, n_way,

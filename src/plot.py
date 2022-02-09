@@ -3,6 +3,7 @@ from itertools import cycle
 from collections import defaultdict
 from functools import partial
 from typing import Any, List, Tuple
+from loguru import logger
 
 import json
 import argparse
@@ -92,7 +93,7 @@ def main(folder: str, reduce_by='random_seed', simu_params=['dataset', 'backbone
         save_path = p / 'plots'
         save_path.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path / f'{metric}.png')
-    print(f"Plots saved at {folder}")
+    logger.info(f"Plots saved at {folder}")
 
 
 def compute_confidence_interval(data: np.ndarray, axis=0, ignore_value=None,) -> Tuple[np.ndarray, np.ndarray]:

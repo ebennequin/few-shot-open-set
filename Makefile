@@ -1,3 +1,10 @@
+
+# Server options
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+
+# Simu options
+DATADIR=data
 DATASETS=mini_imagenet
 DETECTORS=knn
 SHOTS=1 5
@@ -13,12 +20,15 @@ BACKBONE=resnet12
 MODEL_SRC="feat"
 TRAINING=standard
 DEBUG=False
+GPUS=0
 
 train:
+	SHOTS=1
 	for dataset in $(DATASETS); do \
 		for shot in $(SHOTS); do \
 		    python3 -m src.pretrain \
 		        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+		        --data_dir $(DATADIR) \
 		        --inference_method SimpleShot \
 		        --n_tasks $(N_TASKS) \
 		        --n_shot $${shot} \
@@ -27,7 +37,8 @@ train:
 		        --pool \
 		        --backbone $(BACKBONE) \
 		        --dataset $${dataset} \
-		        --debug $(DEBUG) ;\
+		        --debug $(DEBUG) \
+		        --gpus $(GPUS) ;\
 	    done ;\
 	done ;\
 
@@ -114,3 +125,27 @@ snatcher:
 
 experimental_training:
 	make PREPOOL=trivial EXP=experimental train ;\
+
+
+
+deploy:
+	rsync -avm Makefile $(SERVER_IP):${SERVER_PATH}/ ;\
+	rsync -avm --exclude '*.pyc' src $(SERVER_IP):${SERVER_PATH}/ ;\
+	rsync -avm --exclude '*.pyc' configs $(SERVER_IP):${SERVER_PATH}/ ;\
+
+data/mini_imagenet.tar.gz:
+	tar -czvf  data/mini_imagenet.tar.gz -C data/ mini_imagenet
+
+data/tiered_imagenet.tar.gz:
+	tar -czvf  data/tiered_imagenet.tar.gz -C data/ tiered_imagenet
+
+data/mini_imagenet: data/mini_imagenet.tar.gz
+	tar -xvf data/mini_imagenet.tar.gz -C data/
+
+data/tiered_imagenet: data/tiered_imagenet.tar.gz
+	tar -xvf data/tiered_imagenet.tar.gz -C data/
+
+deploy_data: data/mini_imagenet.tar.gz
+	for dataset in $(DATASETS); do \
+		rsync -avm data/$${dataset}.tar.gz $(SERVER_IP):${SERVER_PATH}/data/ ;\
+	done \

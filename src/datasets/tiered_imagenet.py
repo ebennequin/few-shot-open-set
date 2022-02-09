@@ -75,7 +75,7 @@ class TieredImageNet(VisionDataset):
         self,
         args,
         root: Path,
-        specs_file: Path,
+        split: str,
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
@@ -102,24 +102,25 @@ class TieredImageNet(VisionDataset):
             )
         )
 
+        images_path = root / 'images'
         super(TieredImageNet, self).__init__(
-            str(root), transform=transform, target_transform=target_transform
+            str(images_path), transform=transform, target_transform=target_transform
         )
 
         # Get images and labels
-        with open(specs_file, "r") as file:
-            split = json.load(file)
+        with open(root / 'specs' / f'{split}.json', "r") as file:
+            split_dict = json.load(file)
 
-        self.class_list = split['class_names']
+        self.class_list = split_dict['class_names']
         self.id_to_class = dict(enumerate(self.class_list))
         self.class_to_id = {v: k for k, v in self.id_to_class.items()}
         images = []
         self.labels = []
         for class_ in tqdm(self.class_list):
-            path = root / class_
+            path = images_path / class_
             all_images = path.glob("*.JPEG")
-            for image_path in all_images:
-                images.append(image_path)
+            for img_path in all_images:
+                images.append(img_path)
                 self.labels.append(self.class_to_id[class_])
         self.images = images
 

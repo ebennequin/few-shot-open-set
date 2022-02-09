@@ -45,7 +45,7 @@ class CUB(VisionDataset):
         )
 
         images_path = root / 'images'
-        super(TieredImageNet, self).__init__(
+        super(CUB, self).__init__(
             str(images_path), transform=transform, target_transform=target_transform
         )
 
@@ -60,7 +60,7 @@ class CUB(VisionDataset):
         self.labels = []
         for class_ in tqdm(self.class_list):
             path = images_path / class_
-            all_images = path.glob("*.JPEG")
+            all_images = path.glob("*.jpg")
             for img_path in all_images:
                 images.append(img_path)
                 self.labels.append(self.class_to_id[class_])
@@ -83,3 +83,4 @@ class CUB(VisionDataset):
         return img, label
 
     def load_image(self, filename):
+        return self.transform(Image.open(filename).convert("RGB"))

@@ -56,12 +56,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image_size", type=int, default=84)
 
     # Training
-    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--max_updates_per_epoch", type=int, default=1e6)
     parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--milestones", type=int, nargs='+', default=[75, 150, 300])
+    parser.add_argument("--milestones", type=int, nargs='+', default=[75, 150, 180])
     parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--label_smoothing", type=float, default=0.1)
+    parser.add_argument("--label_smoothing", type=float, default=0.2)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")

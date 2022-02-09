@@ -10,7 +10,7 @@ from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from src.datasets import FewShotCIFAR100, MiniImageNet, FeaturesDataset, TieredImageNet
+from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet
 from src.open_query_sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
@@ -62,6 +62,15 @@ def get_tiered_imagenet_set(args, split, training):
     )
 
 
+def get_cub_set(args, split, training):
+    return CUB(
+        root=Path(args.data_dir) / 'cub',
+        args=args,
+        split=split,
+        training=training,
+    )
+
+
 def get_dataset(dataset_name, args, split, training):
     if dataset_name == "cifar":
         dataset = get_cifar_set(args, split, training)
@@ -69,6 +78,8 @@ def get_dataset(dataset_name, args, split, training):
         dataset = get_mini_imagenet_set(args, split, training)
     elif dataset_name == "tiered_imagenet":
         dataset = get_tiered_imagenet_set(args, split, training)
+    elif dataset_name == "cub":
+        dataset = get_cub_set(args, split, training)
     else:
         raise NotImplementedError(f"I don't know this dataset {dataset_name}.")
     return dataset

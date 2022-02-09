@@ -29,7 +29,7 @@ train:
 	for dataset in $(DATASETS); do \
 		for shot in $(SHOTS); do \
 		    python3 -m src.pretrain \
-		        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+		        --exp_name $${dataset}'-'$(EXP) \
 		        --data_dir $(DATADIR) \
 		        --inference_method SimpleShot \
 		        --n_tasks 500 \
@@ -126,13 +126,14 @@ snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
 
 experimental_training:
-	make PREPOOL=trivial EXP=experimental train ;\
+	make PREPOOL=trivial train ;\
 
 
 
 deploy:
 	rsync -avm Makefile $(SERVER_IP):${SERVER_PATH}/ ;\
 	rsync -avm --exclude '*.pyc' src $(SERVER_IP):${SERVER_PATH}/ ;\
+	rsync -avm --exclude '*.pyc' scripts $(SERVER_IP):${SERVER_PATH}/ ;\
 	rsync -avm --exclude '*.pyc' configs $(SERVER_IP):${SERVER_PATH}/ ;\
 
 data/mini_imagenet.tar.gz:
@@ -141,13 +142,11 @@ data/mini_imagenet.tar.gz:
 data/tiered_imagenet.tar.gz:
 	tar -czvf  data/tiered_imagenet.tar.gz -C data/ tiered_imagenet
 
-data/mini_imagenet: data/mini_imagenet.tar.gz
-	tar -xvf data/mini_imagenet.tar.gz -C data/
+data/cub.tar.gz:
+	tar -czvf  data/cub.tar.gz -C data/ cub
 
-data/tiered_imagenet: data/tiered_imagenet.tar.gz
-	tar -xvf data/tiered_imagenet.tar.gz -C data/
 
-deploy_data: data/mini_imagenet.tar.gz
+deploy_data:
 	for dataset in $(DATASETS); do \
 		rsync -avm data/$${dataset}.tar.gz $(SERVER_IP):${SERVER_PATH}/data/ ;\
 	done \

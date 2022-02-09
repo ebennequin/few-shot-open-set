@@ -50,7 +50,7 @@ class wide_basic(nn.Module):
 
 
 class Wide_ResNet(nn.Module):
-    def __init__(self, depth, widen_factor, dropout_rate):
+    def __init__(self, depth, widen_factor, dropout_rate, num_classes):
         super(Wide_ResNet, self).__init__()
         self.in_planes = 16
         self.last_layer_name = 'last'
@@ -67,6 +67,7 @@ class Wide_ResNet(nn.Module):
         self.layer2 = self._wide_layer(wide_basic, nStages[2], n, dropout_rate, stride=2)
         self.layer3 = self._wide_layer(wide_basic, nStages[3], n, dropout_rate, stride=2)
         self.bn1 = nn.BatchNorm2d(nStages[3], momentum=0.9)
+        self.fc = nn.Linear(640, num_classes)
         
     def _wide_layer(self, block, planes, num_blocks, dropout_rate, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -100,5 +101,5 @@ class Wide_ResNet(nn.Module):
 
 def wrn2810(**kwargs):
 
-    model = Wide_ResNet(28, 10, 0.)
+    model = Wide_ResNet(28, 10, 0., **kwargs)
     return model

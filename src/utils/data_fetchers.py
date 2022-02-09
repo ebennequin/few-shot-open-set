@@ -77,10 +77,10 @@ def get_dataset(dataset_name, args, split, training):
 def get_classic_loader(args, dataset_name, training=False, shuffle=False, split="train", batch_size=1024, world_size=1, n_workers=6):
 
     dataset = get_dataset(dataset_name, args, split, training)
-    sampler = DistributedSampler(dataset) if (world_size > 1) else None
+    sampler = DistributedSampler(dataset, shuffle=True) if (world_size > 1) else None
     batch_size = int(args.batch_size / world_size) if (world_size > 1) else batch_size
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=n_workers,
-                             sampler=sampler, pin_memory=True, shuffle=shuffle)
+                             sampler=sampler, pin_memory=True, shuffle=shuffle and (sampler is None))
     return dataset, sampler, data_loader
 
 

@@ -24,8 +24,8 @@ source ~/ENV/bin/activate
 DATASET=mini_imagenet
 DATA_DIR=${SLURM_TMPDIR}/data
 mkdir -p $DATA_DIR
-tar xf ~/scratch/open-set/data/${DATASET}.tar.gz -C $DATA_DIR
+tar xf ~/scratch/open-set/data/${DATASET}.tar.gz -C ${DATA_DIR}
 
 
-make DATADIR=${DATA_DIR} BACKBONE=resnet12 DATASETS=${DATASET} experimental_training
+make GPUS="0 1" DATADIR=${DATA_DIR} BACKBONE=resnet12 DATASETS=${DATASET} experimental_training
 

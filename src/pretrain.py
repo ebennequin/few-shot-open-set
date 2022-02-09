@@ -110,8 +110,8 @@ def main_worker(rank: int,
         save_dir = Path('results') / 'training' / args.exp_name
         save_dir.mkdir(exist_ok=True, parents=True)
 
-    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
     if main_process(args):
+        logger.info(f"Dropping config file at {save_dir / 'config.json'}")
         with open(save_dir / 'config.json', 'w') as f:
             json.dump(vars(args), f)
 
@@ -183,8 +183,9 @@ def main_worker(rank: int,
             loss.backward()  # Even if distributed, DDP takes care of averaging gradients across processes
             optimizer.step()
 
+            if args.distributed:
+                dist.reduce(loss, 0)
             if main_process(args):
-                dist.all_reduce(loss)
                 if j % args.log_freq == 0:
                     metrics['train_loss'][logs_per_epoch * i + j // args.log_freq] = loss.item() / world_size
                 if j == updates_per_epoch - 1:

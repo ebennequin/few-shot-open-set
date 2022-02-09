@@ -2,6 +2,7 @@
 # Server options
 SERVER_IP=narval
 SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
 
 # Simu options
 DATADIR=data
@@ -22,6 +23,7 @@ TRAINING=standard
 DEBUG=False
 GPUS=0
 
+
 train:
 	SHOTS=1
 	for dataset in $(DATASETS); do \
@@ -30,7 +32,7 @@ train:
 		        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
 		        --data_dir $(DATADIR) \
 		        --inference_method SimpleShot \
-		        --n_tasks $(N_TASKS) \
+		        --n_tasks 500 \
 		        --n_shot $${shot} \
 		        --prepool_transform  $(PREPOOL) \
 		        --postpool_transform  $(POSTPOOL) \
@@ -149,3 +151,7 @@ deploy_data: data/mini_imagenet.tar.gz
 	for dataset in $(DATASETS); do \
 		rsync -avm data/$${dataset}.tar.gz $(SERVER_IP):${SERVER_PATH}/data/ ;\
 	done \
+
+kill_all: ## Kill all my python and tee processes on the server
+	ps -u $(USER) | grep "python" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
+	ps -u $(USER) | grep "tee" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill

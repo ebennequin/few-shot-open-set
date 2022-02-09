@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from typing import List
 from torch.distributions import Bernoulli
-
+import torch.distributed as dist
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
@@ -29,7 +29,8 @@ class DropBlock(nn.Module):
             bernoulli = Bernoulli(gamma)
             mask = bernoulli.sample((batch_size, channels, height - (self.block_size - 1), width - (self.block_size - 1)))
             if torch.cuda.is_available():
-                mask = mask.cuda()
+                rank = dist.get_rank()
+                mask = mask.to(rank)
             block_mask = self._compute_block_mask(mask)
             countM = block_mask.size()[0] * block_mask.size()[1] * block_mask.size()[2] * block_mask.size()[3]
             count_ones = block_mask.sum()
@@ -54,7 +55,8 @@ class DropBlock(nn.Module):
         ).t()
         offsets = torch.cat((torch.zeros(self.block_size**2, 2).long(), offsets.long()), 1)
         if torch.cuda.is_available():
-            offsets = offsets.cuda()
+            rank = dist.get_rank()
+            offsets = offsets.to(rank)
 
         if nr_blocks > 0:
             non_zero_idxs = non_zero_idxs.repeat(self.block_size ** 2, 1)

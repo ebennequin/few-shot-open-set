@@ -1,6 +1,9 @@
 import torch.nn.functional as F
 from torch import Tensor
+from loguru import logger
 import torch
+from easyfsl.utils import compute_prototypes
+import torch.nn as nn
 
 
 def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
@@ -17,12 +20,33 @@ def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
 
 
-def react(feat_s: Tensor, feat_q: Tensor, **kwargs):
+def debiased_bn(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
-    c = torch.quantile(feat_s, 0.95)
-    return feat_s.clamp(max=c), feat_q.clamp(max=c)
+
+    # Assessing if this is even achievable
+    # all_feats = torch.cat([feat_s, feat_q], 0)
+    # all_labels = torch.cat([kwargs['support_labels'], kwargs['query_labels']], 0)
+    # prototypes = compute_prototypes(all_feats, all_labels)  # [K, d]
+    # mean = prototypes.mean(0, keepdim=True)  # [1, d]
+
+    # Attempt
+    # all_feats = torch.cat([feat_s, feat_q], 0)
+    # all_feats = F.normalize(all_feats, dim=1)
+    # nodes_degrees = torch.cdist(all_feats, all_feats).mean(-1, keepdim=True)  # [N]
+    # logger.warning((nodes_degrees.min(), nodes_degrees.max().values))
+    # normalized_degrees = nodes_degrees / nodes_degrees.sum()  # [N, 1]
+    # mean = (all_feats * normalized_degrees).sum(0)
+
+    # all_feats = torch.cat([feat_s, feat_q], 0)
+    nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(feat_s, dim=1)).sum(-1, keepdim=True)  # [N]
+    # logger.info(nodes_degrees.size())
+    farthest_points = nodes_degrees.topk(dim=0, k=50).indices.squeeze()
+    # logger.warning(farthest_points)
+    mean = torch.cat([feat_s, feat_q[farthest_points]], 0).mean(0, keepdim=True)
+    assert len(mean.size()) == 2, mean.size()
+    return feat_s - mean, feat_q - mean
 
 
 def max_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
@@ -56,17 +80,6 @@ def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
 
 
-def semi_inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
-    """
-    feat: Tensor shape [N, hidden_dim, h, w]
-    """
-    assert len(feat_s.size()) >= 4
-    dims = (0, 2, 3)
-    mean = torch.mean(feat_s, dim=dims, keepdim=True)
-    var = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
-
-
 def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, h, w]
@@ -78,6 +91,21 @@ def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     mean_q = torch.mean(feat_q, dim=dims, keepdim=True)
     var_q = torch.var(feat_q, dim=dims, unbiased=False, keepdim=True)
     return (feat_s - mean_s) / (var_s.sqrt() + 1e-10), (feat_q - mean_q) / (var_q.sqrt() + 1e-10)
+
+
+def transductive_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, h, w]
+    """
+    if len(feat_s.size()) == 4:
+        dims = (0, 2, 3)  # we normalize over the batch, as well as spatial dims
+    elif len(feat_s.size()) == 2:
+        dims = (0,)
+    else:
+        raise ValueError("Problem with size of features.")
+    cat_feat = torch.cat([feat_s, feat_q], 0)
+    mean = torch.mean(cat_feat, dim=dims, keepdim=True)
+    return (feat_s - mean), (feat_q - mean)
 
 
 def transductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):

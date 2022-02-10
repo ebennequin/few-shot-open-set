@@ -8,20 +8,22 @@ USER=mboudiaf
 DATADIR=data
 DATASETS=mini_imagenet
 DETECTORS=knn
-SHOTS=1 5
-N_TASKS=1000
 PREPOOL=base_centering
 POSTPOOL=l2_norm
 LAYERS=4_4
 COMBIN=1
 EXP=default
 RESOLUTION=84
-AUGMENTATIONS=trivial
 BACKBONE=resnet12
 MODEL_SRC="feat"
 TRAINING=standard
 DEBUG=False
 GPUS=0
+
+# Tasks
+N_TASKS=1000
+SHOTS=1 5
+BALANCED=True
 
 
 train:
@@ -75,6 +77,7 @@ run:
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
 			        --model_source $(MODEL_SRC) \
+			        --balanced $(BALANCED) \
 			        --training $(TRAINING) \
 			        --dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
@@ -99,7 +102,6 @@ run_scratch:
 			        --outlier_detectors $${detector} \
 			        --prepool_transform  $(PREPOOL) \
 			        --postpool_transform  $(POSTPOOL) \
-			        --augmentations $(AUGMENTATIONS) \
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
@@ -126,9 +128,9 @@ snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
 
 experimental_training:
-	make PREPOOL=trivial train ;\
+	make PREPOOL=trivial SHOTS=1 train ;\
 
-
+# ================= Deployment / Imports ==================
 
 deploy:
 	rsync -avm Makefile $(SERVER_IP):${SERVER_PATH}/ ;\

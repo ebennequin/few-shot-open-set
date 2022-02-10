@@ -24,20 +24,9 @@ from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.utils.data_fetchers import get_task_loader, get_classic_loader
 from src.detectors import ALL_DETECTORS
 from collections import defaultdict
-from .inference_features import detect_outliers
+from .inference_features import detect_outliers, str2bool
 from .losses import _CrossEntropy
 from .plot import main as plot_fn
-
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_workers", type=int, default=6)
     parser.add_argument("--pool", action='store_true')
     parser.add_argument("--image_size", type=int, default=84)
+    parser.add_argument("--balanced_tasks", type=str2bool, default="True")
 
     # Training
     parser.add_argument("--epochs", type=int, default=200)
@@ -61,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--milestones", type=int, nargs='+', default=[75, 150, 180])
     parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--label_smoothing", type=float, default=0.2)
+    parser.add_argument("--label_smoothing", type=float, default=0.1)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")

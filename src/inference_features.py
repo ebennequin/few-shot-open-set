@@ -26,6 +26,17 @@ from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def parse_args() -> argparse.Namespace:
 
     # Data
@@ -39,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_workers", type=int, default=6)
     parser.add_argument("--pool", action='store_true')
     parser.add_argument("--device", type=str, default='cuda')
+    parser.add_argument("--balanced_tasks", type=str2bool, default="True")
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -227,7 +239,7 @@ def save_results(args, metrics):
 def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
 
     metrics = defaultdict(list)
-    for support, support_labels, query, query_labels, true_class_ids in tqdm(data_loader):
+    for support, support_labels, query, query_labels, outliers in tqdm(data_loader):
 
         # ====== Extract features ======
         if on_features:
@@ -242,7 +254,10 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
             query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
         # ====== Transforming features ======
-        support_features, query_features = few_shot_classifier.transform_features(support_features.copy(), query_features.copy())
+        support_features, query_features = few_shot_classifier.transform_features(support_features.copy(),
+                                                                                  query_features.copy(),
+                                                                                  support_labels,
+                                                                                  query_labels)
 
         # ====== OOD detection ======
         outlier_scores = []
@@ -259,14 +274,10 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
         predictions = all_probs.argmax(-1)
 
         # ====== Tracking metrics ======
-
-        acc = (predictions[:n_way * n_query] == query_labels[:n_way * n_query]).float().mean()
-        outliers = torch.cat([torch.zeros(n_way * n_query), torch.ones(n_way * n_query)])
+        acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean()
         fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), outlier_scores.numpy())
         precision, recall, _ = precision_recall_curve(outliers.numpy(), outlier_scores.numpy())
         auc = auc_fn(fp_rate, tp_rate)
-        predictions = predictions[:n_way * n_query]
-        query_labels = query_labels[:n_way * n_query]
 
         for metric_name in ['auc', 'acc']:
             metrics[metric_name].append(eval(metric_name))

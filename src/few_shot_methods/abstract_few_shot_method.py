@@ -59,7 +59,7 @@ class AbstractFewShotMethod(nn.Module):
             @ F.normalize(self.prototypes, dim=1).T
         )
 
-    def transform_features(self, support_features: Tensor, query_features: Tensor):
+    def transform_features(self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, query_labels: Tensor):
         """
         Performs an (optional) normalization of feature maps, then average pooling, then another (optional) normalization
         """
@@ -70,7 +70,9 @@ class AbstractFewShotMethod(nn.Module):
                                                                     support_features[layer],
                                                                     query_features[layer],
                                                                     average_train_features=self.average_train_features[layer],
-                                                                    std_train_features=self.std_train_features[layer])
+                                                                    std_train_features=self.std_train_features[layer],
+                                                                    support_labels=support_labels,
+                                                                    query_labels=query_labels)
 
             # Average pooling
             if self.pool:
@@ -82,7 +84,9 @@ class AbstractFewShotMethod(nn.Module):
                                                                         support_features[layer],
                                                                         query_features[layer],
                                                                         average_train_features=self.average_train_features[layer],
-                                                                        std_train_features=self.std_train_features[layer])
+                                                                        std_train_features=self.std_train_features[layer],
+                                                                        support_labels=support_labels,
+                                                                        query_labels=query_labels)
 
         # Aggregate features
         # support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)

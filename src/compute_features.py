@@ -19,11 +19,13 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--dataset", type=str, default="mini_imagenet")
     parser.add_argument("--backbone", type=str, default="resnet12")
+    parser.add_argument("--data_dir", type=str, default="data")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
     parser.add_argument("--layers", type=str, nargs='+')
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--image_size", type=int, default=84)
     parser.add_argument("--device", type=str, default="cuda")
 
     args = parser.parse_args()
@@ -33,10 +35,10 @@ def parse_args() -> argparse.Namespace:
 def main(args):
     weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.dataset}_{args.model_source}.pth"
     logger.info("Fetching data...")
-    dataset, data_loader = get_classic_loader(args,
-                                              dataset_name=args.dataset,
-                                              split=args.split,
-                                              batch_size=args.batch_size)
+    dataset, _, data_loader = get_classic_loader(args,
+                                                 dataset_name=args.dataset,
+                                                 split=args.split,
+                                                 batch_size=args.batch_size)
 
     logger.info("Building model...")
     feature_extractor = load_model(args, args.backbone, weights, args.dataset, args.device)

@@ -9,8 +9,8 @@ from easyfsl.data_tools import TaskSampler
 from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
-
-from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet
+from loguru import logger
+from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet, FeatTieredImageNet
 from src.open_query_sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
@@ -54,12 +54,21 @@ def get_mini_imagenet_set(args, split, training):
 
 
 def get_tiered_imagenet_set(args, split, training):
-    return TieredImageNet(
-        root=Path(args.data_dir) / 'tiered_imagenet',
-        args=args,
-        split=split,
-        training=training,
-    )
+    if args.model_source == 'feat':
+        logger.warning("Return FEAT version of Tiered-ImageNet ! ")
+        return FeatTieredImageNet(
+                root=Path(args.data_dir) / 'tiered_imagenet',
+                args=args,
+                split=split,
+                training=training,
+                )
+    else:
+        return TieredImageNet(
+            root=Path(args.data_dir) / 'tiered_imagenet',
+            args=args,
+            split=split,
+            training=training,
+        )
 
 
 def get_cub_set(args, split, training):
@@ -141,6 +150,7 @@ def get_test_features(backbone, dataset, training_method, model_source, layer, p
     pickle_basename = f"{backbone}_{dataset}_{model_source}_{layer}.pickle"
     features_path = Path("data/features") / dataset / "test" / training_method / pickle_basename
     avg_train_features_path = Path("data/features") / dataset / "train" / training_method / pickle_basename
+    logger.info(f"Loading features from {features_path}")
 
     with open(features_path, "rb") as stream:
         features = pickle.load(stream)

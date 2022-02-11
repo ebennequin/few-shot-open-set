@@ -38,6 +38,4 @@ class FeaturesDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, item: int) -> Tuple[torch.Tensor, int]:
-        # item_data = self.data.loc[int(item)]
-        # return item_data.features, item_data.label
         return self.data[item], self.labels[item]

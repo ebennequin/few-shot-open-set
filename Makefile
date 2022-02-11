@@ -15,13 +15,13 @@ COMBIN=1
 EXP=default
 RESOLUTION=84
 BACKBONE=resnet12
-MODEL_SRC="feat"
+MODEL_SRC=feat
 TRAINING=standard
 DEBUG=False
 GPUS=0
 
 # Tasks
-N_TASKS=1000
+N_TASKS=10000
 SHOTS=1 5
 BALANCED=True
 
@@ -52,10 +52,11 @@ extract:
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--dataset $${dataset} \
+					--data_dir $(DATADIR) \
 			        --model_source $(MODEL_SRC) \
 			        --training $(TRAINING) \
 					--split $${split} \
-					--layers $(LAYERS) ;\
+					--layers 4_0 4_1 4_2 4_3 4_4 ;\
 		    done \
 		done \
 
@@ -120,9 +121,11 @@ baseline:
 layer_mixing:
 	make EXP=layer_mixing COMBIN=3 run ;\
 
+multi_layers:
+	make LAYERS="4_0 4_1 4_2 4_3" run ;\
 
-resolution:
-	make PREPOOL=trivial EXP=resolution SHOTS=1 LAYERS='4_0' RESOLUTION=224 run_scratch ;\
+extract_snatcher:
+	make TRAINING='feat' MODEL_SRC='feat' extract ;\
 
 snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\

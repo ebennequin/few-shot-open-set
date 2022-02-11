@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backbone", type=str, default="resnet18")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
-    parser.add_argument("--layers", type=str, default="4")
+    parser.add_argument("--layers", type=str, nargs='+')
 
     # Detector
     parser.add_argument("--outlier_detectors", type=str)
@@ -151,12 +151,10 @@ def parse_args() -> argparse.Namespace:
 
 def main(args):
     set_random_seed(args.random_seed)
-
-    layers = args.layers.split('-')
     feature_dic = defaultdict(dict)
     average_train_features = {}
     std_train_features = {}
-    for i, layer in enumerate(layers):
+    for i, layer in enumerate(args.layers):
         features, _, average_train_features[i], std_train_features[i] = get_test_features(
             args.backbone, args.dataset, args.training, args.model_source, layer
         )
@@ -216,7 +214,7 @@ def main(args):
             #                                        verbose=False)
             outlier_detectors = ALL_DETECTORS['aggregator'](d_sequence)
 
-            metrics = detect_outliers(layers=layers,
+            metrics = detect_outliers(layers=args.layers,
                                       few_shot_classifier=few_shot_classifier,
                                       detector=outlier_detectors,
                                       data_loader=data_loader,
@@ -263,7 +261,8 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
         outlier_scores = []
         for layer in support_features:
             detector.fit(support_features[layer], support_labels)
-            outlier_scores.append(torch.from_numpy(detector.decision_function(support_features[layer], query_features[layer])))  # [?,]
+            raw_scores = torch.from_numpy(detector.decision_function(support_features[layer], query_features[layer]))
+            outlier_scores.append((raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min()))  # [?,]
         outlier_scores = torch.stack(outlier_scores, 0).mean(0)
 
         # ====== Few-shot classifier ======

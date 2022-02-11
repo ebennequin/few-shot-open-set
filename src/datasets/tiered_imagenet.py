@@ -11,63 +11,61 @@ from tqdm import tqdm
 import json
 import numpy as np
 
-NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
+class FeatTieredImageNet(VisionDataset):
+    def __init__(
+        self,
+        args,
+        root: Path,
+        split: str,
+        target_transform: Optional[Callable] = None,
+        training: bool = False,
+    ):
 
-# class TieredImageNet(VisionDataset):
-#     def __init__(
-#         self,
-#         args,
-#         root: Path,
-#         specs_file: Path,
-#         target_transform: Optional[Callable] = None,
-#         training: bool = False,
-#     ):
+        transform = transforms.Compose([
+                                       transforms.ToTensor(),
+                                       transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+                                                            np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
+                                       ]
+                                       )
 
-#         transform = transforms.Compose([
-#                                        transforms.ToTensor(),
-#                                        NORMALIZE,
-#                                        ]
-#                                        )
+        super(FeatTieredImageNet, self).__init__(
+            str(root), transform=transform, target_transform=target_transform
+        )
 
-#         super(TieredImageNet, self).__init__(
-#             str(root), transform=transform, target_transform=target_transform
-#         )
+        # Get images and labels
+        self.labels = self.load_data_from_pkl(root / f'{split}_labels.pkl')['labels']
+        self.images = np.load(root / f'{split}_images.npz')['images']
+        self.class_list = set(self.labels)
+        self.id_to_class = dict(enumerate(self.class_list))
+        self.class_to_id = {v: k for k, v in self.id_to_class.items()}
 
-#         # Get images and labels
-#         split = specs_file.stem
-#         self.labels = self.load_data_from_pkl(root / f'{split}_labels.pkl')['labels']
-#         self.images = np.load(root / f'{split}_images.npz')['images']
-#         self.class_list = set(self.labels)
-#         self.id_to_class = dict(enumerate(self.class_list))
-#         self.class_to_id = {v: k for k, v in self.id_to_class.items()}
+    def __len__(self):
+        return len(self.images)
 
-#     def __len__(self):
-#         return len(self.images)
+    def load_data_from_pkl(self, file):
+        try:
+            with open(file, 'rb') as fo:
+                data = pickle.load(fo)
+            return data
+        except:
+            with open(file, 'rb') as f:
+                u = pickle._Unpickler(f)
+                u.encoding = 'latin1'
+                data = u.load()
+            return data
 
-#     def load_data_from_pkl(self, file):
-#         try:
-#             with open(file, 'rb') as fo:
-#                 data = pickle.load(fo)
-#             return data
-#         except:
-#             with open(file, 'rb') as f:
-#                 u = pickle._Unpickler(f)
-#                 u.encoding = 'latin1'
-#                 data = u.load()
-#             return data
+    def __getitem__(self, item):
 
-#     def __getitem__(self, item):
+        img, label = (
+            self.transform(self.images[item]),
+            self.labels[item],
+        )
 
-#         img, label = (
-#             self.transform(self.images[item]),
-#             self.labels[item],
-#         )
+        if self.target_transform is not None:
+            label = self.target_transform(label)
 
-#         if self.target_transform is not None:
-#             label = self.target_transform(label)
-
-#         return img, label
+        return img, label
 
 
 class TieredImageNet(VisionDataset):
@@ -87,7 +85,7 @@ class TieredImageNet(VisionDataset):
                     transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    NORMALIZE,
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 
                 ]
             )
@@ -97,7 +95,7 @@ class TieredImageNet(VisionDataset):
                     transforms.Resize(int(args.image_size*256/224)),
                     transforms.CenterCrop(args.image_size),
                     transforms.ToTensor(),
-                    NORMALIZE,
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ]
             )
         )

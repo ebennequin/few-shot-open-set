@@ -17,7 +17,8 @@ import argparse
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="mini_imagenet")
+    parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
+    parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--backbone", type=str, default="resnet12")
     parser.add_argument("--data_dir", type=str, default="data")
     parser.add_argument("--model_source", type=str, default="feat")
@@ -33,15 +34,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(args):
-    weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.dataset}_{args.model_source}.pth"
     logger.info("Fetching data...")
     dataset, _, data_loader = get_classic_loader(args,
-                                                 dataset_name=args.dataset,
+                                                 dataset_name=args.tgt_dataset,
                                                  split=args.split,
                                                  batch_size=args.batch_size)
 
     logger.info("Building model...")
-    feature_extractor = load_model(args, args.backbone, weights, args.dataset, args.device)
+    weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+    feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
 
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor,
@@ -53,7 +54,7 @@ def main(args):
     # if output_file is None:
     for layer in features:
         pickle_name = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
-        output_file = FEATURES_DIR / args.dataset / args.split / args.training / pickle_name
+        output_file = FEATURES_DIR / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         if args.split == 'test' or args.split == 'val':

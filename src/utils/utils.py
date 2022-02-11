@@ -114,8 +114,8 @@ def strip_prefix(state_dict: OrderedDict, prefix: str):
     )
 
 
-def load_model(args, backbone: str, weights: Optional[Path], dataset_name, device: torch.device,
-               num_classes: int = None):
+def load_model(args, backbone: str, weights: Optional[Path], dataset_name: str,
+               device: torch.device, num_classes: int = None):
     logger.info("Fetching data...")
     if num_classes is None:
         train_dataset, _, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)

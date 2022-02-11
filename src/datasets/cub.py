@@ -21,15 +21,16 @@ class CUB(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-
-        transform = (
+        self.target_transform = target_transform
+        self.transform = (
             transforms.Compose(
                 [
                     transforms.RandomResizedCrop(args.image_size),
                     transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
 
                 ]
             )
@@ -39,41 +40,49 @@ class CUB(VisionDataset):
                     transforms.Resize(int(args.image_size*256/224)),
                     transforms.CenterCrop(args.image_size),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
                 ]
             )
         )
 
-        images_path = root / 'images'
-        super(CUB, self).__init__(
-            str(images_path), transform=transform, target_transform=target_transform
-        )
+        with open(root / 'images.txt', 'r') as f:
+            image_list = f.readlines()
 
-        # Get images and labels
-        with open(root / 'specs' / f'{split}.json', "r") as file:
-            split_dict = json.load(file)
+        image_index = []
+        image_path = []
+        for data in image_list:
+            index, path = data.split(' ')
+            image_index.append(int(index))
+            image_path.append(root / 'images' / path[:-1])
 
-        self.class_list = split_dict['class_names']
-        self.id_to_class = dict(enumerate(self.class_list))
-        self.class_to_id = {v: k for k, v in self.id_to_class.items()}
-        images = []
-        self.labels = []
-        for class_ in tqdm(self.class_list):
-            path = images_path / class_
-            all_images = path.glob("*.jpg")
-            for img_path in all_images:
-                images.append(img_path)
-                self.labels.append(self.class_to_id[class_])
-        self.images = images
+        self.images = image_path
+
+        train_flag = np.loadtxt(root / 'train_test_split.txt', delimiter=' ', dtype=np.int32)
+        train_flag = train_flag[:, 1]
+        labels = np.loadtxt(root / 'image_class_labels.txt', delimiter=' ', dtype=np.int32)
+        labels = labels[:, 1]
+
+        # use first 100 classes
+        targets = np.where(labels < 101)[0]
+        self.labels = labels
+        self.indices = targets
+        self.label = list(self.labels[self.indices] - 1)
+        self.num_classes = self.num_class = 100
+
+        train_flag = np.loadtxt(root / 'train_test_split.txt', delimiter=' ', dtype=np.int32)
+        train_flag = train_flag[:, 1]
+        labels = np.loadtxt(root / 'image_class_labels.txt', delimiter=' ', dtype=np.int32)
+        labels = labels[:, 1]
 
     def __len__(self):
-        return len(self.images)
+        return len(self.indices)
 
     def __getitem__(self, item):
-
+        index = self.indices[item]
         img_path, label = (
-            self.images[item],
-            self.labels[item],
+            self.images[index],
+            self.labels[index],
         )
         img = self.load_image(img_path)
 

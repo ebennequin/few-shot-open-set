@@ -6,7 +6,8 @@ USER=mboudiaf
 
 # Simu options
 DATADIR=data
-DATASETS=mini_imagenet
+SRC_DATASET=mini_imagenet
+TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
 PREPOOL=base_centering
 POSTPOOL=l2_norm
@@ -21,7 +22,7 @@ DEBUG=False
 GPUS=0
 
 # Tasks
-N_TASKS=10000
+N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
 
@@ -47,11 +48,12 @@ train:
 	done ;\
 
 extract:
-		for dataset in $(DATASETS); do \
+		for dataset in $(TGT_DATASETS); do \
 		    for split in train test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
-					--dataset $${dataset} \
+					--src_dataset $(SRC_DATASET) \
+					--tgt_dataset $${dataset} \
 					--data_dir $(DATADIR) \
 			        --model_source $(MODEL_SRC) \
 			        --training $(TRAINING) \
@@ -61,7 +63,7 @@ extract:
 		done \
 
 run:
-	for dataset in $(DATASETS); do \
+	for dataset in $(TGT_DATASETS); do \
 		for detector in $(DETECTORS); do \
 			for shot in $(SHOTS); do \
 			    python3 -m src.inference_features \
@@ -80,7 +82,8 @@ run:
 			        --model_source $(MODEL_SRC) \
 			        --balanced $(BALANCED) \
 			        --training $(TRAINING) \
-			        --dataset $${dataset} \
+					--src_dataset $(SRC_DATASET) \
+					--tgt_dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
 			        --combination_size $(COMBIN) \
 			        --override ;\
@@ -116,19 +119,20 @@ run_scratch:
 	done ;\
 
 baseline:
-	make EXP=baseline run ;\
+	make EXP=baseline PREPOOL=trivial POSTPOOL="debiased_bn l2_norm" run ;\
 
 layer_mixing:
 	make EXP=layer_mixing COMBIN=3 run ;\
 
 multi_layers:
-	make LAYERS="4_0 4_1 4_2 4_3" run ;\
+	make LAYERS="4_0 4_3" baseline ;\
 
 extract_snatcher:
 	make TRAINING='feat' MODEL_SRC='feat' extract ;\
 
 snatcher:
-	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
+	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' \
+		 TRAINING='feat' MODEL_SRC='feat' EXP=snatcher run ;\
 
 experimental_training:
 	make PREPOOL=trivial SHOTS=1 train ;\

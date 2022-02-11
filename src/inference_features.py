@@ -41,7 +41,8 @@ def parse_args() -> argparse.Namespace:
 
     # Data
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="mini_imagenet")
+    parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
+    parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_query", type=int, default=10)
@@ -111,7 +112,8 @@ def parse_args() -> argparse.Namespace:
         "--general_hparams",
         type=str,
         nargs='+',
-        default=['backbone', 'dataset', 'outlier_detectors', 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
+                 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
         help="Important params that will appear in .csv result file.",
         )
     parser.add_argument(
@@ -156,7 +158,7 @@ def main(args):
     std_train_features = {}
     for i, layer in enumerate(args.layers):
         features, _, average_train_features[i], std_train_features[i] = get_test_features(
-            args.backbone, args.dataset, args.training, args.model_source, layer
+            args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
         )
         for class_ in features:
             feature_dic[class_.item()][layer] = features[class_]
@@ -201,7 +203,7 @@ def main(args):
 
             set_random_seed(args.random_seed)
 
-            data_loader = get_task_loader(args, "test", args.dataset, args.n_way, args.n_shot,
+            data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
                                           args.n_query, args.n_tasks, args.n_workers, feature_dic)
 
             d_sequence = []

@@ -43,9 +43,9 @@ def debiased_bn(feat_s: Tensor, feat_q: Tensor, **kwargs):
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
     # logger.info(nodes_degrees.size())
-    farthest_points = nodes_degrees.topk(dim=0, k=50).indices.squeeze()
+    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 2))).indices.squeeze()
     # logger.warning(farthest_points)
-    mean = torch.cat([feat_s, feat_q[farthest_points]], 0).mean(0, keepdim=True)
+    mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
 

@@ -49,7 +49,7 @@ train:
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train test; do \
+		    for split in test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -118,8 +118,24 @@ run_scratch:
 		done ;\
 	done ;\
 
+# ========== Extraction pipelines ===========
+
+extract_standard:
+	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+
+extract_snatcher:
+	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+
+# ========== Benchmarking ===========
+
 baseline:
-	make EXP=baseline PREPOOL=trivial POSTPOOL="debiased_bn l2_norm" run ;\
+	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
+	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
+	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_bn l2_norm" run ;\
 
 layer_mixing:
 	make EXP=layer_mixing COMBIN=3 run ;\
@@ -127,8 +143,6 @@ layer_mixing:
 multi_layers:
 	make LAYERS="4_0 4_3" baseline ;\
 
-extract_snatcher:
-	make TRAINING='feat' MODEL_SRC='feat' extract ;\
 
 snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' \

@@ -49,7 +49,7 @@ train:
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in test; do \
+		    for split in train  test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -133,9 +133,9 @@ extract_snatcher:
 # ========== Benchmarking ===========
 
 baseline:
-	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
 	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
 	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_bn l2_norm" run ;\
+# 	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
 
 layer_mixing:
 	make EXP=layer_mixing COMBIN=3 run ;\

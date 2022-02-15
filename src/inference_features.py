@@ -227,7 +227,8 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
         support_features, query_features = few_shot_classifier.transform_features(support_features.copy(),
                                                                                   query_features.copy(),
                                                                                   support_labels,
-                                                                                  query_labels)
+                                                                                  query_labels,
+                                                                                  outliers)
 
         # ====== OOD detection ======
         outlier_scores = []

@@ -128,9 +128,9 @@ run_scratch:
 
 extract_standard:
 	make SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-# 	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
-# 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-# 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
 
 extract_snatcher:
 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
@@ -149,11 +149,20 @@ baseline:
 # 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
 # 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
 
+oracle:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="oracle_centering l2_norm" run ;\
+
+debiased:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
+
 kcenter:
 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="kcenter_centering l2_norm" run ;\
 
 t_center:
 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="transductive_centering l2_norm" run ;\
+
+tarjan:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="tarjan_centering l2_norm" run ;\
 
 protorect:
 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="protorect_centering l2_norm" run ;\
@@ -168,12 +177,12 @@ layer_mixing:
 # ========== Ablations ===========
 
 alpha_influence:
-	for alpha in 0.5 1.0 1.5 2.0 2.5 3.0 4.0 5.0; do \
-# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher; \
-# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_debiased SIMU_PARAMS="current_sequence alpha" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
-# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_biased SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
-# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_bn SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_batch_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
+		make SHOTS=1 BALANCED=False EXP=influence_alpha_debiased SIMU_PARAMS="current_sequence alpha" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+		make SHOTS=1 BALANCED=False EXP=influence_alpha_biased SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+		make SHOTS=1 BALANCED=False EXP=influence_alpha_oracle SIMU_PARAMS="current_sequence alpha" POSTPOOL="oracle_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
 	done ;\
+# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher; \
 
 plot_alpha:
 	python -m src.plots.csv_plotter --folder results --exp influence_alpha --param_plot alpha

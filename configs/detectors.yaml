@@ -7,11 +7,11 @@ snatcher_f:
     hparam_values: {1: [[64.]], 5: [[64.]]}
 
 knn:
-  current_params: {1: {'n_neighbors': 1, method: 'mean'},
+  current_params: {1: {'n_neighbors': 2, method: 'mean'},
                    5: {'n_neighbors': 5, method: 'mean'}}
   tuning:
     hparams2tune: ['n_neighbors', 'method']
-    hparam_values: {1: [[1, 2, 3], ['mean']], 5: [[3, 5, 7, 10, 15], ['mean']]}
+    hparam_values: {1: [[1, 2, 3, 4], ['mean']], 5: [[3, 5, 10, 15, 20], ['mean']]}
 
 local_knn:
   current_params:

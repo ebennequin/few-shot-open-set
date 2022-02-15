@@ -5,6 +5,8 @@ import torch
 from easyfsl.utils import compute_prototypes
 import torch.nn as nn
 import numpy as np
+from tarjan import tarjan
+import networkx as nx
 
 
 def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
@@ -35,20 +37,41 @@ def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     # all_feats = torch.cat([feat_s, feat_q], 0)
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 2))).indices.squeeze()
+    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 8))).indices.squeeze()
     mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
+
+
+def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    prototypes = compute_prototypes(torch.cat([feat_s, feat_q], 0),
+                                    torch.cat([kwargs["support_labels"], kwargs["query_labels"]], 0))  # [K, d]
+    mean = prototypes.mean(0, keepdim=True)
+    assert len(mean.size()) == 2, mean.size()
+    return feat_s - mean, feat_q - mean
+
+# def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+#     """
+#     feat: Tensor shape [N, hidden_dim, *]
+#     """
+#     mean_id = torch.cat([feat_s, feat_q[~ kwargs['outliers'].bool()]], 0).mean(0, keepdim=True)
+#     mean_ood = feat_q[kwargs['outliers'].bool()].mean(0, keepdim=True)
+#     mean = (mean_ood + mean_id) / 2
+#     assert len(mean.size()) == 2, mean.size()
+#     return feat_s - mean, feat_q - mean
 
 
 # def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
 #     """
 #     feat: Tensor shape [N, hidden_dim, *]
 #     """
-#     random_starts = np.random.choice(np.arange(feat_q.size(0)), size=1, replace=False)
+#     random_starts = np.random.choice(np.arange(feat_q.size(0)), size=5, replace=False)
 #     centers = []
 #     for init_index in random_starts:
-#         centers.append(k_center(feat_q, init_index, 75))
+#         centers.append(k_center(feat_q, [init_index], 10))
 #     centers = torch.cat(centers, 0)
 #     mean = torch.cat([feat_s, centers], 0).mean(0, keepdim=True)
 #     assert len(mean.size()) == 2, mean.size()
@@ -58,8 +81,9 @@ def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
-    all_feats = torch.cat([feat_s, feat_q], 0)
-    centers = k_center(all_feats, np.arange(feat_s.size(0)), 75)
+    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+    all_feats = torch.cat([prototypes, feat_q], 0)
+    centers = k_center(all_feats, np.arange(prototypes.size(0)), prototypes.size(0))
     mean = centers.mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
@@ -167,18 +191,19 @@ def base_bn(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor,
            (feat_q - average_train_features) / (std_train_features + 1e-10).sqrt()
 
 
-# def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
-#     """
-#     feat: Tensor shape [N, hidden_dim, *]
-#     """
-#     # average_train_features = average_train_features.unsqueeze(0)
-#     if len(average_train_features.size()) > len(feat_s.size()):
-#         mean = average_train_features.squeeze(-1).squeeze(-1)
-#     elif len(average_train_features.size()) < len(feat_s.size()):
-#         mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
-#     else:
-#         mean = average_train_features
-#     return (feat_s - mean), (feat_q - mean)
+def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    # average_train_features = average_train_features.unsqueeze(0)
+    if len(average_train_features.size()) > len(feat_s.size()):
+        mean = average_train_features.squeeze(-1).squeeze(-1)
+    elif len(average_train_features.size()) < len(feat_s.size()):
+        mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
+    else:
+        mean = average_train_features
+    return (feat_s - mean), (feat_q - mean)
+
 
 def protorect_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
@@ -205,9 +230,62 @@ def k_center(feats: Tensor, init_indexes: np.ndarray, k: int):
         centers = feats[centers_locations]
         # distances = torch.cdist(F.normalize(feats, dim=1), F.normalize(centers, dim=1))  # [N, N_centers]
         distances = torch.cdist(feats, centers)  # [N, N_centers]
-        point_to_set_distances = distances.min(-1).values  # [N,]
+        # point_to_set_distances = distances.min(-1).values  # [N,]
+        point_to_set_distances = distances.mean(-1)
+        point_to_set_distances[centers_locations] = 0.
         farthest_point = point_to_set_distances.argmax()  # [,]
         centers_locations[farthest_point] = True
 
     assert centers_locations.sum().item() == (k + len(init_indexes)), centers_locations.sum().item()
     return feats[centers_locations]
+
+
+def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
+
+    # Create affinity matrix
+    
+    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+    all_feats = torch.cat([prototypes, feat_q])
+    prototypes = np.arange(feat_s.size(0))
+    N = all_feats.size(0)
+    dist = torch.cdist(all_feats, all_feats)  # [N, N]
+    # dist = torch.cdist(F.normalize(all_feats, dim=1), F.normalize(all_feats, dim=1))  # [N, N]
+    n_neighbors = min(knn + 1, N)
+    knn_indexes = dist.topk(n_neighbors, -1, largest=False).indices[:, 1:]  # [N, knn]
+    # W = torch.zeros(N, N)
+    # W.scatter_(dim=-1, index=knn_index, value=1.0)  # [N, N]
+
+    # Connected components
+
+    # graph = {i: array.tolist() for i, array in enumerate(knn_indexes)}
+    # connected_components = tarjan(graph)
+
+    G = nx.DiGraph()
+    for i, children in enumerate(knn_indexes):
+        G.add_edges_from([(i, k.item()) for k in children])
+
+    connected_components = [list(x) for x in nx.weakly_connected_components(G)]
+    centers = [prototypes]
+    for group in connected_components:
+        centers.append(all_feats[group].mean(0, keepdim=True))
+    centers = torch.cat(centers, 0)
+    mean = centers.mean(0, keepdim=True)
+
+    return feat_s - mean, feat_q - mean
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

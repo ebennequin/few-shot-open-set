@@ -119,14 +119,6 @@ def compute_confidence_interval(data: np.ndarray, axis=0, ignore_value=None,) ->
 
     return m, pm
 
-
-def nested_default_dict(depth: int, final_type: Any, i: int = 1):
-    if i == depth:
-        return defaultdict(final_type)
-    fn = partial(nested_default_dict, depth=depth, final_type=final_type, i=i+1)
-    return defaultdict(fn)
-
-
 if __name__ == "__main__":
     args = parse_args()
     main(**vars(args))

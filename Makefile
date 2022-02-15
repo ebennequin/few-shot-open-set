@@ -9,8 +9,8 @@ DATADIR=data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
-PREPOOL=base_centering
-POSTPOOL=l2_norm
+PREPOOL=trivial
+POSTPOOL=debiased_centering l2_norm
 LAYERS=4_4
 COMBIN=1
 EXP=default
@@ -20,12 +20,16 @@ MODEL_SRC=feat
 TRAINING=standard
 DEBUG=False
 GPUS=0
+SIMU_PARAMS=current_sequence
+OVERRIDE=False
+MODE=benchmark
 
 # Tasks
-N_TASKS=1000
+N_TASKS=10000
 SHOTS=1 5
 BALANCED=True
-
+ABLATION_ARG=alpha
+ABLATION_VAL=1.0
 
 train:
 	SHOTS=1
@@ -58,7 +62,7 @@ extract:
 			        --model_source $(MODEL_SRC) \
 			        --training $(TRAINING) \
 					--split $${split} \
-					--layers 4_0 4_1 4_2 4_3 4_4 ;\
+					--layers $(LAYERS) ;\
 		    done \
 		done \
 
@@ -84,9 +88,11 @@ run:
 			        --training $(TRAINING) \
 					--src_dataset $(SRC_DATASET) \
 					--tgt_dataset $${dataset} \
-			        --simu_hparams 'current_sequence' \
+			        --simu_hparams $(SIMU_PARAMS) \
 			        --combination_size $(COMBIN) \
-			        --override ;\
+			        --$(ABLATION_ARG) $(ABLATION_VAL) \
+			        --override $(OVERRIDE) \
+			        --mode $(MODE) ;\
 		    done ;\
 		done ;\
 	done ;\
@@ -113,7 +119,7 @@ run_scratch:
 			        --dataset $${dataset} \
 			        --simu_hparams 'current_sequence' \
 			        --combination_size $(COMBIN) \
-			        --override ;\
+			        --override $(OVERRIDE);\
 		    done ;\
 		done ;\
 	done ;\
@@ -121,35 +127,68 @@ run_scratch:
 # ========== Extraction pipelines ===========
 
 extract_standard:
-	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
-	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
+# 	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+# 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+# 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
 
 extract_snatcher:
-	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
-	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
+# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+
+snatcher_run:
+	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
 
 # ========== Benchmarking ===========
 
 baseline:
-	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
-	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_bn l2_norm" run ;\
-# 	make EXP=debiased_bn PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_bn l2_norm" run ;\
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
+# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
+# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
+# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
+
+kcenter:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="kcenter_centering l2_norm" run ;\
+
+t_center:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="transductive_centering l2_norm" run ;\
+
+protorect:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="protorect_centering l2_norm" run ;\
+
+snatcher:
+	make EXP=snatcher SRC_DATASET=mini_imagenet TGT_DATASETS=cub snatcher_run ;\
+
 
 layer_mixing:
 	make EXP=layer_mixing COMBIN=3 run ;\
 
-multi_layers:
-	make LAYERS="4_0 4_3" baseline ;\
+# ========== Ablations ===========
 
+alpha_influence:
+	for alpha in 0.5 1.0 1.5 2.0 2.5 3.0 4.0 5.0; do \
+# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher; \
+# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_debiased SIMU_PARAMS="current_sequence alpha" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_biased SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_bn SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_batch_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+	done ;\
 
-snatcher:
-	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' \
-		 TRAINING='feat' MODEL_SRC='feat' EXP=snatcher run ;\
+plot_alpha:
+	python -m src.plots.csv_plotter --folder results --exp influence_alpha --param_plot alpha
 
-experimental_training:
-	make PREPOOL=trivial SHOTS=1 train ;\
+nquery_influence:
+	for n_query in 1 5 10 15 20; do \
+		make SHOTS=1 EXP=influence_query_sota SIMU_PARAMS="current_sequence n_query" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} snatcher; \
+		make SHOTS=1 EXP=influence_query_debiased SIMU_PARAMS="current_sequence n_query" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
+		make SHOTS=1 EXP=influence_query_biased SIMU_PARAMS="current_sequence n_query" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
+		make SHOTS=1 EXP=influence_query_bn SIMU_PARAMS="current_sequence n_query" POSTPOOL="transductive_batch_norm l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
+	done ;\
+
+plot_nquery:
+	python -m src.plots.csv_plotter --folder results --exp influence_query --param_plot n_query
+
 
 # ================= Deployment / Imports ==================
 

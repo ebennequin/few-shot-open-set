@@ -52,6 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pool", action='store_true')
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--balanced_tasks", type=str2bool, default="True")
+    parser.add_argument("--alpha", type=float)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -66,80 +67,35 @@ def parse_args() -> argparse.Namespace:
     # Method
     parser.add_argument("--inference_method", type=str, default="SimpleShot")
     parser.add_argument("--softmax_temperature", type=float, default=1.0)
-    parser.add_argument(
-        "--inference_lr",
-        type=float,
-        default=1e-3,
-        help="Learning rate used for methods that perform \
-                        gradient-based inference.",
-    )
+    parser.add_argument("--inference_lr", type=float, default=1e-3,
+                        help="Learning rate used for methods that perform \
+                        gradient-based inference.")
 
-    parser.add_argument(
-        "--prepool_transforms",
-        type=str,
-        nargs='+',
-        default=['trivial'],
-        help="What type of transformation to apply before spatial pooling.",
-    )
-    parser.add_argument(
-        "--postpool_transforms",
-        nargs='+',
-        type=str,
-        default=['l2_norm'],
-        help="What type of transformation to apply after spatial pooling.",
-    )
-    parser.add_argument(
-        "--aggreg",
-        type=str,
-        default='concat',
-        help="What type of transformation to apply after spatial pooling.",
-    )
-    parser.add_argument(
-        "--inference_steps",
-        type=float,
-        default=10,
-        help="Steps used for gradient-based inferences.",
-    )
+    parser.add_argument("--prepool_transforms", type=str, nargs='+',
+                        default=['trivial'], help="What type of transformation to apply before spatial pooling.")
+    parser.add_argument("--postpool_transforms", nargs='+', type=str, default=['l2_norm'],
+                        help="What type of transformation to apply after spatial pooling.")
+    parser.add_argument("--aggreg", type=str, default='concat',
+                        help="What type of transformation to apply after spatial pooling.")
+    parser.add_argument("--inference_steps", type=float, default=10,
+                        help="Steps used for gradient-based inferences.")
 
     # Logging / Saving results
 
-    parser.add_argument(
-        "--exp_name",
-        type=str,
-        default='default',
-        help="Name the experiment for easy grouping.")
-    parser.add_argument(
-        "--general_hparams",
-        type=str,
-        nargs='+',
-        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
-                 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
-        help="Important params that will appear in .csv result file.",
-        )
-    parser.add_argument(
-        "--simu_hparams",
-        type=str,
-        nargs='*',
-        default=[],
-        help="Important params that will appear in .csv result file.",
-        )
-    parser.add_argument(
-            "--override",
-            action='store_true',
-            help='Whether to override results already present in the .csv out file.')
+    parser.add_argument("--exp_name", type=str, default='default',
+                        help="Name the experiment for easy grouping.")
+    parser.add_argument("--general_hparams", type=str, nargs='+',
+                        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
+                                 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+                        help="Important params that will appear in .csv result file.",)
+    parser.add_argument("--simu_hparams", type=str, nargs='*', default=[],
+                        help="Important params that will appear in .csv result file.")
+    parser.add_argument("--override", type=str2bool, help='Whether to override results already present in the .csv out file.')
 
     # Tuning
-    parser.add_argument(
-            "--combination_size",
-            type=int,
-            default=2)
-    parser.add_argument(
-            "--mode",
-            type=str,
-            default='benchmark')
-    parser.add_argument(
-            "--debug",
-            action='store_true')
+    parser.add_argument("--combination_size", type=int, default=2)
+    parser.add_argument("--mode", type=str, default='benchmark')
+    parser.add_argument("--debug", action='store_true')
 
     args = parser.parse_args()
 
@@ -153,6 +109,8 @@ def parse_args() -> argparse.Namespace:
 
 def main(args):
     set_random_seed(args.random_seed)
+
+
     feature_dic = defaultdict(dict)
     average_train_features = {}
     std_train_features = {}
@@ -168,14 +126,35 @@ def main(args):
         if class_.__name__ == args.inference_method
     ][0].from_cli_args(args, average_train_features, std_train_features)
 
+    data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
+                                  args.n_query, args.n_tasks, args.n_workers, feature_dic)
     current_detectors = args.outlier_detectors.split('-')
 
-    if args.mode == 'tune':
+    if args.mode == 'benchmark':
+        detectors = []
+        for x in current_detectors:
+            detector_args = eval(f'args.{x}.current_params')[args.n_shot]  # take default args
+            if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
+                detector_args['args'] = args
+            detectors.append(ALL_DETECTORS[x](**detector_args))
+        args.current_sequence = [str(x) for x in detectors]
+        outlier_detector = ALL_DETECTORS['aggregator'](detectors)
+        metrics = detect_outliers(layers=args.layers,
+                                  few_shot_classifier=few_shot_classifier,
+                                  detector=outlier_detector,
+                                  data_loader=data_loader,
+                                  n_way=args.n_way,
+                                  n_query=args.n_query,
+                                  on_features=True)
+        # Saving results
+        save_results(args, metrics)
+
+    elif args.mode == 'tune':
 
         # For each detector type, create all relevant detectors
         detectors_to_try = defaultdict(list)
         for x in current_detectors:
-            detector_args = vars(eval(f'args.{x}.current_params'))  # take default args
+            detector_args = eval(f'args.{x}.current_params')[args.n_shot]  # take default args
             params2tune = eval(f'args.{x}.tuning.hparams2tune')
             values2tune = eval(f'args.{x}.tuning.hparam_values')[args.n_shot]
             values_combinations = itertools.product(*values2tune)
@@ -186,8 +165,6 @@ def main(args):
                 if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
                     detector_args['args'] = args
                 detectors_to_try[x].append(ALL_DETECTORS[x](**detector_args))
-
-        # print(detectors_to_try)
 
         # For each detector type, create all relevant detectors
         for x in detectors_to_try:
@@ -203,17 +180,10 @@ def main(args):
 
             set_random_seed(args.random_seed)
 
-            data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
-                                          args.n_query, args.n_tasks, args.n_workers, feature_dic)
-
             d_sequence = []
             for d in detector_sequence:
                 d_sequence += d
             args.current_sequence = [str(x) for x in d_sequence]
-
-            # final_detector = pyod.models.suod.SUOD(base_estimators=d_sequence,
-            #                                        n_jobs=1, combination='average',
-            #                                        verbose=False)
             outlier_detectors = ALL_DETECTORS['aggregator'](d_sequence)
 
             metrics = detect_outliers(layers=args.layers,

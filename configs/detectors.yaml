@@ -1,18 +1,17 @@
 snatcher_f:
-  current_params:
-    temperature: 10
+  current_params: {1: {'temperature': 64.},
+                   5: {'temperature': 64.}
+                   }
   tuning:
     hparams2tune: ['temperature']
     hparam_values: {1: [[64.]], 5: [[64.]]}
 
 knn:
-  current_params:
-    n_neighbors: 10
-    method: 'mean'
-    metric: 'minkowski'
+  current_params: {1: {'n_neighbors': 1, method: 'mean'},
+                   5: {'n_neighbors': 5, method: 'mean'}}
   tuning:
     hparams2tune: ['n_neighbors', 'method']
-    hparam_values: {1: [[1, 2, 3, 4], ['mean']], 5: [[1, 3, 5, 10, 15], ['mean']]}
+    hparam_values: {1: [[1, 2, 3], ['mean']], 5: [[3, 5, 7, 10, 15], ['mean']]}
 
 local_knn:
   current_params:

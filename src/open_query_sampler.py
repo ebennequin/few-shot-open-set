@@ -20,7 +20,7 @@ class TaskSampler(Sampler):
 
     def __init__(
         self, dataset: Dataset, n_way: int, n_shot: int, n_query: int, n_tasks: int,
-        balanced: bool = True, alpha: float = 1.0,
+        balanced: bool, alpha,
     ):
         """
         Args:

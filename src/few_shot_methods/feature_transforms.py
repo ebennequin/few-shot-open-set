@@ -4,6 +4,7 @@ from loguru import logger
 import torch
 from easyfsl.utils import compute_prototypes
 import torch.nn as nn
+import numpy as np
 
 
 def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
@@ -20,7 +21,7 @@ def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
 
 
-def debiased_bn(feat_s: Tensor, feat_q: Tensor, **kwargs):
+def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
@@ -31,21 +32,35 @@ def debiased_bn(feat_s: Tensor, feat_q: Tensor, **kwargs):
     # prototypes = compute_prototypes(all_feats, all_labels)  # [K, d]
     # mean = prototypes.mean(0, keepdim=True)  # [1, d]
 
-    # Attempt
-    # all_feats = torch.cat([feat_s, feat_q], 0)
-    # all_feats = F.normalize(all_feats, dim=1)
-    # nodes_degrees = torch.cdist(all_feats, all_feats).mean(-1, keepdim=True)  # [N]
-    # logger.warning((nodes_degrees.min(), nodes_degrees.max().values))
-    # normalized_degrees = nodes_degrees / nodes_degrees.sum()  # [N, 1]
-    # mean = (all_feats * normalized_degrees).sum(0)
-
     # all_feats = torch.cat([feat_s, feat_q], 0)
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-    # logger.info(nodes_degrees.size())
     farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 2))).indices.squeeze()
-    # logger.warning(farthest_points)
     mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
+    assert len(mean.size()) == 2, mean.size()
+    return feat_s - mean, feat_q - mean
+
+
+# def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+#     """
+#     feat: Tensor shape [N, hidden_dim, *]
+#     """
+#     random_starts = np.random.choice(np.arange(feat_q.size(0)), size=1, replace=False)
+#     centers = []
+#     for init_index in random_starts:
+#         centers.append(k_center(feat_q, init_index, 75))
+#     centers = torch.cat(centers, 0)
+#     mean = torch.cat([feat_s, centers], 0).mean(0, keepdim=True)
+#     assert len(mean.size()) == 2, mean.size()
+#     return feat_s - mean, feat_q - mean
+
+def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    all_feats = torch.cat([feat_s, feat_q], 0)
+    centers = k_center(all_feats, np.arange(feat_s.size(0)), 75)
+    mean = centers.mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
 
@@ -152,15 +167,47 @@ def base_bn(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor,
            (feat_q - average_train_features) / (std_train_features + 1e-10).sqrt()
 
 
-def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
+# def base_centering(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
+#     """
+#     feat: Tensor shape [N, hidden_dim, *]
+#     """
+#     # average_train_features = average_train_features.unsqueeze(0)
+#     if len(average_train_features.size()) > len(feat_s.size()):
+#         mean = average_train_features.squeeze(-1).squeeze(-1)
+#     elif len(average_train_features.size()) < len(feat_s.size()):
+#         mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
+#     else:
+#         mean = average_train_features
+#     return (feat_s - mean), (feat_q - mean)
+
+def protorect_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
     # average_train_features = average_train_features.unsqueeze(0)
-    if len(average_train_features.size()) > len(feat_s.size()):
-        mean = average_train_features.squeeze(-1).squeeze(-1)
-    elif len(average_train_features.size()) < len(feat_s.size()):
-        mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
-    else:
-        mean = average_train_features
-    return (feat_s - mean), (feat_q - mean)
+    ksi = feat_s.mean(0, keepdim=True) - feat_q.mean(0, keepdim=True)
+    return feat_s, feat_q + ksi
+
+
+def k_center(feats: Tensor, init_indexes: np.ndarray, k: int):
+    """
+    feats : [N, d]
+    init_point: [d]
+
+    Runs K-center algorithm. At each iteration, find the farthest node from the set.
+    """
+
+    centers_locations = torch.zeros(feats.size(0)).bool()
+    for x in init_indexes:
+        centers_locations[x] = True
+
+    for i in range(k):
+        centers = feats[centers_locations]
+        # distances = torch.cdist(F.normalize(feats, dim=1), F.normalize(centers, dim=1))  # [N, N_centers]
+        distances = torch.cdist(feats, centers)  # [N, N_centers]
+        point_to_set_distances = distances.min(-1).values  # [N,]
+        farthest_point = point_to_set_distances.argmax()  # [,]
+        centers_locations[farthest_point] = True
+
+    assert centers_locations.sum().item() == (k + len(init_indexes)), centers_locations.sum().item()
+    return feats[centers_locations]

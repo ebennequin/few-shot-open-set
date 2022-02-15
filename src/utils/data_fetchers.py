@@ -117,6 +117,7 @@ def get_task_loader(args, split, dataset_name, n_way,
             n_query=n_query,
             n_tasks=n_tasks,
             balanced=args.balanced_tasks,
+            alpha=args.alpha,
         )
     else:
         dataset = get_dataset(dataset_name, args, split, training)
@@ -127,6 +128,7 @@ def get_task_loader(args, split, dataset_name, n_way,
             n_query=n_query,
             n_tasks=n_tasks,
             balanced=args.balanced_tasks,
+            alpha=args.alpha
         )
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 

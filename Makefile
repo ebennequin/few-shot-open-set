@@ -127,48 +127,50 @@ run_scratch:
 # ========== Extraction pipelines ===========
 
 extract_standard:
-	make SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
 	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
+# 	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 extract_snatcher:
-	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
-# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-# 	make TRAINING='feat' MODEL_SRC='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
+# 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 snatcher_run:
-	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' MODEL_SRC='feat' run ;\
+	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 # ========== Benchmarking ===========
 
 baseline:
 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
-# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
-# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
-# 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
-
-oracle:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="oracle_centering l2_norm" run ;\
-
-debiased:
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
 	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
-
-kcenter:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="kcenter_centering l2_norm" run ;\
-
-t_center:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="transductive_centering l2_norm" run ;\
-
-tarjan:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="tarjan_centering l2_norm" run ;\
-
-protorect:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="protorect_centering l2_norm" run ;\
+	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
 
 snatcher:
-	make EXP=snatcher SRC_DATASET=mini_imagenet TGT_DATASETS=cub snatcher_run ;\
+	make EXP=snatcher SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet snatcher_run ;\
+# 	make EXP=snatcher SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet snatcher_run ;\
+
+oracle:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="oracle_centering l2_norm" run ;\
+
+debiased:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="debiased_centering l2_norm" run ;\
+
+kcenter:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="kcenter_centering l2_norm" run ;\
+
+t_center:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="transductive_centering l2_norm" run ;\
+
+tarjan:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="tarjan_centering l2_norm" run ;\
+
+protorect:
+	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="protorect_centering l2_norm" run ;\
+
 
 
 layer_mixing:
@@ -181,8 +183,8 @@ alpha_influence:
 		make SHOTS=1 BALANCED=False EXP=influence_alpha_debiased SIMU_PARAMS="current_sequence alpha" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
 		make SHOTS=1 BALANCED=False EXP=influence_alpha_biased SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
 		make SHOTS=1 BALANCED=False EXP=influence_alpha_oracle SIMU_PARAMS="current_sequence alpha" POSTPOOL="oracle_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
+		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher_run; \
 	done ;\
-# 		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher; \
 
 plot_alpha:
 	python -m src.plots.csv_plotter --folder results --exp influence_alpha --param_plot alpha

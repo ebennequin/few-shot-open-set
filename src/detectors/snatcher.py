@@ -18,6 +18,7 @@ class SNATCHERF(AbstractDetector):
         self.attn_model = MISC_MODULES['snatcher_f'](args)
         weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         state_dict = torch.load(weights)['params']
+        state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")
         missing_keys, unexpected = self.attn_model.load_state_dict(state_dict, strict=False)
         logger.info(f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}")

@@ -37,7 +37,7 @@ def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     # all_feats = torch.cat([feat_s, feat_q], 0)
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 8))).indices.squeeze()
+    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 4))).indices.squeeze()
     mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
@@ -246,28 +246,41 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
     
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     all_feats = torch.cat([prototypes, feat_q])
-    prototypes = np.arange(feat_s.size(0))
     N = all_feats.size(0)
     dist = torch.cdist(all_feats, all_feats)  # [N, N]
     # dist = torch.cdist(F.normalize(all_feats, dim=1), F.normalize(all_feats, dim=1))  # [N, N]
+
+    # Using nearest neighbors
+
     n_neighbors = min(knn + 1, N)
     knn_indexes = dist.topk(n_neighbors, -1, largest=False).indices[:, 1:]  # [N, knn]
-    # W = torch.zeros(N, N)
-    # W.scatter_(dim=-1, index=knn_index, value=1.0)  # [N, N]
+    # trimmed_indexes = []
+    # dist_limit = dist.mean()
+    # for i, row in enumerate(knn_indexes):
+    #     acceptable_indexes = dist[i, row] < dist_limit
+    #     trimmed_indexes.append(row[acceptable_indexes])
+    # logger.info(trimmed_indexes)
 
-    # Connected components
+    # Strongly connected components
 
     # graph = {i: array.tolist() for i, array in enumerate(knn_indexes)}
     # connected_components = tarjan(graph)
 
+    # Weakly connected components
+
     G = nx.DiGraph()
     for i, children in enumerate(knn_indexes):
+        logger.info(children)
         G.add_edges_from([(i, k.item()) for k in children])
-
     connected_components = [list(x) for x in nx.weakly_connected_components(G)]
+
     centers = [prototypes]
     for group in connected_components:
-        centers.append(all_feats[group].mean(0, keepdim=True))
+        if any([i in group for i in range(len(prototypes))]):  # we remove components that already contain prototypes
+            continue
+        else:
+            centers.append(all_feats[group].mean(0, keepdim=True))
+    # logger.info(len(centers) - 1)
     centers = torch.cat(centers, 0)
     mean = centers.mean(0, keepdim=True)
 

@@ -130,6 +130,7 @@ def load_model(args, backbone: str, weights: Optional[Path], dataset_name: str,
             state_dict = strip_prefix(state_dict["state_dict"], "module.")
         elif "params" in state_dict:
             state_dict = strip_prefix(state_dict["params"], "encoder.")
+            state_dict = strip_prefix(state_dict, "module.")
         else:
             state_dict = strip_prefix(state_dict, "backbone.")
 

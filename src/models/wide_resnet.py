@@ -94,8 +94,8 @@ class Wide_ResNet(nn.Module):
                 if layer_name in layers:
                     all_feats[layer_name] = pooled_map
         if "last" in layers:
-            pooled_map = F.relu(self.bn1(layer_feats[-1])).mean((-2, -1), keepdim=True)
-            all_feats["last"] = pooled_map
+            last_map = F.relu(self.bn1(layer_feats[-1]))
+            all_feats["last"] = last_map.mean((-2, -1), keepdim=True)
         return all_feats
 
 

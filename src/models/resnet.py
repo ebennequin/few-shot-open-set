@@ -4,7 +4,6 @@ Custom ResNet from https://github.com/fiveai/on-episodes-fsl/blob/master/src/mod
 
 
 import torch.nn as nn
-import torch
 from torchvision.models.resnet import Bottleneck, BasicBlock, conv1x1
 
 __all__ = [

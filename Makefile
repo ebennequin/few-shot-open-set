@@ -166,7 +166,7 @@ t_center:
 	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="transductive_centering l2_norm" run ;\
 
 tarjan:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="tarjan_centering l2_norm" run ;\
+	make EXP=tarjan_centering PREPOOL=trivial POSTPOOL="tarjan_centering l2_norm" run ;\
 
 protorect:
 	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="protorect_centering l2_norm" run ;\

@@ -24,6 +24,8 @@ from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.detectors import ALL_DETECTORS
 from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
 
 def str2bool(v):
@@ -52,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pool", action='store_true')
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--balanced_tasks", type=str2bool, default="True")
-    parser.add_argument("--alpha", type=float)
+    parser.add_argument("--alpha", type=float, default=1.0)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -206,10 +208,26 @@ def save_results(args, metrics):
     update_csv(args, metrics, path=res_root / 'out.csv')
 
 
+def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
+
+    fig, axis = plt.subplots(nrows=1, ncols=len(feat_s), figsize=(10, 10), squeeze=True, dpi=200)
+    if len(feat_s) == 1:
+        axis = [axis]
+
+    for layer, ax in zip(feat_s, axis):
+        all_feats = torch.cat([feat_s[layer], feat_q[layer]], 0)
+        # logger.warning(all_feats.squeeze().numpy()[0])
+        embedded_feats = TSNE(n_components=2, init='pca', perplexity=5, learning_rate=50).fit_transform(all_feats.squeeze().numpy())
+        all_labels = torch.cat([support_labels, query_labels], 0).numpy()
+        ax.scatter(embedded_feats[:, 0], embedded_feats[:, 1], c=all_labels)
+    figures[title] = fig
+
+
 def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
 
     metrics = defaultdict(list)
-    for support, support_labels, query, query_labels, outliers in tqdm(data_loader):
+    figures = {}
+    for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
 
         # ====== Extract features ======
         if on_features:
@@ -224,11 +242,16 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
             query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
         # ====== Transforming features ======
+        if task_id == 0:
+            tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'pre_norm')
         support_features, query_features = few_shot_classifier.transform_features(support_features.copy(),
                                                                                   query_features.copy(),
                                                                                   support_labels,
                                                                                   query_labels,
-                                                                                  outliers)
+                                                                                  outliers,
+                                                                                  figures)
+        if task_id == 0:
+            tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'post_norm')
 
         # ====== OOD detection ======
         outlier_scores = []
@@ -256,6 +279,12 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
 
     for metric_name in metrics:
         metrics[metric_name] = torch.Tensor(metrics[metric_name])
+
+    # Save figures
+    res_root = Path('results') / args.exp_name
+    res_root.mkdir(exist_ok=True, parents=True)
+    for title, fig in figures.items():
+        fig.savefig(res_root / f'{title}.png')
 
     return metrics
 

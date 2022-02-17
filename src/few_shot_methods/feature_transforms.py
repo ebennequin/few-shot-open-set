@@ -7,6 +7,7 @@ import torch.nn as nn
 import numpy as np
 from tarjan import tarjan
 import networkx as nx
+import matplotlib.pyplot as plt
 
 
 def trivial(feat_s: Tensor, feat_q: Tensor, **kwargs):
@@ -268,9 +269,9 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
 
     # Weakly connected components
 
+    # logger.info(kwargs['query_labels'].unique(return_counts=True)[-1])
     G = nx.DiGraph()
     for i, children in enumerate(knn_indexes):
-        logger.info(children)
         G.add_edges_from([(i, k.item()) for k in children])
     connected_components = [list(x) for x in nx.weakly_connected_components(G)]
 
@@ -280,10 +281,22 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
             continue
         else:
             centers.append(all_feats[group].mean(0, keepdim=True))
-    # logger.info(len(centers) - 1)
     centers = torch.cat(centers, 0)
     mean = centers.mean(0, keepdim=True)
 
+    # Draw the graph
+    # fig = plt.Figure((10, 10), dpi=200)
+    # labels = torch.cat([kwargs["support_labels"], kwargs["query_labels"]])
+    # pos = nx.spring_layout(G, k=0.2, iterations=50, scale=2)
+    # # k controls the distance between the nodes and varies between 0 and 1
+    # # iterations is the number of times simulated annealing is run
+    # # default k=0.1 and iterations=50
+    # colors = labels.numpy()[G.nodes]
+    # colors[len(prototypes):][kwargs['outliers'].bool().numpy()] = 6
+    # nx.drawing.nx_pylab.draw_networkx(G, ax=fig.gca(), pos=pos,
+    #                                   node_color=colors,
+    #                                   node_size=500, cmap='Set1')
+    # kwargs['figures']['network'] = fig
     return feat_s - mean, feat_q - mean
 
 

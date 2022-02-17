@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from .feature_transforms import __dict__ as ALL_FEATURE_TRANSFORMS
 from .aggregations import __dict__ as ALL_AGGREG
 
@@ -60,7 +60,8 @@ class AbstractFewShotMethod(nn.Module):
         )
 
     def transform_features(self, support_features: Tensor, query_features: Tensor,
-                           support_labels: Tensor, query_labels: Tensor, outliers: Tensor):
+                           support_labels: Tensor, query_labels: Tensor, outliers: Tensor,
+                           figures: Dict):
         """
         Performs an (optional) normalization of feature maps, then average pooling, then another (optional) normalization
         """
@@ -74,7 +75,8 @@ class AbstractFewShotMethod(nn.Module):
                                                                     std_train_features=self.std_train_features[layer],
                                                                     support_labels=support_labels,
                                                                     query_labels=query_labels,
-                                                                    outliers=outliers)
+                                                                    outliers=outliers,
+                                                                    figures=figures)
 
             # Average pooling
             if self.pool:
@@ -89,9 +91,9 @@ class AbstractFewShotMethod(nn.Module):
                                                                         std_train_features=self.std_train_features[layer],
                                                                         support_labels=support_labels,
                                                                         query_labels=query_labels,
-                                                                        outliers=outliers)
+                                                                        outliers=outliers,
+                                                                        figures=figures)
 
-        # Aggregate features
         # support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
         
         return support_features, query_features

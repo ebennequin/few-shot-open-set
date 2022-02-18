@@ -6,10 +6,7 @@ from typing import Optional
 import torch
 from collections import defaultdict
 from torch import nn
-import logging
 
-from .build import BACKBONE_REGISTRY
-from .backbone import Backbone
 from .transformer import Transformer
 
 
@@ -29,7 +26,7 @@ class PositionalEmbedding1D(nn.Module):
         return x + self.pos_embedding
 
 
-class ViT(Backbone):
+class ViT(nn.Module):
     """
     Args:
         name (str): Model name, e.g. 'B_16'
@@ -57,7 +54,7 @@ class ViT(Backbone):
         dropout_rate = config['dropout_rate']
         self.representation_size = config['representation_size']
         classifier = config['classifier']
-        self.image_size = image_size                
+        self.image_size = image_size
 
         # Image and patch sizes
         h, w = as_tuple(image_size)  # image sizes
@@ -95,12 +92,10 @@ class ViT(Backbone):
 
         # Initialize weights
         self.init_weights()
-        
-    def output_shape(self):
-        if self.representation_size:
-            return {'last': ShapeSpec(channels=self.representation_size)}
-        else:
-            return {'last': ShapeSpec(channels=self.dim)}
+
+        self.all_layers = [f"{i}_{j}"for i in range(len(self.transformer.blocks)) for j in ['map', 'cls']] + \
+                          [f"last_{j}" for j in ['map', 'cls']]
+        self.last_layer_name = "last_cls"
 
     @torch.no_grad()
     def init_weights(self):
@@ -115,12 +110,11 @@ class ViT(Backbone):
         nn.init.normal_(self.positional_embedding.pos_embedding, std=0.02)  # _trunc_normal(self.positional_embedding.pos_embedding, std=0.02)
         nn.init.constant_(self.class_token, 0)
 
-    def forward(self, x):
+    def forward(self, x, layers):
         """Breaks image into patches, applies transformer, applies MLP head.
         Args:
             x (tensor): `b,c,fh,fw`
         """
-        outputs = {}
         b, c, fh, fw = x.shape
         x = self.patch_embedding(x)  # b,d,gh,gw
         x = x.flatten(2).transpose(1, 2)  # b,gh*gw,d
@@ -128,47 +122,17 @@ class ViT(Backbone):
             x = torch.cat((self.class_token.expand(b, -1, -1), x), dim=1)  # b,gh*gw+1,d
         if hasattr(self, 'positional_embedding'): 
             x = self.positional_embedding(x)  # b,gh*gw+1,d 
-        x = self.transformer(x)  # b,gh*gw+1,d
+        x, all_layers = self.transformer(x, layers)  # b,gh*gw+1,d
         if hasattr(self, 'pre_logits'):
             x = self.pre_logits(x)
             x = torch.tanh(x)
-        x = self.norm(x)[:, 0]  # b,d
-        outputs['last'] = x
-        # self.out = x.detach()
-        return outputs
-
-    def partition_parameters(self, granularity):
-
-        logger = logging.getLogger(__name__)
-        partition = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-        section = 0
-        logger.info(f"Partitionning ViT model with granularity {granularity}. {len(self.transformer.blocks)} blocks detected")
-        for i, block in enumerate(self.transformer.blocks):
-            for named_m, m in block.named_modules():
-                immediate_parameters = list(m.named_parameters(recurse=False))
-                for named_p, p in immediate_parameters:  # only get immediate parameters
-                    name = f"block{i}_{named_m}.{named_p}"
-                    if 'norm' in name:
-                        type_ = 'BN'
-                    elif 'weight' in name or 'bias' in name:
-                        type_ = 'conv'
-                    elif 'token' in name:
-                        type_ = 'class_token'
-                    elif 'embedding' in name:
-                        type_ = 'positional_embedding'
-                    else:
-                        raise ValueError(f"Parameter {name} belongs to no category")
-                    partition[section][type_]['names'].append(name)
-                    partition[section][type_]['parameters'].append(p)  # we put the direct module parent as well
-                    partition[section][type_]['modules'].append(m)  # we put the direct module parent as well
-            if i % (len(self.transformer.blocks) // granularity) == 0 and i != 0:
-                section += 1
-
-        return self.default_to_regular(partition)
+        x = self.norm(x)
+        all_layers['last_map'] = x[:, 1:].mean(dim=1) # b,d
+        all_layers['last_cls'] = x[:, 0]  # b,d
+        return all_layers
 
 
-@BACKBONE_REGISTRY.register()
-def build_vit_backbone(cfg, input_shape, **kwargs):
+def vit_b16(**kwargs):
     """
     Create a ResNet instance from config.
 
@@ -177,8 +141,9 @@ def build_vit_backbone(cfg, input_shape, **kwargs):
     """
     # need registration of new blocks/stems?
 
-    config = PRETRAINED_MODELS[cfg.MODEL.VIT.NAME]['config']
-    image_size = PRETRAINED_MODELS[cfg.MODEL.VIT.NAME]['image_size']
+    config = PRETRAINED_MODELS['B_16']['config']
+    image_size = PRETRAINED_MODELS['B_16']['image_size']
+    # num_classes = PRETRAINED_MODELS['B_16']['num_classes']
     return ViT(config=config, image_size=image_size)
 
 

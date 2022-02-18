@@ -80,7 +80,8 @@ class AbstractFewShotMethod(nn.Module):
 
             # Average pooling
             if self.pool:
-                support_features[layer], query_features[layer] = support_features[layer].mean((-2, -1)), query_features[layer].mean((-2, -1))
+                if len(support_features[layer].size()) > 2:
+                    support_features[layer], query_features[layer] = support_features[layer].mean((-2, -1)), query_features[layer].mean((-2, -1))
 
                 # Post-pooling transforms
                 for transf in self.postpool_transforms:

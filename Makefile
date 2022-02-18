@@ -11,7 +11,7 @@ TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
 PREPOOL=trivial
 POSTPOOL=debiased_centering l2_norm
-LAYERS=4_4
+LAYERS=last
 COMBIN=1
 EXP=default
 RESOLUTION=84
@@ -25,11 +25,11 @@ OVERRIDE=False
 MODE=benchmark
 
 # Tasks
-N_TASKS=10000
+N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
-ABLATION_ARG=alpha
-ABLATION_VAL=1.0
+MISC_ARG=alpha
+MISC_VAL=1.0
 
 train:
 	SHOTS=1
@@ -53,7 +53,7 @@ train:
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train  test; do \
+		    for split in train test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -62,7 +62,8 @@ extract:
 			        --model_source $(MODEL_SRC) \
 			        --training $(TRAINING) \
 					--split $${split} \
-					--layers $(LAYERS) ;\
+					--layers $(LAYERS) \
+					--$(MISC_ARG) $(MISC_VAL) ;\
 		    done \
 		done \
 
@@ -71,7 +72,7 @@ run:
 		for detector in $(DETECTORS); do \
 			for shot in $(SHOTS); do \
 			    python3 -m src.inference_features \
-			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+			        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${dataset}/$(BACKBONE)'($(MODEL_SRC))'/$${shot} \
 			        --mode 'tune' \
 			        --inference_method SimpleShot \
 			        --n_tasks $(N_TASKS) \
@@ -90,7 +91,7 @@ run:
 					--tgt_dataset $${dataset} \
 			        --simu_hparams $(SIMU_PARAMS) \
 			        --combination_size $(COMBIN) \
-			        --$(ABLATION_ARG) $(ABLATION_VAL) \
+			        --$(MISC_ARG) $(MISC_VAL) \
 			        --override $(OVERRIDE) \
 			        --mode $(MODE) ;\
 		    done ;\
@@ -102,7 +103,7 @@ run_scratch:
 		for detector in $(DETECTORS); do \
 			for shot in $(SHOTS); do \
 			    python3 -m src.inference \
-			        --exp_name $(EXP)'-'$${shot}'-'$${dataset} \
+			        --exp_name $(EXP)'-'$${shot}'-'$${dataset}'-'$(BACKBONE) \
 			        --mode 'tune' \
 			        --inference_method SimpleShot \
 			        --n_tasks 500 \
@@ -127,10 +128,20 @@ run_scratch:
 # ========== Extraction pipelines ===========
 
 extract_standard:
-	make SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-	make SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
-	make SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-# 	make SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+	# Extract for ViT
+	for tfg_dataset in cub aircraft mini_imagenet; do \
+		make BACKBONE=vitb16 LAYERS='all' MODEL_SRC='luke' MISC_ARG='image_size' MISC_VAL='224' \
+			SRC_DATASET=imagenet TGT_DATASETS=$${tfg_dataset} extract ;\
+	done ;\
+
+	# Extract for RN and WRN
+	for backbone in resnet12 wrn2810; do \
+		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
+		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
+		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	done ;\
+
+
 
 extract_snatcher:
 	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
@@ -138,64 +149,58 @@ extract_snatcher:
 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
-snatcher_run:
+run_snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
-# ========== Benchmarking ===========
-
-baseline:
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=cub POSTPOOL="debiased_centering l2_norm" run ;\
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
-	make EXP=debiased_centering PREPOOL=trivial SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet POSTPOOL="debiased_centering l2_norm" run ;\
-
-snatcher:
-	make EXP=snatcher SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet snatcher_run ;\
-# 	make EXP=snatcher SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet snatcher_run ;\
-
-oracle:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="oracle_centering l2_norm" run ;\
-
-debiased:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="debiased_centering l2_norm" run ;\
-
-kcenter:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="kcenter_centering l2_norm" run ;\
-
-t_center:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="transductive_centering l2_norm" run ;\
-
-tarjan:
-	make EXP=tarjan_centering PREPOOL=trivial POSTPOOL="tarjan_centering l2_norm" run ;\
-
-protorect:
-	make EXP=debiased_centering PREPOOL=trivial POSTPOOL="protorect_centering l2_norm" run ;\
-
-
-
-layer_mixing:
-	make EXP=layer_mixing COMBIN=3 run ;\
-
-# ========== Ablations ===========
-
-alpha_influence:
-	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
-		make SHOTS=1 BALANCED=False EXP=influence_alpha_debiased SIMU_PARAMS="current_sequence alpha" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
-		make SHOTS=1 BALANCED=False EXP=influence_alpha_biased SIMU_PARAMS="current_sequence alpha" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
-		make SHOTS=1 BALANCED=False EXP=influence_alpha_oracle SIMU_PARAMS="current_sequence alpha" POSTPOOL="oracle_centering l2_norm" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} run; \
-		make SHOTS=1 BALANCED=False EXP=influence_alpha_sota SIMU_PARAMS="current_sequence alpha" ABLATION_ARG=alpha ABLATION_VAL=$${alpha} snatcher_run; \
+run_centering:
+	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
+	for centering in base debiased tarjan transductive kcenter; do \
+		make PREPOOL=trivial POSTPOOL="$${centering}_centering l2_norm" run ;\
 	done ;\
 
-plot_alpha:
-	python -m src.plots.csv_plotter --folder results --exp influence_alpha --param_plot alpha
+# ========== Experiments ===========
+
+benchmark:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for backbone in wrn2810; do \
+			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
+			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
+		done ;\
+	done ;\
+
+cross_domain:
+	# Tiered -> CUB, Aircraft
+	for backbone in wrn2810; do \
+		for tgt_dataset in cub aircraft; do \
+			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${tgt_dataset} run_centering ;\
+		done ; \
+	done ;\
+
+	# ImageNet -> CUB, Aircraft with ViT
+	for tgt_dataset in cub aircraft; do \
+		make EXP=cross_domain BACKBONE=vitb16 MODEL_SRC='luke' \
+			SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+	done ;\
+
+imbalance:
+	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
+		for backbone in wrn2810; do \
+			make SHOTS=1 BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
+		done ;\
+	done ;\
 
 nquery_influence:
 	for n_query in 1 5 10 15 20; do \
-		make SHOTS=1 EXP=influence_query_sota SIMU_PARAMS="current_sequence n_query" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} snatcher; \
-		make SHOTS=1 EXP=influence_query_debiased SIMU_PARAMS="current_sequence n_query" POSTPOOL="debiased_centering l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
-		make SHOTS=1 EXP=influence_query_biased SIMU_PARAMS="current_sequence n_query" POSTPOOL="transductive_centering l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
-		make SHOTS=1 EXP=influence_query_bn SIMU_PARAMS="current_sequence n_query" POSTPOOL="transductive_batch_norm l2_norm" ABLATION_ARG=n_query ABLATION_VAL=$${n_query} run; \
+		for backbone in resnet12 wrn2810; do \
+			make SHOTS=1 EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
+		done ;\
 	done ;\
+
+# ========== Ablations ===========
+
+
+plot_alpha:
+	python -m src.plots.csv_plotter --folder results --exp imbalance --param_plot alpha
 
 plot_nquery:
 	python -m src.plots.csv_plotter --folder results --exp influence_query --param_plot n_query
@@ -227,3 +232,15 @@ deploy_data:
 kill_all: ## Kill all my python and tee processes on the server
 	ps -u $(USER) | grep "python" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
 	ps -u $(USER) | grep "tee" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
+
+
+
+# =============== Models ====================
+
+models/vit_b16:
+	mkdir -p data/models/standard/
+	wget https://github.com/lukemelas/PyTorch-Pretrained-ViT/releases/download/0.0.2/B_16.pth -O data/models/standard/vitb16_imagenet_luke.pth
+
+models/vit_l16:
+	mkdir -p data/models/standard/
+	wget https://github.com/lukemelas/PyTorch-Pretrained-ViT/releases/download/0.0.2/L_16.pth -O data/models/standard/vitl16_imagenet_luke.pth

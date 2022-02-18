@@ -10,7 +10,7 @@ from torchvision import transforms
 from tqdm import tqdm
 import json
 import numpy as np
-
+from .utils import get_normalize
 
 class CUB(VisionDataset):
     def __init__(
@@ -21,6 +21,7 @@ class CUB(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
+        NORMALIZE = get_normalize(args)
         self.target_transform = target_transform
         self.transform = (
             transforms.Compose(
@@ -29,8 +30,7 @@ class CUB(VisionDataset):
                     transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
-                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
+                    NORMALIZE
 
                 ]
             )
@@ -40,8 +40,7 @@ class CUB(VisionDataset):
                     transforms.Resize(int(args.image_size*256/224)),
                     transforms.CenterCrop(args.image_size),
                     transforms.ToTensor(),
-                    transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
-                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
+                    NORMALIZE
                 ]
             )
         )

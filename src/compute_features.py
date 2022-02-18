@@ -1,5 +1,4 @@
 import _pickle as cpickle
-from collections import OrderedDict
 
 import numpy as np
 from pathlib import Path
@@ -43,6 +42,8 @@ def main(args):
     logger.info("Building model...")
     weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
     feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
+    args.layers = feature_extractor.all_layers if args.layers == ['all'] else args.layers
+    logger.warning(args.layers)
 
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor,

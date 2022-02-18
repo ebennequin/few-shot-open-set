@@ -10,7 +10,8 @@ from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from loguru import logger
-from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet, FeatTieredImageNet
+from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet, \
+                         FeatTieredImageNet, ImageNet, Aircraft
 from src.open_query_sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
@@ -53,6 +54,24 @@ def get_mini_imagenet_set(args, split, training):
     )
 
 
+def get_aircraft_set(args, split, training):
+    return Aircraft(
+        root=Path(args.data_dir) / 'fgvc-aircraft-2013b' / 'data',
+        args=args,
+        split=split,
+        training=training,
+    )
+
+
+def get_imagenet_set(args, split, training):
+    return ImageNet(
+        root=Path(args.data_dir) / 'ilsvrc_2012',
+        args=args,
+        split=split,
+        training=training,
+    )
+
+
 def get_tiered_imagenet_set(args, split, training):
     if args.model_source == 'feat':
         logger.warning("Return FEAT version of Tiered-ImageNet ! ")
@@ -85,10 +104,14 @@ def get_dataset(dataset_name, args, split, training):
         dataset = get_cifar_set(args, split, training)
     elif dataset_name == "mini_imagenet":
         dataset = get_mini_imagenet_set(args, split, training)
+    elif dataset_name == "imagenet":
+        dataset = get_imagenet_set(args, split, training)
     elif dataset_name == "tiered_imagenet":
         dataset = get_tiered_imagenet_set(args, split, training)
     elif dataset_name == "cub":
         dataset = get_cub_set(args, split, training)
+    elif dataset_name == "aircraft":
+        dataset = get_aircraft_set(args, split, training)
     else:
         raise NotImplementedError(f"I don't know this dataset {dataset_name}.")
     return dataset

@@ -54,29 +54,6 @@ def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
 
-# def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
-#     """
-#     feat: Tensor shape [N, hidden_dim, *]
-#     """
-#     mean_id = torch.cat([feat_s, feat_q[~ kwargs['outliers'].bool()]], 0).mean(0, keepdim=True)
-#     mean_ood = feat_q[kwargs['outliers'].bool()].mean(0, keepdim=True)
-#     mean = (mean_ood + mean_id) / 2
-#     assert len(mean.size()) == 2, mean.size()
-#     return feat_s - mean, feat_q - mean
-
-
-# def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
-#     """
-#     feat: Tensor shape [N, hidden_dim, *]
-#     """
-#     random_starts = np.random.choice(np.arange(feat_q.size(0)), size=5, replace=False)
-#     centers = []
-#     for init_index in random_starts:
-#         centers.append(k_center(feat_q, [init_index], 10))
-#     centers = torch.cat(centers, 0)
-#     mean = torch.cat([feat_s, centers], 0).mean(0, keepdim=True)
-#     assert len(mean.size()) == 2, mean.size()
-#     return feat_s - mean, feat_q - mean
 
 def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
@@ -84,7 +61,7 @@ def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     all_feats = torch.cat([prototypes, feat_q], 0)
-    centers = k_center(all_feats, np.arange(prototypes.size(0)), prototypes.size(0))
+    centers = k_center(all_feats, np.arange(prototypes.size(0)), feat_q.size(0) // 4)
     mean = centers.mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean

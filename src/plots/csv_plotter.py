@@ -2,6 +2,7 @@ from pathlib import Path
 from itertools import cycle
 from collections import defaultdict
 from functools import partial
+from loguru import logger
 from typing import Any, List, Tuple
 from .plotter import Plotter
 import pandas as pd
@@ -13,9 +14,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--folder', type=str,
                         help='Folder to search')
     parser.add_argument('--exp', type=str, help='Name of the experiment')
-    parser.add_argument('--param_plot', type=str, default='alpha')
+    parser.add_argument('--plot_versus', type=str, default='alpha')
+    parser.add_argument('--filters', type=str, nargs='+', default=[],
+                        help="Format: n_query=5 n_shot=1 ...")
     parser.add_argument('--metrics', type=str, nargs='+',
                         default=['acc', 'roc_auc'])
+    parser.add_argument('--groupby', type=str, help="Defines the methods compared. Ex: postpool_transforms")
 
     args = parser.parse_args()
     return args
@@ -37,22 +41,44 @@ class CSVPlotter(Plotter):
                                                 'pm': Optional[ndarray],
                                                }
         """
-        # Recover all files that match .npy pattern in folder/
-        p = Path(folder)
+        #  ===== Recover all csv result files =====
+        p = Path('results') / args.exp
         csv_files = list(p.glob('**/*.csv'))  # every csv file represents the  summary of an experiment
         csv_files.sort()
         assert len(csv_files)
+
+        #  ===== Recover all csv result files =====
+        result_dir = self.nested_default_dict(4, list)
         for file in csv_files:
-            experiment_name = file.parent
-            if kwargs['exp'] in str(experiment_name):
-                self.out_dir = kwargs['exp']
-                df = pd.read_csv(file)
-                x_values = df[kwargs['param_plot']].values
-                sorted_indexes = x_values.argsort()
+            df = pd.read_csv(file)
+            x_values = df[kwargs['plot_versus']].values
+
+            # Perform necesary filtering
+            filters = [x.split('=') for x in args.filters]
+            for key, value in filters:
+                df = df[df[kwargs[key]] == value]
+
+            # Read remaining rows and add it to result_dir
+            for index, row in df.iterrows():
                 for metric in kwargs['metrics']:
-                    self.metric_dic[metric][experiment_name]['xlabel'] = kwargs['param_plot']
-                    self.metric_dic[metric][experiment_name]['x'] = x_values[sorted_indexes]
-                    self.metric_dic[metric][experiment_name]['y'] = df[metric].values[sorted_indexes]
+                    method_at_row = row[kwargs['groupby']]
+                    x_value = row[kwargs['plot_versus']]
+                    result_dir[metric][method_at_row][x_value] = row[metric]
+
+            # Fill the metric_dic
+
+            for metric in result_dir:
+                for method, method_dic in result_dir[metric].items():
+                    for x_value, values in method_dic.items():
+                        if len(method_dic[x_value]) > 1:
+                            logger.warning(f"Method {method} contains {len(method_dic[x_value])} \
+                                             possible values for {kwargs['plot_versus']}={x_value}. \
+                                             Choosing the best among them.")
+                        self.metric_dic[metric][method]['x'].append(x_value)
+                        self.metric_dic[metric][method]['y'].append(max(method_dic[x_value]))
+                    self.metric_dic[metric][method]['xlabel'] = kwargs['plot_versus']
+
+        self.out_dir = kwargs['exp']
 
 
 if __name__ == "__main__":

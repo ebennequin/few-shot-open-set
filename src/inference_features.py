@@ -15,6 +15,8 @@ from sklearn.metrics import roc_curve, precision_recall_curve
 from sklearn.metrics import auc as auc_fn
 
 from loguru import logger
+import os
+import json
 import inspect
 import yaml
 import numpy as np
@@ -26,6 +28,7 @@ from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
+from src.constants import BACKBONES
 
 
 def str2bool(v):
@@ -111,7 +114,14 @@ def parse_args() -> argparse.Namespace:
 
 def main(args):
     set_random_seed(args.random_seed)
+    save_dir = os.path.join('results', args.exp_name)
+    args.layers = [BACKBONES[args.backbone]().last_layer_name] if args.layers == ['last'] else args.layers
 
+    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
+    with open(save_dir / 'config.json', 'w') as f:
+        json.dump(vars(args), f)
+
+    # ================ Prepare data ===================
 
     feature_dic = defaultdict(dict)
     average_train_features = {}
@@ -122,17 +132,23 @@ def main(args):
         )
         for class_ in features:
             feature_dic[class_.item()][layer] = features[class_]
+    data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
+                                  args.n_query, args.n_tasks, args.n_workers, feature_dic)
+
+    # ================ Prepare Few-Shot Classifier ===================
+
     few_shot_classifier = [
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
         if class_.__name__ == args.inference_method
     ][0].from_cli_args(args, average_train_features, std_train_features)
 
-    data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
-                                  args.n_query, args.n_tasks, args.n_workers, feature_dic)
     current_detectors = args.outlier_detectors.split('-')
 
     if args.mode == 'benchmark':
+
+        # ================ Prepare detector ===================
+
         detectors = []
         for x in current_detectors:
             detector_args = eval(f'args.{x}.current_params')[args.n_shot]  # take default args

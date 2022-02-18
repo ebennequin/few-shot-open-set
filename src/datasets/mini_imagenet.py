@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 import numpy as np
 import os.path as osp
-
+from .utils import get_normalize
 
 # class MiniImageNet(VisionDataset):
 #     """ Usage:
@@ -98,7 +98,7 @@ class MiniImageNet(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-
+        NORMALIZE = get_normalize(args)
         transform = (
             transforms.Compose(
                 [
@@ -106,7 +106,7 @@ class MiniImageNet(VisionDataset):
                     transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    NORMALIZE,
                 ]
             )
             if training
@@ -115,7 +115,7 @@ class MiniImageNet(VisionDataset):
                     transforms.Resize(int(args.image_size*256/224)),
                     transforms.CenterCrop(args.image_size),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    NORMALIZE,
                 ]
             )
         )

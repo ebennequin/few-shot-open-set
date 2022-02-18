@@ -145,6 +145,7 @@ class ResNet(nn.Module):
 
         self.num_classes = num_classes
         self.last_layer_name = "4_4"
+        self.all_layers = [f"{i}_{j}" for i in range(1, 5) for j in range(5)]
 
         self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
         self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)

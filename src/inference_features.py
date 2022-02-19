@@ -114,12 +114,13 @@ def parse_args() -> argparse.Namespace:
 
 def main(args):
     set_random_seed(args.random_seed)
-    save_dir = os.path.join('results', args.exp_name)
+    save_dir = Path(os.path.join('results', args.exp_name))
+    save_dir.mkdir(exist_ok=True, parents=True)
     args.layers = [BACKBONES[args.backbone]().last_layer_name] if args.layers == ['last'] else args.layers
 
-    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
-    with open(save_dir / 'config.json', 'w') as f:
-        json.dump(vars(args), f)
+    # logger.info(f"Dropping config file at {save_dir / 'config.json'}")
+    # with open(save_dir / 'config.json', 'w') as f:
+    #     json.dump(vars(args), f)
 
     # ================ Prepare data ===================
 

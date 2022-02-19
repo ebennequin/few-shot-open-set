@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 from itertools import cycle
 from collections import defaultdict
 from functools import partial
@@ -11,8 +12,6 @@ import argparse
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Plot training metrics')
-    parser.add_argument('--folder', type=str,
-                        help='Folder to search')
     parser.add_argument('--exp', type=str, help='Name of the experiment')
     parser.add_argument('--plot_versus', type=str, default='alpha')
     parser.add_argument('--filters', type=str, nargs='+', default=[],
@@ -30,7 +29,7 @@ class CSVPlotter(Plotter):
     An abstract plotter.
     """
 
-    def fit(self, folder: Path, **kwargs):
+    def fit(self, **kwargs):
         """
         Reads metrics in the folder and fill the dictionnary of metrics.
         At the end of this function, metric_dic should be filled as:
@@ -48,7 +47,7 @@ class CSVPlotter(Plotter):
         assert len(csv_files)
 
         #  ===== Recover all csv result files =====
-        result_dir = self.nested_default_dict(4, list)
+        result_dir = self.nested_default_dict(3, list)
         for file in csv_files:
             df = pd.read_csv(file)
             x_values = df[kwargs['plot_versus']].values
@@ -56,14 +55,16 @@ class CSVPlotter(Plotter):
             # Perform necesary filtering
             filters = [x.split('=') for x in args.filters]
             for key, value in filters:
-                df = df[df[kwargs[key]] == value]
+                expected_type = df[key].dtypes
+                cast_value = np.array([value]).astype(expected_type)[0]
+                df = df[df[key] == cast_value]
 
             # Read remaining rows and add it to result_dir
             for index, row in df.iterrows():
                 for metric in kwargs['metrics']:
                     method_at_row = row[kwargs['groupby']]
                     x_value = row[kwargs['plot_versus']]
-                    result_dir[metric][method_at_row][x_value] = row[metric]
+                    result_dir[metric][method_at_row][x_value].append(row[metric])
 
             # Fill the metric_dic
 
@@ -77,8 +78,11 @@ class CSVPlotter(Plotter):
                         self.metric_dic[metric][method]['x'].append(x_value)
                         self.metric_dic[metric][method]['y'].append(max(method_dic[x_value]))
                     self.metric_dic[metric][method]['xlabel'] = kwargs['plot_versus']
+                    sorted_indexes = np.argsort(self.metric_dic[metric][method]['x'])
+                    self.metric_dic[metric][method]['x'] = [self.metric_dic[metric][method]['x'][i] for i in sorted_indexes]
+                    self.metric_dic[metric][method]['y'] = [self.metric_dic[metric][method]['y'][i] for i in sorted_indexes]
 
-        self.out_dir = kwargs['exp']
+        self.out_dir = Path(kwargs['exp']) / '-'.join(args.filters)
 
 
 if __name__ == "__main__":

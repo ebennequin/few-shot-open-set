@@ -32,7 +32,7 @@ class Plotter:
         self.max_col = max_col
         self.out_extension = out_extension
         self.out_dir = out_dir
-        self.metric_dic = self.nested_default_dict(3, np.ndarray)
+        self.metric_dic = self.nested_default_dict(3, list)
 
     def fit(self, folder: Path):
         """

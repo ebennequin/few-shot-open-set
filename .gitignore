@@ -11,7 +11,7 @@ __pycache__/
 *.so
 results/
 data/
-
+plots/
 # Distribution / packaging
 .Python
 build/

@@ -25,7 +25,7 @@ OVERRIDE=False
 MODE=benchmark
 
 # Tasks
-N_TASKS=1000
+N_TASKS=10000
 SHOTS=1 5
 BALANCED=True
 MISC_ARG=alpha
@@ -128,17 +128,16 @@ run_scratch:
 # ========== Extraction pipelines ===========
 
 extract_standard:
-	# Extract for ViT
-	for tfg_dataset in cub aircraft mini_imagenet; do \
-		make BACKBONE=vitb16 LAYERS='all' MODEL_SRC='luke' MISC_ARG='image_size' MISC_VAL='224' \
-			SRC_DATASET=imagenet TGT_DATASETS=$${tfg_dataset} extract ;\
-	done ;\
-
 	# Extract for RN and WRN
-	for backbone in resnet12 wrn2810; do \
-		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-		make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
+	for tgt_dataset in cub aircraft; do \
+		for backbone in resnet12 wrn2810; do \
+			make MISC_ARG='image_size' MISC_VAL='84' BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
+	done ;\
+	# Extract for ViT
+	for tgt_dataset in cub aircraft mini_imagenet; do \
+		make BACKBONE=vitb16 LAYERS='all' MODEL_SRC='luke' MISC_ARG='image_size' MISC_VAL='224' \
+			SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} extract ;\
 	done ;\
 
 
@@ -162,7 +161,7 @@ run_centering:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in wrn2810; do \
+		for backbone in wrn2810 resnet12; do \
 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
@@ -170,13 +169,12 @@ benchmark:
 
 cross_domain:
 	# Tiered -> CUB, Aircraft
-	for backbone in wrn2810; do \
+	for backbone in resnet12 wrn2810; do \
 		for tgt_dataset in cub aircraft; do \
-			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${tgt_dataset} run_centering ;\
+			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
 		done ; \
 	done ;\
-
-	# ImageNet -> CUB, Aircraft with ViT
+	# ImageNet -> CUB Aircraft with ViT
 	for tgt_dataset in cub aircraft; do \
 		make EXP=cross_domain BACKBONE=vitb16 MODEL_SRC='luke' \
 			SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
@@ -184,8 +182,8 @@ cross_domain:
 
 imbalance:
 	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
-		for backbone in wrn2810; do \
-			make SHOTS=1 BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
+		for backbone in resnet12 wrn2810; do \
+			make SHOTS=5 BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
 		done ;\
 	done ;\
 
@@ -198,9 +196,27 @@ nquery_influence:
 
 # ========== Ablations ===========
 
+plot_benchmark:
+	for backbone in wrn2810 resnet12; do \
+		python -m src.plots.csv_plotter --exp benchmark --groupby postpool_transforms --plot_versus tgt_dataset \
+			--filters n_shot=1 outlier_detectors=knn backbone=$${backbone} ;\
+	done ;\
 
-plot_alpha:
-	python -m src.plots.csv_plotter --folder results --exp imbalance --param_plot alpha
+plot_cross_domain:
+	for backbone in wrn2810 resnet12 vitb16; do \
+		for shot in 1 5; do \
+			python -m src.plots.csv_plotter --exp cross_domain --groupby postpool_transforms --plot_versus tgt_dataset \
+				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
+		done ;\
+	done ;\
+
+plot_imbalance:
+	for backbone in wrn2810 resnet12; do \
+		for  shot in 1 5; do \
+			python -m src.plots.csv_plotter --exp imbalance --groupby postpool_transforms --plot_versus alpha \
+				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
+		done ;\
+	done ;\
 
 plot_nquery:
 	python -m src.plots.csv_plotter --folder results --exp influence_query --param_plot n_query

@@ -12,6 +12,7 @@ __pycache__/
 results/
 data/
 plots/
+archive/
 # Distribution / packaging
 .Python
 build/

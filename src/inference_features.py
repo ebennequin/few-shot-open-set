@@ -302,7 +302,6 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
     res_root.mkdir(exist_ok=True, parents=True)
     for title, fig in figures.items():
         fig.savefig(res_root / f'{title}.png')
-
     return metrics
 
 

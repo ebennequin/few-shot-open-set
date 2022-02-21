@@ -1,0 +1,73 @@
+backbone,src_dataset,tgt_dataset,balanced_tasks,outlier_detectors,inference_method,n_way,n_shot,prepool_transforms,postpool_transforms,current_sequence,acc,roc_auc
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3851,0.5677
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3883,0.5713
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3895,0.5773
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3924,0.5874
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3944,0.592
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.3896,0.5776
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.3849,0.5707
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.3849,0.5633
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.3849,0.56
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.388,0.5737
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.388,0.5673
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.388,0.5641
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.3891,0.579
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.3891,0.5758
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.3891,0.5745
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.392,0.584
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.392,0.5893
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.392,0.5895
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.3941,0.5881
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.3941,0.5934
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.3941,0.5934
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.389,0.5776
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.389,0.5773
+wrn2810,tiered_imagenet,aircraft,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.389,0.5761

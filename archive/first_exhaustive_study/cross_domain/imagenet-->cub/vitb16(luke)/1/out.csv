@@ -1,0 +1,73 @@
+backbone,src_dataset,tgt_dataset,balanced_tasks,outlier_detectors,inference_method,n_way,n_shot,prepool_transforms,postpool_transforms,current_sequence,acc,roc_auc
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.9723,0.9652
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.9725,0.9661
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.9722,0.9664
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.9738,0.9749
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.9754,0.9776
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=2, p=2,
+  radius=1.0)",0.973,0.9634
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9719,0.9689
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9719,0.9627
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9719,0.9596
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9722,0.9693
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9722,0.9639
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9722,0.9612
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9719,0.9698
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9719,0.9645
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9719,0.962
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9736,0.9743
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9736,0.9752
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9736,0.9742
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9752,0.9762
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9752,0.9792
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9752,0.98
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=1, p=2,
+  radius=1.0)",0.9727,0.968
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.9727,0.9563
+vitb16,imagenet,cub,True,knn,SimpleShot,5,1,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=4, p=2,
+  radius=1.0)",0.9727,0.9479

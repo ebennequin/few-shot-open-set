@@ -22,10 +22,10 @@ DEBUG=False
 GPUS=0
 SIMU_PARAMS=current_sequence
 OVERRIDE=False
-MODE=benchmark
+MODE=tune
 
 # Tasks
-N_TASKS=10000
+N_TASKS=5000
 SHOTS=1 5
 BALANCED=True
 MISC_ARG=alpha
@@ -152,10 +152,11 @@ run_snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
-	for centering in base debiased tarjan transductive kcenter; do \
+	for centering in tarjan; do \
 		make PREPOOL=trivial POSTPOOL="$${centering}_centering l2_norm" run ;\
 	done ;\
+# 	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
+# 	for centering in base debiased tarjan transductive kcenter; do \
 
 # ========== Experiments ===========
 
@@ -189,8 +190,10 @@ imbalance:
 
 nquery_influence:
 	for n_query in 1 5 10 15 20; do \
-		for backbone in resnet12 wrn2810; do \
-			make SHOTS=1 EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
+		for shot in 5; do \
+			for backbone in resnet12; do \
+				make SHOTS=$${shot} EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
+			done ;\
 		done ;\
 	done ;\
 
@@ -198,8 +201,10 @@ nquery_influence:
 
 plot_benchmark:
 	for backbone in wrn2810 resnet12; do \
-		python -m src.plots.csv_plotter --exp benchmark --groupby postpool_transforms --plot_versus tgt_dataset \
-			--filters n_shot=1 outlier_detectors=knn backbone=$${backbone} ;\
+		for tgt_dataset in mini_imagenet tiered_imagenet; do \
+			python -m src.plots.csv_plotter --exp benchmark --groupby postpool_transforms --plot_versus n_shot \
+				--filters outlier_detectors=knn backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+		done ;\
 	done ;\
 
 plot_cross_domain:
@@ -219,7 +224,12 @@ plot_imbalance:
 	done ;\
 
 plot_nquery:
-	python -m src.plots.csv_plotter --folder results --exp influence_query --param_plot n_query
+	for backbone in wrn2810 resnet12; do \
+		for  shot in 1 5; do \
+			python -m src.plots.csv_plotter --exp n_query --groupby postpool_transforms --plot_versus n_query \
+				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
+		done ;\
+	done ;\
 
 
 # ================= Deployment / Imports ==================
@@ -250,6 +260,26 @@ kill_all: ## Kill all my python and tee processes on the server
 	ps -u $(USER) | grep "tee" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
 
 
+# ============= Archive results =============
+
+
+store: # Archive experiments
+	python src/utils/list_files.py results/ archive/ tmp.txt
+	{ read -r out_files; read -r archive_dir; } < tmp.txt ; \
+	for file in $${out_files}; do \
+		cp -Rv $${file} $${archive_dir}/ ; \
+	done
+	rm tmp.txt
+
+
+restore: # Restore experiments to output/
+	python src/utils/list_files.py archive/ results/ tmp.txt ; \
+	read -r out_files < tmp.txt ; \
+	mkdir -p results/$${folder[1]} ; \
+	for file in $${out_files}; do \
+		cp -Rv $${file} results/$${folder[1]}/ ; \
+	done
+	rm tmp.txt
 
 # =============== Models ====================
 

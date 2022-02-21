@@ -232,22 +232,35 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
 
     n_neighbors = min(knn + 1, N)
     knn_indexes = dist.topk(n_neighbors, -1, largest=False).indices[:, 1:]  # [N, knn]
-    # trimmed_indexes = []
-    # dist_limit = dist.mean()
-    # for i, row in enumerate(knn_indexes):
-    #     acceptable_indexes = dist[i, row] < dist_limit
-    #     trimmed_indexes.append(row[acceptable_indexes])
-    # logger.info(trimmed_indexes)
+
+    # Trimming graph
+
+    intra_class_distances = []
+    for i, label in enumerate(kwargs["support_labels"].unique()):
+        assert i == label, (i, label)
+        relevant_feats = feat_s[kwargs["support_labels"] == label]
+        intra_dist = torch.cdist(prototypes[i].unsqueeze(0), relevant_feats).squeeze()
+        intra_class_distances.append(intra_dist)
+    intra_class_distances = torch.cat(intra_class_distances)
+
+    trimmed_indexes = []
+    dist_limit = intra_class_distances.mean()
+    for i, row in enumerate(knn_indexes):
+        acceptable_indexes = dist[i, row] < dist_limit
+        trimmed_indexes.append(row[acceptable_indexes])
+    knn_indexes = trimmed_indexes
 
     # Strongly connected components
 
     # graph = {i: array.tolist() for i, array in enumerate(knn_indexes)}
     # connected_components = tarjan(graph)
 
-    # Weakly connected components
+    # Create and fill graph
 
-    # logger.info(kwargs['query_labels'].unique(return_counts=True)[-1])
     G = nx.DiGraph()
+    for i in range(all_feats.size(0)):
+        G.add_node(i)
+
     for i, children in enumerate(knn_indexes):
         G.add_edges_from([(i, k.item()) for k in children])
     connected_components = [list(x) for x in nx.weakly_connected_components(G)]
@@ -262,18 +275,18 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
     mean = centers.mean(0, keepdim=True)
 
     # Draw the graph
-    # fig = plt.Figure((10, 10), dpi=200)
-    # labels = torch.cat([kwargs["support_labels"], kwargs["query_labels"]])
-    # pos = nx.spring_layout(G, k=0.2, iterations=50, scale=2)
-    # # k controls the distance between the nodes and varies between 0 and 1
-    # # iterations is the number of times simulated annealing is run
-    # # default k=0.1 and iterations=50
-    # colors = labels.numpy()[G.nodes]
-    # colors[len(prototypes):][kwargs['outliers'].bool().numpy()] = 6
-    # nx.drawing.nx_pylab.draw_networkx(G, ax=fig.gca(), pos=pos,
-    #                                   node_color=colors,
-    #                                   node_size=500, cmap='Set1')
-    # kwargs['figures']['network'] = fig
+    fig = plt.Figure((10, 10), dpi=200)
+    pos = nx.spring_layout(G, k=0.2, iterations=50, scale=2)
+    # k controls the distance between the nodes and varies between 0 and 1
+    # iterations is the number of times simulated annealing is run
+    # default k=0.1 and iterations=50
+    labels = torch.cat([kwargs["support_labels"].unique(), kwargs["query_labels"]])
+    colors = labels.numpy()[G.nodes]
+    colors[len(prototypes):][kwargs['outliers'].bool().numpy()] = 6
+    nx.drawing.nx_pylab.draw_networkx(G, ax=fig.gca(), pos=pos,
+                                      node_color=colors,
+                                      node_size=500, cmap='Set1')
+    kwargs['figures']['network'] = fig
     return feat_s - mean, feat_q - mean
 
 

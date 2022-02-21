@@ -1,0 +1,75 @@
+backbone,src_dataset,tgt_dataset,balanced_tasks,outlier_detectors,inference_method,n_way,n_shot,prepool_transforms,postpool_transforms,current_sequence,acc,roc_auc
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.8081,0.7096
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.7985,0.7449
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.7958,0.779
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.7948,0.792
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.7966,0.7858
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+  radius=1.0)",0.7935,0.7615
+wrn2810,mini_imagenet,mini_imagenet,True,snatcher_f,SimpleShot,5,5,trivial,trivial,<src.detectors.snatcher.SNATCHERF object at 0x7fb0447cb280>,0.8173,0.7251
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.8081,0.7199
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.8081,0.6993
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.8081,0.6836
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.7995,0.7479
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.7995,0.7386
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,base_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.7995,0.7276
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.7969,0.7801
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.7969,0.7737
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,debiased_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.7969,0.7652
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.7953,0.7846
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.7953,0.7925
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,tarjan_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.7953,0.7912
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.7973,0.7743
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.7973,0.7914
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,transductive_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.7973,0.7975
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+  radius=1.0)",0.794,0.759
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=7, p=2,
+  radius=1.0)",0.794,0.7562
+wrn2810,mini_imagenet,mini_imagenet,True,knn,SimpleShot,5,5,trivial,kcenter_centering-l2_norm,"KNN(algorithm='auto', contamination=0.1, leaf_size=30, method='mean',
+  metric='minkowski', metric_params=None, n_jobs=1, n_neighbors=10, p=2,
+  radius=1.0)",0.794,0.7469
+wrn2810,mini_imagenet,mini_imagenet,True,snatcher_f,SimpleShot,5,5,trivial,trivial,<src.detectors.snatcher.SNATCHERF object at 0x7fc0b68ead30>,0.8182,0.7253

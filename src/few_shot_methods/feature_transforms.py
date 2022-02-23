@@ -55,6 +55,60 @@ def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return feat_s - mean, feat_q - mean
 
 
+def custom_gradient(sup, raw_feat_i, raw_feat_o, feat_i, feat_o, mu):
+    d = feat_i.size(-1)
+    all_feats = torch.cat([feat_i], 0)
+    all_raw_feats = torch.cat([raw_feat_i], 0)
+    #sign_mask = torch.cat([torch.ones(feat_i.size(0)), - torch.ones(feat_o.size(0))]).unsqueeze(-1).unsqueeze(-1)  # [n, 1, 1]
+
+    eye = torch.eye(d).unsqueeze(0)  # [1, d, d]
+    gram = all_feats[:, :, None] @ all_feats[:, None, :]
+    centering_matrix = eye - gram  # [n, d, d]
+    norms = torch.cdist(all_raw_feats, mu, p=2).unsqueeze(-1)  # [n, d] , [1, d] = [n, 1] -> [n, 1, 1]
+    grad = (centering_matrix / norms).sum(0)   # [d, d]
+    grad = sup.matmul(grad)  # [1, d] x [d, d] = [1, d]
+    assert grad.size() == torch.Size([1, d]), grad.size()
+    return grad
+
+
+def cheat_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim]
+    """
+    raw_feat_i = feat_q[~kwargs['outliers'].bool()]
+    raw_feat_o = feat_q[kwargs['outliers'].bool()]
+
+    mu = torch.zeros(1, raw_feat_i.size(1), requires_grad=True)
+    optimizer = torch.optim.SGD([mu], lr=1.0)
+
+    for i in range(100):
+        feat_i = raw_feat_i - mu
+        feat_i = F.normalize(feat_i, dim=1)  # [?, d]
+
+        feat_o = raw_feat_o - mu
+        feat_o = F.normalize(feat_o, dim=1)  # [?, d]
+
+        sup = feat_s - mu
+        sup = F.normalize(sup, dim=1)
+        sup = sup.mean(0, keepdim=True)  # [1, d]
+
+        loss = - (feat_i @ sup.t()).sum()  # + (feat_o @ sup.t()).sum()
+
+        optimizer.zero_grad()
+        loss.backward()
+        real_grad = mu.grad
+        analytical_grad = custom_gradient(sup, raw_feat_i, raw_feat_o, feat_i, feat_o, mu)
+        assert real_grad.size() == analytical_grad.size()
+        logger.warning(f"{i}: {((real_grad - analytical_grad) ** 2).sum() / (real_grad ** 2).sum()}")
+        optimizer.step()
+        # logger.info(f"{i}: {loss.item()}")
+
+
+    mu = mu.detach()
+
+    return feat_s - mu, feat_q - mu
+
+
 def kcenter_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
@@ -221,7 +275,9 @@ def k_center(feats: Tensor, init_indexes: np.ndarray, k: int):
 def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
 
     # Create affinity matrix
-    
+    # feat_s = feat_s.cuda()
+    # feat_q = feat_q.cuda()
+
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
     all_feats = torch.cat([prototypes, feat_q])
     N = all_feats.size(0)
@@ -236,15 +292,21 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
     # Trimming graph
 
     intra_class_distances = []
-    for i, label in enumerate(kwargs["support_labels"].unique()):
-        assert i == label, (i, label)
-        relevant_feats = feat_s[kwargs["support_labels"] == label]
-        intra_dist = torch.cdist(prototypes[i].unsqueeze(0), relevant_feats).squeeze()
-        intra_class_distances.append(intra_dist)
-    intra_class_distances = torch.cat(intra_class_distances)
+    multi_shot = feat_s.size(0) > 5
+    if multi_shot:
+        for i, label in enumerate(kwargs["support_labels"].unique()):
+            assert i == label, (i, label)
+            relevant_feats = feat_s[kwargs["support_labels"] == label]
+            intra_dist = torch.cdist(prototypes[i].unsqueeze(0), relevant_feats).squeeze()
+            intra_class_distances.append(intra_dist)
+        intra_class_distances = torch.cat(intra_class_distances)
+        dist_limit = intra_class_distances.mean()
+    else:
+        inter_class_distances = torch.cdist(feat_s, feat_s)
+        n_terms = feat_s.size(0) * (feat_s.size(0) - 1) / 2
+        dist_limit = inter_class_distances.triu(diagonal=1).sum() / n_terms
 
     trimmed_indexes = []
-    dist_limit = intra_class_distances.mean()
     for i, row in enumerate(knn_indexes):
         acceptable_indexes = dist[i, row] < dist_limit
         trimmed_indexes.append(row[acceptable_indexes])
@@ -275,18 +337,18 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
     mean = centers.mean(0, keepdim=True)
 
     # Draw the graph
-    fig = plt.Figure((10, 10), dpi=200)
-    pos = nx.spring_layout(G, k=0.2, iterations=50, scale=2)
-    # k controls the distance between the nodes and varies between 0 and 1
-    # iterations is the number of times simulated annealing is run
-    # default k=0.1 and iterations=50
-    labels = torch.cat([kwargs["support_labels"].unique(), kwargs["query_labels"]])
-    colors = labels.numpy()[G.nodes]
-    colors[len(prototypes):][kwargs['outliers'].bool().numpy()] = 6
-    nx.drawing.nx_pylab.draw_networkx(G, ax=fig.gca(), pos=pos,
-                                      node_color=colors,
-                                      node_size=500, cmap='Set1')
-    kwargs['figures']['network'] = fig
+    # fig = plt.Figure((10, 10), dpi=200)
+    # pos = nx.spring_layout(G, k=0.2, iterations=50, scale=2)
+    # # k controls the distance between the nodes and varies between 0 and 1
+    # # iterations is the number of times simulated annealing is run
+    # # default k=0.1 and iterations=50
+    # labels = torch.cat([kwargs["support_labels"].unique(), kwargs["query_labels"]])
+    # colors = labels.numpy()[G.nodes]
+    # colors[len(prototypes):][kwargs['outliers'].bool().numpy()] = 6
+    # nx.drawing.nx_pylab.draw_networkx(G, ax=fig.gca(), pos=pos,
+    #                                   node_color=colors,
+    #                                   node_size=500, cmap='Set1')
+    # kwargs['figures']['network'] = fig
     return feat_s - mean, feat_q - mean
 
 

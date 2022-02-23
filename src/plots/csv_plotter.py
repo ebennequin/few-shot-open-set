@@ -50,7 +50,6 @@ class CSVPlotter(Plotter):
         result_dir = self.nested_default_dict(3, list)
         for file in csv_files:
             df = pd.read_csv(file)
-            x_values = df[kwargs['plot_versus']].values
 
             # Perform necesary filtering
             filters = [x.split('=') for x in args.filters]

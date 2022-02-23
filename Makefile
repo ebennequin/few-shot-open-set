@@ -21,7 +21,7 @@ TRAINING=standard
 DEBUG=False
 GPUS=0
 SIMU_PARAMS=current_sequence
-OVERRIDE=False
+OVERRIDE=True
 MODE=tune
 
 # Tasks
@@ -152,7 +152,7 @@ run_snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in tarjan; do \
+	for centering in cheat; do \
 		make PREPOOL=trivial POSTPOOL="$${centering}_centering l2_norm" run ;\
 	done ;\
 # 	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
@@ -164,7 +164,7 @@ benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in wrn2810 resnet12; do \
 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
-			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
+# 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
 	done ;\
 
@@ -184,16 +184,14 @@ cross_domain:
 imbalance:
 	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
 		for backbone in resnet12 wrn2810; do \
-			make SHOTS=5 BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
+			make BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
 		done ;\
 	done ;\
 
 nquery_influence:
 	for n_query in 1 5 10 15 20; do \
-		for shot in 5; do \
-			for backbone in resnet12; do \
-				make SHOTS=$${shot} EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
-			done ;\
+		for backbone in resnet12; do \
+			make EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
 		done ;\
 	done ;\
 

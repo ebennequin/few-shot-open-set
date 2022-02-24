@@ -162,7 +162,7 @@ run_centering:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in wrn2810 resnet12; do \
+		for backbone in resnet12 wrn2810; do \
 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
 # 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\

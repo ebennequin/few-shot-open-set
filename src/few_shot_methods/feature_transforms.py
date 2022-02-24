@@ -57,15 +57,15 @@ def oracle_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
 
 def custom_gradient(sup, raw_feat_i, raw_feat_o, feat_i, feat_o, mu):
     d = feat_i.size(-1)
-    all_feats = torch.cat([feat_i], 0)
-    all_raw_feats = torch.cat([raw_feat_i], 0)
-    #sign_mask = torch.cat([torch.ones(feat_i.size(0)), - torch.ones(feat_o.size(0))]).unsqueeze(-1).unsqueeze(-1)  # [n, 1, 1]
+    all_feats = torch.cat([feat_i, feat_o], 0)
+    all_raw_feats = torch.cat([raw_feat_i, raw_feat_o], 0)
+    sign_mask = torch.cat([torch.ones(feat_i.size(0)), - torch.ones(feat_o.size(0))])  # [n,]
 
     eye = torch.eye(d).unsqueeze(0)  # [1, d, d]
     gram = all_feats[:, :, None] @ all_feats[:, None, :]
     centering_matrix = eye - gram  # [n, d, d]
     norms = torch.cdist(all_raw_feats, mu, p=2).unsqueeze(-1)  # [n, d] , [1, d] = [n, 1] -> [n, 1, 1]
-    grad = (centering_matrix / norms).sum(0)   # [d, d]
+    grad = (sign_mask[:, None, None] * centering_matrix / norms).sum(0)   # [d, d]
     grad = sup.matmul(grad)  # [1, d] x [d, d] = [1, d]
     assert grad.size() == torch.Size([1, d]), grad.size()
     return grad
@@ -79,29 +79,50 @@ def cheat_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     raw_feat_o = feat_q[kwargs['outliers'].bool()]
 
     mu = torch.zeros(1, raw_feat_i.size(1), requires_grad=True)
-    optimizer = torch.optim.SGD([mu], lr=1.0)
+    optimizer = torch.optim.SGD([mu], lr=0.1)
+    d = raw_feat_i.size(-1)
 
     for i in range(100):
-        feat_i = raw_feat_i - mu
-        feat_i = F.normalize(feat_i, dim=1)  # [?, d]
+        with torch.no_grad():
+            unorm_feat_i = raw_feat_i - mu
+            feat_i = F.normalize(unorm_feat_i, dim=1)  # [?, d]
 
-        feat_o = raw_feat_o - mu
-        feat_o = F.normalize(feat_o, dim=1)  # [?, d]
-
+            feat_o = raw_feat_o - mu
+            feat_o = F.normalize(feat_o, dim=1)  # [?, d]
+        
         sup = feat_s - mu
         sup = F.normalize(sup, dim=1)
         sup = sup.mean(0, keepdim=True)  # [1, d]
 
-        loss = - (feat_i @ sup.t()).sum()  # + (feat_o @ sup.t()).sum()
+        loss = - (feat_i @ sup.t()).sum() + (feat_o @ sup.t()).sum()
+
+        # ======== Check derivative w.r.t z_i : OK ========
+        # expected_grad_zi = - sup  # [N, d]
+        # # feat_i.register_hook(lambda grad: logger.warning(((grad - expected_grad_zi) ** 2).sum()))
+
+        # ======== Check derivative w.r.t x_i : OK ========
+        # eye = torch.eye(d).unsqueeze(0)  # [1, d, d]
+        # gram = feat_i[:, :, None] @ feat_i[:, None, :]
+        # norms = torch.cdist(raw_feat_i, mu, p=2).squeeze()  # [n, d] , [1, d] = [n, 1] -> [n]
+        # expected_grad_xi = ((eye - gram) / norms[:, None, None])  # [n, d, d]
+        # expected_grad_xi = (expected_grad_xi @ expected_grad_zi[:, :, None]).squeeze()  # [n, d]
+        # # unorm_feat_i.register_hook(lambda grad: logger.warning(((grad - expected_grad_xi) ** 2).sum()))
+
+        # ======== Check derivative w.r.t mu: OK ========
+        # expected_grad_mu = expected_grad_xi.sum(0, keepdim=True)
+        # mu.register_hook(lambda grad: logger.warning(((grad - expected_grad_mu) ** 2).sum()))
+
 
         optimizer.zero_grad()
         loss.backward()
-        real_grad = mu.grad
-        analytical_grad = custom_gradient(sup, raw_feat_i, raw_feat_o, feat_i, feat_o, mu)
-        assert real_grad.size() == analytical_grad.size()
-        logger.warning(f"{i}: {((real_grad - analytical_grad) ** 2).sum() / (real_grad ** 2).sum()}")
+
+        # ======== Checking global derivative w.r.t mu: OK ========
+        # real_grad = mu.grad
+        # analytical_grad = custom_gradient(sup, raw_feat_i, raw_feat_o, feat_i, feat_o, mu)
+        # assert real_grad.size() == analytical_grad.size()
+        # logger.warning(f"{i}: {((real_grad - analytical_grad) ** 2).sum()}")
         optimizer.step()
-        # logger.info(f"{i}: {loss.item()}")
+        logger.info(f"{i}: {loss.item()}")
 
 
     mu = mu.detach()

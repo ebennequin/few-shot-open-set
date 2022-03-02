@@ -28,7 +28,7 @@ from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
-from src.constants import BACKBONES
+from src.models import __dict__ as BACKBONES
 
 
 def str2bool(v):

@@ -28,6 +28,19 @@ def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
     """
+    # all_feats = torch.cat([feat_s, feat_q], 0)
+    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+    nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
+    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 4))).indices.squeeze()
+    mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
+    assert len(mean.size()) == 2, mean.size()
+    return feat_s - mean, feat_q - mean
+
+
+def classif_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
 
     # Assessing if this is even achievable
     # all_feats = torch.cat([feat_s, feat_q], 0)
@@ -37,9 +50,9 @@ def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
 
     # all_feats = torch.cat([feat_s, feat_q], 0)
     prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
-    nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-    farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 4))).indices.squeeze()
-    mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
+    nodes_degrees = - torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
+    closed_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 2))).indices.squeeze()
+    mean = torch.cat([prototypes, feat_q[closed_points]], 0).mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
 
@@ -162,15 +175,13 @@ def layer_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return (feat_s - mean_s) / (var_s.sqrt() + 1e-10), (feat_q - mean_q) / (var_q.sqrt() + 1e-10)
 
 
-def inductive_batch_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
+def inductive_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, h, w]
     """
-    assert len(feat_s.size()) >= 4
-    dims = (0, 2, 3)
-    mean = torch.mean(feat_s, dim=dims, keepdim=True)
-    var = torch.var(feat_s, dim=dims, unbiased=False, keepdim=True)
-    return (feat_s - mean) / (var.sqrt() + 1e-10), (feat_q - mean) / (var.sqrt() + 1e-10)
+    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+    mean = prototypes.mean(0, keepdim=True)
+    return F.normalize(feat_s - mean, dim=1), F.normalize(feat_q - mean, dim=1)
 
 
 def instance_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):

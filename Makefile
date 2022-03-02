@@ -129,7 +129,7 @@ run_scratch:
 extract_standard:
 	# Extract for RN and WRN
 	for tgt_dataset in mini_imagenet; do \
-		for backbone in efficientnet_b4; do \
+		for backbone in resnet12; do \
 			make BACKBONE=$${backbone} LAYERS='all' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
@@ -151,8 +151,8 @@ run_snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in cheat; do \
-		make PREPOOL=trivial POSTPOOL="$${centering}_centering l2_norm" run ;\
+	for centering in classif; do \
+		make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
 	done ;\
 # 	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
 # 	for centering in base debiased tarjan transductive kcenter; do \

@@ -10,7 +10,7 @@ from torchvision import transforms
 from tqdm import tqdm
 import json
 import numpy as np
-from .utils import get_normalize
+from .utils import get_transforms
 
 
 class Aircraft(VisionDataset):
@@ -22,30 +22,8 @@ class Aircraft(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-        NORMALIZE = get_normalize(args)
+        self.transform = get_transforms(args)
         self.target_transform = target_transform
-        self.transform = (
-            transforms.Compose(
-                [
-                    transforms.RandomResizedCrop(args.image_size),
-                    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    NORMALIZE
-
-                ]
-            )
-            if training
-            else transforms.Compose(
-                [
-                    transforms.Resize(int(args.image_size*256/224)),
-                    transforms.CenterCrop(args.image_size),
-                    transforms.ToTensor(),
-                    NORMALIZE
-                ]
-            )
-        )
-
         with open(root / 'families.txt', 'r') as f:
             families = f.readlines()
         families = list(map(lambda x: x.strip(), families))

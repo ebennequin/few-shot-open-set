@@ -11,18 +11,19 @@ def get_transforms(args):
     image_size = BACKBONE_CONFIGS[args.backbone]['input_size'][-1]
 
     if args.tgt_dataset == 'tiered_imagenet':
-        return transforms.Compose(
+        res = transforms.Compose(
             [
                 transforms.ToTensor(),
                 NORMALIZE,
             ]
         )
     else:
-        transforms.Compose(
+        res = transforms.Compose(
                 [
-                    transforms.Resize(int(image_size*256/224)),
+                    transforms.Resize(int(image_size * 256 / 224)),
                     transforms.CenterCrop(image_size),
                     transforms.ToTensor(),
                     NORMALIZE,
                 ]
             )
+    return res

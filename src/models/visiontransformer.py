@@ -26,9 +26,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
-from .helpers import build_model_with_cfg, named_apply, adapt_input_conv
-from .layers import PatchEmbed, Mlp, DropPath, trunc_normal_, lecun_normal_
-from .registry import register_model
+from timm.models.helpers import build_model_with_cfg, named_apply, adapt_input_conv
+from timm.models.layers import PatchEmbed, Mlp, DropPath, trunc_normal_, lecun_normal_
 
 _logger = logging.getLogger(__name__)
 
@@ -236,35 +235,35 @@ class Block(nn.Module):
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
 
-def forward(self, x):
-    x = x + self.drop_path(self.attn(self.norm1(x)))
-    x = x + self.drop_path(self.mlp(self.norm2(x)))
-    return x
+    def forward(self, x):
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        return x
 
 
-class Transformer(nn.Module):
-    """Transformer with Self-Attentive Blocks"""
-    def __init__(self, num_layers, dim, num_heads, ff_dim, dropout):
-        super().__init__()
-        self.blocks = nn.ModuleList([
-            Block(dim, num_heads, ff_dim, dropout) for _ in range(num_layers)])
+# class Transformer(nn.Module):
+#     """Transformer with Self-Attentive Blocks"""
+#     def __init__(self, num_layers, dim, num_heads, ff_dim, dropout):
+#         super().__init__()
+#         self.blocks = nn.ModuleList([
+#             Block(dim, num_heads, ff_dim, dropout) for _ in range(num_layers)])
 
-    def forward(self, x, layers: List[str], mask=None):
-        all_layers = {}
-        for i, block in enumerate(self.blocks):
-            x = block(x, mask)  # [b, seq_length, d]
+#     def forward(self, x, layers: List[str], mask=None):
+#         all_layers = {}
+#         for i, block in enumerate(self.blocks):
+#             x = block(x, mask)  # [b, seq_length, d]
 
-            # Extracting layers
+#             # Extracting layers
 
-            layer_name = f"{i}_map"
-            if layer_name in layers:
-                all_layers[layer_name] = x.detach()[:, 1:, :].mean(dim=1)
+#             layer_name = f"{i}_map"
+#             if layer_name in layers:
+#                 all_layers[layer_name] = x.detach()[:, 1:, :].mean(dim=1)
 
-            layer_name = f"{i}_cls"
-            if layer_name in layers:
-                all_layers[layer_name] = x.detach()[:, 0, :]
+#             layer_name = f"{i}_cls"
+#             if layer_name in layers:
+#                 all_layers[layer_name] = x.detach()[:, 0, :]
 
-        return x, all_layers
+#         return x, all_layers
 
 
 class VisionTransformer(nn.Module):
@@ -316,7 +315,7 @@ class VisionTransformer(nn.Module):
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        self.blocks = nn.ModuleList(*[
+        self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
                 attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer)
@@ -338,7 +337,9 @@ class VisionTransformer(nn.Module):
         self.head_dist = None
         if distilled:
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
-
+        self.all_layers = [f"{i}_{j}"for i in range(len(self.blocks)) for j in ['map', 'cls']] + \
+                          [f"last_{j}" for j in ['map', 'cls']]
+        self.last_layer_name = "last_cls"
         self.init_weights(weight_init)
 
     def init_weights(self, mode=''):
@@ -378,7 +379,7 @@ class VisionTransformer(nn.Module):
         if self.num_tokens == 2:
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, layers: List[str]):
+    def forward(self, x, layers: List[str]):
         x = self.patch_embed(x)
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
         if self.dist_token is None:
@@ -628,7 +629,6 @@ def _create_vision_transformer(variant, pretrained=False, default_cfg=None, **kw
     return model
 
 
-@register_model
 def vit_tiny_patch16_224(pretrained=False, **kwargs):
     """ ViT-Tiny (Vit-Ti/16)
     """
@@ -637,7 +637,7 @@ def vit_tiny_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_tiny_patch16_384(pretrained=False, **kwargs):
     """ ViT-Tiny (Vit-Ti/16) @ 384x384.
     """
@@ -646,7 +646,7 @@ def vit_tiny_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch32_224(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/32)
     """
@@ -655,7 +655,7 @@ def vit_small_patch32_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch32_384(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/32) at 384x384.
     """
@@ -664,7 +664,7 @@ def vit_small_patch32_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch16_224(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/16)
     NOTE I've replaced my previous 'small' model definition and weights with the small variant from the DeiT paper
@@ -674,7 +674,7 @@ def vit_small_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch16_384(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/16)
     NOTE I've replaced my previous 'small' model definition and weights with the small variant from the DeiT paper
@@ -684,7 +684,7 @@ def vit_small_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch32_224(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k, source https://github.com/google-research/vision_transformer.
@@ -694,7 +694,7 @@ def vit_base_patch32_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base2_patch32_256(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/32)
     # FIXME experiment
@@ -704,7 +704,7 @@ def vit_base2_patch32_256(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch32_384(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 384x384, source https://github.com/google-research/vision_transformer.
@@ -714,7 +714,7 @@ def vit_base_patch32_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -724,7 +724,7 @@ def vit_base_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_384(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 384x384, source https://github.com/google-research/vision_transformer.
@@ -734,7 +734,7 @@ def vit_base_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch8_224(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/8) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -744,7 +744,7 @@ def vit_base_patch8_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch32_224(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929). No pretrained weights.
     """
@@ -753,7 +753,7 @@ def vit_large_patch32_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch32_384(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 384x384, source https://github.com/google-research/vision_transformer.
@@ -763,7 +763,7 @@ def vit_large_patch32_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch16_224(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -773,7 +773,7 @@ def vit_large_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch16_384(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/16) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-1k weights fine-tuned from in21k @ 384x384, source https://github.com/google-research/vision_transformer.
@@ -783,7 +783,7 @@ def vit_large_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_huge_patch14_224(pretrained=False, **kwargs):
     """ ViT-Huge model (ViT-H/14) from original paper (https://arxiv.org/abs/2010.11929).
     """
@@ -792,7 +792,7 @@ def vit_huge_patch14_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_giant_patch14_224(pretrained=False, **kwargs):
     """ ViT-Giant model (ViT-g/14) from `Scaling Vision Transformers` - https://arxiv.org/abs/2106.04560
     """
@@ -801,7 +801,7 @@ def vit_giant_patch14_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_gigantic_patch14_224(pretrained=False, **kwargs):
     """ ViT-Gigantic model (ViT-G/14) from `Scaling Vision Transformers` - https://arxiv.org/abs/2106.04560
     """
@@ -810,7 +810,7 @@ def vit_gigantic_patch14_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_tiny_patch16_224_in21k(pretrained=False, **kwargs):
     """ ViT-Tiny (Vit-Ti/16).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -821,7 +821,7 @@ def vit_tiny_patch16_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch32_224_in21k(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/16)
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -832,7 +832,7 @@ def vit_small_patch32_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch16_224_in21k(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/16)
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -843,7 +843,7 @@ def vit_small_patch16_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch32_224_in21k(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -855,7 +855,7 @@ def vit_base_patch32_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224_in21k(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -867,7 +867,7 @@ def vit_base_patch16_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch8_224_in21k(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/8) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -879,7 +879,7 @@ def vit_base_patch8_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch32_224_in21k(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -891,7 +891,7 @@ def vit_large_patch32_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_large_patch16_224_in21k(pretrained=False, **kwargs):
     """ ViT-Large model (ViT-L/16) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -903,7 +903,7 @@ def vit_large_patch16_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_huge_patch14_224_in21k(pretrained=False, **kwargs):
     """ ViT-Huge model (ViT-H/14) from original paper (https://arxiv.org/abs/2010.11929).
     ImageNet-21k weights @ 224x224, source https://github.com/google-research/vision_transformer.
@@ -915,7 +915,7 @@ def vit_huge_patch14_224_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224_sam(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/16) w/ SAM pretrained weights. Paper: https://arxiv.org/abs/2106.01548
     """
@@ -925,7 +925,7 @@ def vit_base_patch16_224_sam(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch32_224_sam(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/32) w/ SAM pretrained weights. Paper: https://arxiv.org/abs/2106.01548
     """
@@ -935,7 +935,7 @@ def vit_base_patch32_224_sam(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch16_224_dino(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/16) w/ DINO pretrained weights (no head) - https://arxiv.org/abs/2104.14294
     """
@@ -944,7 +944,7 @@ def vit_small_patch16_224_dino(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_small_patch8_224_dino(pretrained=False, **kwargs):
     """ ViT-Small (ViT-S/8) w/ DINO pretrained weights (no head) - https://arxiv.org/abs/2104.14294
     """
@@ -953,7 +953,7 @@ def vit_small_patch8_224_dino(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224_dino(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/16) /w DINO pretrained weights (no head) - https://arxiv.org/abs/2104.14294
     """
@@ -962,7 +962,7 @@ def vit_base_patch16_224_dino(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch8_224_dino(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/8) w/ DINO pretrained weights (no head) - https://arxiv.org/abs/2104.14294
     """
@@ -971,7 +971,7 @@ def vit_base_patch8_224_dino(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_tiny_patch16_224(pretrained=False, **kwargs):
     """ DeiT-tiny model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -981,7 +981,7 @@ def deit_tiny_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_small_patch16_224(pretrained=False, **kwargs):
     """ DeiT-small model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -991,7 +991,7 @@ def deit_small_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_base_patch16_224(pretrained=False, **kwargs):
     """ DeiT base model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1001,7 +1001,7 @@ def deit_base_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_base_patch16_384(pretrained=False, **kwargs):
     """ DeiT base model @ 384x384 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1011,7 +1011,7 @@ def deit_base_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_tiny_distilled_patch16_224(pretrained=False, **kwargs):
     """ DeiT-tiny distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1022,7 +1022,7 @@ def deit_tiny_distilled_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_small_distilled_patch16_224(pretrained=False, **kwargs):
     """ DeiT-small distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1033,7 +1033,7 @@ def deit_small_distilled_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_base_distilled_patch16_224(pretrained=False, **kwargs):
     """ DeiT-base distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1044,7 +1044,7 @@ def deit_base_distilled_patch16_224(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def deit_base_distilled_patch16_384(pretrained=False, **kwargs):
     """ DeiT-base distilled model @ 384x384 from paper (https://arxiv.org/abs/2012.12877).
     ImageNet-1k weights from https://github.com/facebookresearch/deit.
@@ -1055,7 +1055,7 @@ def deit_base_distilled_patch16_384(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224_miil_in21k(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     Weights taken from: https://github.com/Alibaba-MIIL/ImageNet21K
@@ -1065,7 +1065,7 @@ def vit_base_patch16_224_miil_in21k(pretrained=False, **kwargs):
     return model
 
 
-@register_model
+
 def vit_base_patch16_224_miil(pretrained=False, **kwargs):
     """ ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     Weights taken from: https://github.com/Alibaba-MIIL/ImageNet21K

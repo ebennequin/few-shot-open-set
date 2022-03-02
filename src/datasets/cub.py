@@ -10,7 +10,7 @@ from torchvision import transforms
 from tqdm import tqdm
 import json
 import numpy as np
-from .utils import get_normalize
+from .utils import get_transforms
 
 class CUB(VisionDataset):
     def __init__(
@@ -18,32 +18,9 @@ class CUB(VisionDataset):
         args,
         root: Path,
         split: str,
-        target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-        NORMALIZE = get_normalize(args)
-        self.target_transform = target_transform
-        self.transform = (
-            transforms.Compose(
-                [
-                    transforms.RandomResizedCrop(args.image_size),
-                    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    NORMALIZE
-
-                ]
-            )
-            if training
-            else transforms.Compose(
-                [
-                    transforms.Resize(int(args.image_size*256/224)),
-                    transforms.CenterCrop(args.image_size),
-                    transforms.ToTensor(),
-                    NORMALIZE
-                ]
-            )
-        )
+        self.transform = get_transforms(args)
 
         with open(root / 'images.txt', 'r') as f:
             image_list = f.readlines()
@@ -85,8 +62,8 @@ class CUB(VisionDataset):
         )
         img = self.load_image(img_path)
 
-        if self.target_transform is not None:
-            label = self.target_transform(label)
+        if self.get_transforms is not None:
+            label = self.get_transforms(label)
 
         return img, label
 

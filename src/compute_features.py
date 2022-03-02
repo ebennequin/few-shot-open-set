@@ -25,7 +25,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--layers", type=str, nargs='+')
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--image_size", type=int, default=84)
     parser.add_argument("--device", type=str, default="cuda")
 
     args = parser.parse_args()
@@ -42,8 +41,10 @@ def main(args):
     logger.info("Building model...")
     if args.model_source == 'url':
         weights = None
+        stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth" # used for saving features downstream
     else:
         weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        stem = weights.stem
     feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
     args.layers = feature_extractor.all_layers if args.layers == ['all'] else args.layers
     logger.warning(args.layers)
@@ -57,7 +58,7 @@ def main(args):
 
     # if output_file is None:
     for layer in features:
-        pickle_name = Path(weights.stem + f'_{layer}').with_suffix(f".pickle").name
+        pickle_name = Path(stem + f'_{layer}').with_suffix(f".pickle").name
         output_file = FEATURES_DIR / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
         output_file.parent.mkdir(parents=True, exist_ok=True)
 

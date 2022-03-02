@@ -9,17 +9,16 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from src.constants import (
-    BACKBONES,
-)
+from src.models import __dict__ as BACKBONES
 import os
 from types import SimpleNamespace
 from src.utils.data_fetchers import get_classic_loader
 from collections import OrderedDict, defaultdict
 import argparse
 import torch.distributed as dist
+from loguru import logger
 
-
+    
 def set_random_seed(seed: int):
     """
     Set random, numpy and torch random seed, for reproducibility of the training
@@ -135,10 +134,11 @@ def load_model(args, backbone: str, weights: Optional[Path], dataset_name: str,
             state_dict = strip_prefix(state_dict, "backbone.")
 
         missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
-        print(f"Loaded weights from {weights}")
-        print(f"Missing keys {missing_keys}")
-        print(f"Unexpected keys {unexpected}")
-        feature_extractor.eval()
+        logger.info(f"Loaded weights from {weights}")
+        logger.info(f"Missing keys {missing_keys}")
+        logger.info(f"Unexpected keys {unexpected}")
+        
+    feature_extractor.eval()
 
     return feature_extractor
 

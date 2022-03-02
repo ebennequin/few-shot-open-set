@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 import numpy as np
 import os.path as osp
-from .utils import get_normalize
+from .utils import get_transforms
 
 # class MiniImageNet(VisionDataset):
 #     """ Usage:
@@ -100,6 +100,7 @@ class MiniImageNet(VisionDataset):
     ):
 
         image_path = root / 'images'
+        transform = get_transforms(args)
         super(MiniImageNet, self).__init__(
             str(image_path), transform=transform, target_transform=target_transform
         )

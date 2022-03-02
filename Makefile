@@ -11,7 +11,7 @@ TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
 PREPOOL=trivial
 POSTPOOL=debiased_centering l2_norm
-LAYERS=last
+LAYERS=1
 COMBIN=1
 EXP=default
 RESOLUTION=84
@@ -151,7 +151,7 @@ run_snatcher:
 	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in classif; do \
+	for centering in transductive; do \
 		make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
 	done ;\
 # 	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\

@@ -63,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backbone", type=str, default="resnet18")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
-    parser.add_argument("--layers", type=str, nargs='+')
+    parser.add_argument("--layers", type=int)
 
     # Detector
     parser.add_argument("--outlier_detectors", type=str)
@@ -116,7 +116,7 @@ def main(args):
     set_random_seed(args.random_seed)
     save_dir = Path(os.path.join('results', args.exp_name))
     save_dir.mkdir(exist_ok=True, parents=True)
-    args.layers = [BACKBONES[args.backbone]().last_layer_name] if args.layers == ['last'] else args.layers
+    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers:]
 
     # logger.info(f"Dropping config file at {save_dir / 'config.json'}")
     # with open(save_dir / 'config.json', 'w') as f:

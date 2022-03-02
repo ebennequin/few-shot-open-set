@@ -83,18 +83,18 @@ def cheat_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     d = raw_feat_i.size(-1)
 
     for i in range(100):
-        with torch.no_grad():
-            unorm_feat_i = raw_feat_i - mu
-            feat_i = F.normalize(unorm_feat_i, dim=1)  # [?, d]
+        # with torch.no_grad():
+        unorm_feat_i = raw_feat_i - mu
+        feat_i = F.normalize(unorm_feat_i, dim=1)  # [?, d]
 
-            feat_o = raw_feat_o - mu
-            feat_o = F.normalize(feat_o, dim=1)  # [?, d]
+        feat_o = raw_feat_o - mu
+        feat_o = F.normalize(feat_o, dim=1)  # [?, d]
         
         sup = feat_s - mu
         sup = F.normalize(sup, dim=1)
         sup = sup.mean(0, keepdim=True)  # [1, d]
 
-        loss = - (feat_i @ sup.t()).sum() + (feat_o @ sup.t()).sum()
+        loss = (feat_o @ sup.t()).sum() #- (feat_i @ sup.t()).sum()
 
         # ======== Check derivative w.r.t z_i : OK ========
         # expected_grad_zi = - sup  # [N, d]
@@ -122,7 +122,7 @@ def cheat_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
         # assert real_grad.size() == analytical_grad.size()
         # logger.warning(f"{i}: {((real_grad - analytical_grad) ** 2).sum()}")
         optimizer.step()
-        logger.info(f"{i}: {loss.item()}")
+        # logger.info(f"{i}: {loss.item()}")
 
 
     mu = mu.detach()

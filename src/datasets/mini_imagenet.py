@@ -98,27 +98,7 @@ class MiniImageNet(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-        NORMALIZE = get_normalize(args)
-        transform = (
-            transforms.Compose(
-                [
-                    transforms.RandomResizedCrop(args.image_size),
-                    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    NORMALIZE,
-                ]
-            )
-            if training
-            else transforms.Compose(
-                [
-                    transforms.Resize(int(args.image_size*256/224)),
-                    transforms.CenterCrop(args.image_size),
-                    transforms.ToTensor(),
-                    NORMALIZE,
-                ]
-            )
-        )
+
         image_path = root / 'images'
         super(MiniImageNet, self).__init__(
             str(image_path), transform=transform, target_transform=target_transform

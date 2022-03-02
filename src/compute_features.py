@@ -40,7 +40,10 @@ def main(args):
                                                  batch_size=args.batch_size)
 
     logger.info("Building model...")
-    weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+    if args.model_source == 'url':
+        weights = None
+    else:
+        weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
     feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
     args.layers = feature_extractor.all_layers if args.layers == ['all'] else args.layers
     logger.warning(args.layers)

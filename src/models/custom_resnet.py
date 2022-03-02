@@ -4,9 +4,25 @@ import torch.nn.functional as F
 from typing import List
 from torch.distributions import Bernoulli
 import torch.distributed as dist
+import numpy as np
 # This ResNet network was designed following the practice of the following papers:
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
+
+
+def _cfg(url='', **kwargs):
+    return {
+        'input_size': (3, 84, 84),
+        'keep_prob': 1.0,
+        'mean': np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
+        'std':  np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]),
+        **kwargs
+    }
+
+
+default_cfgs = {
+    'resnet12': _cfg(),
+}
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -201,5 +217,5 @@ class ResNet(nn.Module):
 def resnet12(**kwargs):
     """Constructs a ResNet-12 model.
     """
-    model = ResNet(BasicBlock, keep_prob=1.0, avg_pool=False, **kwargs)
+    model = ResNet(BasicBlock, )
     return model

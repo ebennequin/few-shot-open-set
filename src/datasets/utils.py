@@ -1,13 +1,28 @@
 import numpy as np
 from torchvision import transforms
+from src.models import BACKBONE_CONFIGS
 
 
-def get_normalize(args):
-    if args.backbone == 'resnet12' and args.model_source == 'feat':
-        NORMALIZE = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422,  115.59361427, 104.54012653]]),
-                                         np.array([x / 255.0 for x in [70.68188272,   68.27635443,  72.54505529]]))
-    elif args.backbone == 'vitb16':
-        NORMALIZE = transforms.Normalize(0.5, 0.5)
+def get_transforms(args):
+
+    mean = BACKBONE_CONFIGS[args.backbone]['mean']
+    std = BACKBONE_CONFIGS[args.backbone]['std']
+    NORMALIZE = transforms.Normalize(mean, std)
+    image_size = BACKBONE_CONFIGS[args.backbone]['input_size'][-1]
+
+    if args.tgt_dataset == 'tiered_imagenet':
+        return transforms.Compose(
+            [
+                transforms.ToTensor(),
+                NORMALIZE,
+            ]
+        )
     else:
-        NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    return NORMALIZE
+        transforms.Compose(
+                [
+                    transforms.Resize(int(image_size*256/224)),
+                    transforms.CenterCrop(image_size),
+                    transforms.ToTensor(),
+                    NORMALIZE,
+                ]
+            )

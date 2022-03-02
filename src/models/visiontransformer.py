@@ -378,7 +378,7 @@ class VisionTransformer(nn.Module):
         if self.num_tokens == 2:
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x):
+    def forward_features(self, x, layers: List[str]):
         x = self.patch_embed(x)
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
         if self.dist_token is None:
@@ -386,12 +386,29 @@ class VisionTransformer(nn.Module):
         else:
             x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
         x = self.pos_drop(x + self.pos_embed)
-        x = self.blocks(x)
+        all_layers = {}
+        for i, block in enumerate(self.blocks):
+            x = block(x)  # [b, seq_length, d]
+
+            # Extracting layers
+
+            layer_name = f"{i}_map"
+            if layer_name in layers:
+                all_layers[layer_name] = x.detach()[:, 1:, :].mean(dim=1)
+
+            layer_name = f"{i}_cls"
+            if layer_name in layers:
+                all_layers[layer_name] = x.detach()[:, 0, :]
+
         x = self.norm(x)
-        if self.dist_token is None:
-            return self.pre_logits(x[:, 0])
-        else:
-            return x[:, 0], x[:, 1]
+        all_layers['last_map'] = x[:, 1:].mean(dim=1) # b,d
+        all_layers['last_cls'] = x[:, 0]  # b,d
+
+        return all_layers
+        # if self.dist_token is None:
+        #     return self.pre_logits(x[:, 0])
+        # else:
+        #     return x[:, 0], x[:, 1]
 
     # def forward(self, x, layers):
     #     """Breaks image into patches, applies transformer, applies MLP head.

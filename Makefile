@@ -128,16 +128,18 @@ run_scratch:
 
 extract_standard:
 	# Extract for RN and WRN
-	for tgt_dataset in mini_imagenet; do \
+	for tgt_dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
-			make BACKBONE=$${backbone} LAYERS='all' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
-	# Extract for ViT
-# 	for tgt_dataset in cub aircraft mini_imagenet; do \
-# 		make BACKBONE=vitb16 LAYERS='all' MODEL_SRC='luke' MISC_ARG='image_size' MISC_VAL='224' \
-# 			SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} extract ;\
-# 	done ;\
+
+	# Extract for cross-domain
+	for tgt_dataset in cub air; do \
+		for backbone in resnet12; do \
+			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
+	done ;\
 
 
 

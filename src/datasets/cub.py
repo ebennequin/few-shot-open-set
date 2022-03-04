@@ -62,9 +62,6 @@ class CUB(VisionDataset):
         )
         img = self.load_image(img_path)
 
-        if self.get_transforms is not None:
-            label = self.get_transforms(label)
-
         return img, label
 
     def load_image(self, filename):

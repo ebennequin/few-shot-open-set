@@ -1,5 +1,4 @@
 import inspect
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -58,46 +57,6 @@ class AbstractFewShotMethod(nn.Module):
             * F.normalize(samples, dim=1)
             @ F.normalize(self.prototypes, dim=1).T
         )
-
-    def transform_features(self, support_features: Tensor, query_features: Tensor,
-                           support_labels: Tensor, query_labels: Tensor, outliers: Tensor,
-                           figures: Dict):
-        """
-        Performs an (optional) normalization of feature maps, then average pooling, then another (optional) normalization
-        """
-        # Pre-pooling transforms
-        for layer in support_features:
-            for transf in self.prepool_transforms:
-                support_features[layer], query_features[layer] = ALL_FEATURE_TRANSFORMS[transf](
-                                                                    support_features[layer],
-                                                                    query_features[layer],
-                                                                    average_train_features=self.average_train_features[layer],
-                                                                    std_train_features=self.std_train_features[layer],
-                                                                    support_labels=support_labels,
-                                                                    query_labels=query_labels,
-                                                                    outliers=outliers,
-                                                                    figures=figures)
-
-            # Average pooling
-            if self.pool:
-                if len(support_features[layer].size()) > 2:
-                    support_features[layer], query_features[layer] = support_features[layer].mean((-2, -1)), query_features[layer].mean((-2, -1))
-
-                # Post-pooling transforms
-                for transf in self.postpool_transforms:
-                    support_features[layer], query_features[layer] = ALL_FEATURE_TRANSFORMS[transf](
-                                                                        support_features[layer],
-                                                                        query_features[layer],
-                                                                        average_train_features=self.average_train_features[layer],
-                                                                        std_train_features=self.std_train_features[layer],
-                                                                        support_labels=support_labels,
-                                                                        query_labels=query_labels,
-                                                                        outliers=outliers,
-                                                                        figures=figures)
-
-        # support_features, query_features = ALL_AGGREG[self.aggreg](support_features, query_features)
-        
-        return support_features, query_features
 
     @classmethod
     def from_cli_args(cls, args, average_train_features, std_train_features):

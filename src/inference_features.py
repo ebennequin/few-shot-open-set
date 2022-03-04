@@ -21,6 +21,7 @@ import inspect
 import yaml
 import numpy as np
 import itertools
+from typing import Tuple
 from pathlib import Path
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.detectors import ALL_DETECTORS
@@ -75,10 +76,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--inference_lr", type=float, default=1e-3,
                         help="Learning rate used for methods that perform \
                         gradient-based inference.")
-
-    parser.add_argument("--prepool_transforms", type=str, nargs='+',
-                        default=['trivial'], help="What type of transformation to apply before spatial pooling.")
-    parser.add_argument("--postpool_transforms", nargs='+', type=str, default=['l2_norm'],
+    parser.add_argument("--transforms", nargs='+', type=str, default=['l2_norm'],
                         help="What type of transformation to apply after spatial pooling.")
     parser.add_argument("--aggreg", type=str, default='concat',
                         help="What type of transformation to apply after spatial pooling.")
@@ -91,7 +89,7 @@ def parse_args() -> argparse.Namespace:
                         help="Name the experiment for easy grouping.")
     parser.add_argument("--general_hparams", type=str, nargs='+',
                         default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
-                                 'inference_method', 'n_way', 'n_shot', 'prepool_transforms', 'postpool_transforms'],
+                                 'inference_method', 'n_way', 'n_shot', 'transforms'],
                         help="Important params that will appear in .csv result file.",)
     parser.add_argument("--simu_hparams", type=str, nargs='*', default=[],
                         help="Important params that will appear in .csv result file.")
@@ -100,7 +98,7 @@ def parse_args() -> argparse.Namespace:
     # Tuning
     parser.add_argument("--combination_size", type=int, default=2)
     parser.add_argument("--mode", type=str, default='benchmark')
-    parser.add_argument("--debug", action='store_true')
+    parser.add_argument("--debug", type=str2bool)
 
     args = parser.parse_args()
 
@@ -173,9 +171,9 @@ def main(args):
         # For each detector type, create all relevant detectors
         detectors_to_try = defaultdict(list)
         for x in current_detectors:
-            detector_args = eval(f'args.{x}.current_params')[args.n_shot]  # take default args
-            params2tune = eval(f'args.{x}.tuning.hparams2tune')
-            values2tune = eval(f'args.{x}.tuning.hparam_values')[args.n_shot]
+            detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
+            params2tune = eval(f'args.detectors.{x}.tuning.hparams2tune')
+            values2tune = eval(f'args.detectors.{x}.tuning.hparam_values')[args.n_shot]
             values_combinations = itertools.product(*values2tune)
             for some_combin in values_combinations:
                 # Override default args
@@ -206,6 +204,7 @@ def main(args):
             outlier_detectors = ALL_DETECTORS['aggregator'](d_sequence)
 
             metrics = detect_outliers(layers=args.layers,
+                                      transforms=transforms,
                                       few_shot_classifier=few_shot_classifier,
                                       detector=outlier_detectors,
                                       data_loader=data_loader,
@@ -240,9 +239,10 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
+def detect_outliers(layers, transforms, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
 
     metrics = defaultdict(list)
+    intra_task_metrics = defaultdict(list)
     figures = {}
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
 
@@ -259,23 +259,27 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
             query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
         # ====== Transforming features ======
-        if task_id == 0:
-            tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'pre_norm')
-        support_features, query_features = few_shot_classifier.transform_features(support_features.copy(),
-                                                                                  query_features.copy(),
-                                                                                  support_labels,
-                                                                                  query_labels,
-                                                                                  outliers,
-                                                                                  figures)
-        if task_id == 0:
-            tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'post_norm')
+        # if task_id == 0:
+        #     tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'pre_norm')
+        for layer in support_features:
+            support_features[layer], query_features[layer] = transforms(
+                      support_features[layer],
+                      query_features[layer],
+                      support_labels,
+                      query_labels,
+                      outliers,
+                      intra_task_metrics,
+                      figures)
+        # if task_id == 0:
+        #     tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'post_norm')
 
         # ====== OOD detection ======
         outlier_scores = []
         for layer in support_features:
             detector.fit(support_features[layer], support_labels)
             raw_scores = torch.from_numpy(detector.decision_function(support_features[layer], query_features[layer]))
-            outlier_scores.append((raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min()))  # [?,]
+            outlier_scores.append(raw_scores)
+            # outlier_scores.append((raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min()))  # [?,]
         outlier_scores = torch.stack(outlier_scores, 0).mean(0)
 
         # ====== Few-shot classifier ======
@@ -297,14 +301,52 @@ def detect_outliers(layers, few_shot_classifier, detector, data_loader, n_way, n
     for metric_name in metrics:
         metrics[metric_name] = torch.Tensor(metrics[metric_name])
 
-    # Save figures
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
+    for metric_name, values in intra_task_metrics.items():
+        array = np.array(values)
+        assert len(array.shape) == 2
+        m, pm = compute_confidence_interval(array, ignore_value=255)
+        fig = plt.Figure((10, 10), dpi=200)
+        ax = plt.gca()
+        if array.shape[0] == 1:
+            ax.scatter([0], m, c='r')
+        else:
+            x = np.arange(len(m))
+            ax.plot(m)
+            ax.fill_between(x, m - pm, m + pm, alpha=0.5)
+        plt.savefig(res_root / f'{metric_name}.png')
+        plt.clf()
+
+
+    # Save figures
     for title, fig in figures.items():
         fig.savefig(res_root / f'{title}.png')
     return metrics
 
 
+def compute_confidence_interval(data: np.ndarray, axis=0, ignore_value=None,) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute 95% confidence interval
+    :param data: An array of mean accuracy (or mAP) across a number of sampled episodes.
+    :return: the 95% confidence interval for this data.
+    """
+    assert len(data)
+    if ignore_value is None:
+        valid = np.ones_like(data)
+    else:
+        valid = (data != ignore_value)
+    m = np.sum(data * valid, axis=axis, keepdims=True) / valid.sum(axis=axis, keepdims=True)
+    # np.mean(data, axis=axis)
+    std = np.sqrt(((data - m) ** 2 * valid).sum(axis=axis) / valid.sum(axis=axis))
+    # std = np.std(data, axis=axis)
+
+    pm = 1.96 * (std / np.sqrt(valid.sum(axis=axis)))
+
+    m = np.squeeze(m).astype(np.float64)
+    pm = pm.astype(np.float64)
+
+    return m, pm
 if __name__ == "__main__":
     args = parse_args()
     main(args)

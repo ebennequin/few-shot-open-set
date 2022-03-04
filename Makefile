@@ -9,8 +9,7 @@ DATADIR=data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
-PREPOOL=trivial
-POSTPOOL=debiased_centering l2_norm
+TRANSFORMS=debiased_centering l2_norm
 LAYERS=1
 COMBIN=1
 EXP=default
@@ -41,8 +40,7 @@ train:
 		        --inference_method SimpleShot \
 		        --n_tasks 500 \
 		        --n_shot $${shot} \
-		        --prepool_transform  $(PREPOOL) \
-		        --postpool_transform  $(POSTPOOL) \
+		        --transforms  $(TRANSFORMS) \
 		        --pool \
 		        --backbone $(BACKBONE) \
 		        --dataset $${dataset} \
@@ -78,8 +76,7 @@ run:
 			        --n_shot $${shot} \
 			        --layers $(LAYERS) \
 			        --outlier_detectors $${detector} \
-			        --prepool_transform  $(PREPOOL) \
-			        --postpool_transform  $(POSTPOOL) \
+			        --transforms  $(TRANSFORMS) \
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
@@ -92,7 +89,8 @@ run:
 			        --combination_size $(COMBIN) \
 			        --$(MISC_ARG) $(MISC_VAL) \
 			        --override $(OVERRIDE) \
-			        --mode $(MODE) ;\
+			        --mode $(MODE) \
+			        --debug $(DEBUG) ;\
 		    done ;\
 		done ;\
 	done ;\
@@ -110,8 +108,7 @@ run_scratch:
 			        --layers $(LAYERS) \
 			        --image_size $(RESOLUTION) \
 			        --outlier_detectors $${detector} \
-			        --prepool_transform  $(PREPOOL) \
-			        --postpool_transform  $(POSTPOOL) \
+			        --transforms  $(TRANSFORMS) \
 			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
@@ -128,16 +125,16 @@ run_scratch:
 
 extract_standard:
 	# Extract for RN and WRN
-	for tgt_dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12; do \
-			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
+# 	for tgt_dataset in mini_imagenet tiered_imagenet; do \
+# 		for backbone in resnet12; do \
+# 			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
 
 	# Extract for cross-domain
-	for tgt_dataset in cub air; do \
-		for backbone in resnet12; do \
-			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+	for tgt_dataset in cub aircraft; do \
+		for backbone in resnet12 efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+			make BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
@@ -150,22 +147,22 @@ extract_snatcher:
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 run_snatcher:
-	make PREPOOL=trivial POSTPOOL=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
+	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in transductive; do \
-		make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
+	for centering in alternate; do \
+		make TRANSFORMS="$${centering}_centering l2_norm" run ;\
 	done ;\
-# 	make PREPOOL=trivial POSTPOOL="l2_norm" run ;\
+# 	make TRANSFORMS="l2_norm" run ;\
 # 	for centering in base debiased tarjan transductive kcenter; do \
 
 # ========== Experiments ===========
 
 benchmark:
-	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12 wrn2810; do \
-			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
-# 			make EXP=benchmark PREPOOL=trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
+	for dataset in tiered_imagenet; do \
+		for backbone in resnet12; do \
+			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
+# 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
 	done ;\
 
@@ -201,7 +198,7 @@ nquery_influence:
 plot_benchmark:
 	for backbone in wrn2810 resnet12; do \
 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-			python -m src.plots.csv_plotter --exp benchmark --groupby postpool_transforms --plot_versus n_shot \
+			python -m src.plots.csv_plotter --exp benchmark --groupby transformss --plot_versus n_shot \
 				--filters outlier_detectors=knn backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 		done ;\
 	done ;\
@@ -209,7 +206,7 @@ plot_benchmark:
 plot_cross_domain:
 	for backbone in wrn2810 resnet12 vitb16; do \
 		for shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp cross_domain --groupby postpool_transforms --plot_versus tgt_dataset \
+			python -m src.plots.csv_plotter --exp cross_domain --groupby transformss --plot_versus tgt_dataset \
 				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
 		done ;\
 	done ;\
@@ -217,7 +214,7 @@ plot_cross_domain:
 plot_imbalance:
 	for backbone in wrn2810 resnet12; do \
 		for  shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp imbalance --groupby postpool_transforms --plot_versus alpha \
+			python -m src.plots.csv_plotter --exp imbalance --groupby transformss --plot_versus alpha \
 				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
 		done ;\
 	done ;\
@@ -225,7 +222,7 @@ plot_imbalance:
 plot_nquery:
 	for backbone in wrn2810 resnet12; do \
 		for  shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp n_query --groupby postpool_transforms --plot_versus n_query \
+			python -m src.plots.csv_plotter --exp n_query --groupby transformss --plot_versus n_query \
 				--filters n_shot=$${shot} outlier_detectors=knn backbone=$${backbone} ;\
 		done ;\
 	done ;\

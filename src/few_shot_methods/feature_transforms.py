@@ -7,6 +7,7 @@ import torch.nn as nn
 import numpy as np
 from tarjan import tarjan
 import networkx as nx
+from sklearn.cluster import DBSCAN, OPTICS
 import matplotlib.pyplot as plt
 
 
@@ -24,6 +25,102 @@ def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
 
 
+def alternate_centering(feat_s: Tensor, feat_q: Tensor, lambda_=1.0, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    # mu = kwargs['average_train_features'].squeeze()
+    mu = torch.zeros(1, feat_s.size(-1))
+    mu.requires_grad_()
+    optimizer = torch.optim.SGD([mu], lr=1.0)
+    # cos = torch.nn.CosineSimilarity(dim=-1)
+
+    raw_feat_s = feat_s.clone()
+    raw_feat_q = feat_q.clone()
+
+    loss_values = []
+
+    for i in range(10):
+
+        # 1 --- Find potential outliers
+
+        feat_s = F.normalize(raw_feat_s - mu, dim=1)
+        feat_q = F.normalize(raw_feat_q - mu, dim=1)
+        # prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+
+        similarities = feat_q @ feat_s.mean(0, keepdim=True).t()  # [N, 1]
+        outlierness = (-lambda_ * similarities).detach().sigmoid()  # [N, 1]
+
+        # 2 --- Update mu
+        loss = (outlierness * similarities).mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        loss_values.append(loss.item())
+
+    # kwargs['intra_task_metrics']['outlier_prec'].append(outlier_prec)
+    # kwargs['intra_task_metrics']['inlier_prec'].append(inlier_prec)
+    kwargs['intra_task_metrics']['loss'].append(loss_values)
+    return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()
+
+
+def sgd_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    mu = kwargs['average_train_features'].squeeze()
+    mu.requires_grad_()
+    optimizer = torch.optim.SGD([mu], lr=0.1)
+    # cos = torch.nn.CosineSimilarity(dim=-1)
+
+    raw_feat_s = feat_s.clone()
+    raw_feat_q = feat_q.clone()
+
+    outlier_prec = []
+    inlier_prec = []
+    loss_values = []
+
+    for i in range(10):
+
+        # 1 --- Find potential outliers
+
+        feat_s = F.normalize(raw_feat_s - mu, dim=1)
+        feat_q = F.normalize(raw_feat_q - mu, dim=1)
+        prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+
+        with torch.no_grad():
+            similarity = (2 - torch.cdist(feat_q, prototypes)) / 2  # [N, K]
+            potentiel_outliers = similarity.max(-1).values < 0.5  # [N]
+            potentiel_inliers = similarity.max(-1).values > 0.7  # [N]
+        if potentiel_outliers.sum():
+            outlier_prop = kwargs['outliers'][potentiel_outliers].float().mean().item()
+            outlier_prec.append(outlier_prop)
+        else:
+            outlier_prec.append(255)
+        if potentiel_inliers.sum():
+            inlier_prop = (1 - kwargs['outliers'][potentiel_inliers]).float().mean().item()
+            inlier_prec.append(inlier_prop)
+        else:
+            inlier_prec.append(255)
+
+        # 2 --- Update mu
+        # inliers = torch.cat([feat_s, feat_q[potentiel_inliers]], 0)
+        if potentiel_outliers.sum():
+            loss = (feat_q[potentiel_outliers] @ feat_s.t()).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_values.append(loss.item())
+        else:
+            loss_values.append(255)
+
+
+    kwargs['intra_task_metrics']['outlier_prec'].append(outlier_prec)
+    kwargs['intra_task_metrics']['inlier_prec'].append(inlier_prec)
+    kwargs['intra_task_metrics']['loss'].append(loss_values)
+    return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()
+
+
 def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]
@@ -33,26 +130,6 @@ def debiased_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
     nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
     farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 4))).indices.squeeze()
     mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
-    assert len(mean.size()) == 2, mean.size()
-    return feat_s - mean, feat_q - mean
-
-
-def classif_centering(feat_s: Tensor, feat_q: Tensor, **kwargs):
-    """
-    feat: Tensor shape [N, hidden_dim, *]
-    """
-
-    # Assessing if this is even achievable
-    # all_feats = torch.cat([feat_s, feat_q], 0)
-    # all_labels = torch.cat([kwargs['support_labels'], kwargs['query_labels']], 0)
-    # prototypes = compute_prototypes(all_feats, all_labels)  # [K, d]
-    # mean = prototypes.mean(0, keepdim=True)  # [1, d]
-
-    # all_feats = torch.cat([feat_s, feat_q], 0)
-    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
-    nodes_degrees = - torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-    closed_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // 2))).indices.squeeze()
-    mean = torch.cat([prototypes, feat_q[closed_points]], 0).mean(0, keepdim=True)
     assert len(mean.size()) == 2, mean.size()
     return feat_s - mean, feat_q - mean
 
@@ -304,6 +381,37 @@ def k_center(feats: Tensor, init_indexes: np.ndarray, k: int):
     return feats[centers_locations]
 
 
+def dbscan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
+    prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+
+    intra_class_distances = []
+    multi_shot = feat_s.size(0) > 5
+    if multi_shot:
+        for i, label in enumerate(kwargs["support_labels"].unique()):
+            assert i == label, (i, label)
+            relevant_feats = feat_s[kwargs["support_labels"] == label]
+            intra_dist = torch.cdist(prototypes[i].unsqueeze(0), relevant_feats).squeeze()
+            intra_class_distances.append(intra_dist)
+        intra_class_distances = torch.cat(intra_class_distances)
+        eps = intra_class_distances.mean().item()
+    else:
+        inter_class_distances = torch.cdist(feat_s, feat_s)
+        # eps = inter_class_distances.min().item() / 2
+        n_terms = feat_s.size(0) * (feat_s.size(0) - 1) / 2
+        eps = inter_class_distances.triu(diagonal=1).sum().item() / n_terms
+
+    # logger.warning(eps)
+    all_feats = torch.cat([feat_q], 0)
+    db = DBSCAN(max_eps=eps, min_samples=5).fit(all_feats.numpy())
+    labels = db.labels_
+    centers = [prototypes]
+    logger.warning(labels)
+    for label in np.unique(labels):
+        centers.append(all_feats[labels == label].mean(0, keepdim=True))
+    mean = torch.cat(centers, axis=0).mean(0, keepdim=True)
+    return feat_s - mean, feat_q - mean
+
+
 def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
 
     # Create affinity matrix
@@ -344,11 +452,6 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
         trimmed_indexes.append(row[acceptable_indexes])
     knn_indexes = trimmed_indexes
 
-    # Strongly connected components
-
-    # graph = {i: array.tolist() for i, array in enumerate(knn_indexes)}
-    # connected_components = tarjan(graph)
-
     # Create and fill graph
 
     G = nx.DiGraph()
@@ -360,9 +463,12 @@ def tarjan_centering(feat_s: Tensor, feat_q: Tensor, knn: int = 1, **kwargs):
     connected_components = [list(x) for x in nx.weakly_connected_components(G)]
 
     centers = [prototypes]
+    supposed_inliers = []
+    supposed_labels = []
     for group in connected_components:
         if any([i in group for i in range(len(prototypes))]):  # we remove components that already contain prototypes
-            continue
+            supposed_inliers.append(all_feats[group])
+            support_labels.append([])
         else:
             centers.append(all_feats[group].mean(0, keepdim=True))
     centers = torch.cat(centers, 0)

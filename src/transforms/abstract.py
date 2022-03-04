@@ -10,28 +10,42 @@ from tarjan import tarjan
 import networkx as nx
 from sklearn.cluster import DBSCAN, OPTICS
 import matplotlib.pyplot as plt
+from typing import List
 
 
-class FeatureTransform(nn.Module):
+class FeatureTransform:
 
     @classmethod
-    def from_cli_args(cls, args, average_train_features, std_train_features):
+    def from_cli_args(cls, args):
         signature = inspect.signature(cls.__init__)
         return cls(
             **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()},
-            average_train_features=average_train_features,
-            std_train_features=std_train_features
         )
+
+    def __call__(self, feat_s, feat_q, **kwargs):
+        raise NotImplementedError
+
+
+class SequentialTransform(FeatureTransform):
+
+    def __init__(self, transform_list: List[FeatureTransform]):
+        self.transform_list = transform_list
+
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+        for transf in self.transform_list:
+            feat_s, feat_q = transf(feat_s, feat_q, **kwargs)
+        return feat_s, feat_q
 
 
 class AlternateCentering(FeatureTransform):
 
     def __init__(self, lambda_: float, lr: float, n_iter: int):
+        super().__init__()
         self.lambda_ = lambda_
         self.lr = lr
         self.n_iter = n_iter
 
-    def forward(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
@@ -70,10 +84,11 @@ class AlternateCentering(FeatureTransform):
 
 class BaseCentering(FeatureTransform):
 
-    def forward(feat_s: Tensor, feat_q: Tensor, average_train_features: Tensor, **kwargs):
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
+        average_train_features: Tensor = kwargs['train_mean']
         # average_train_features = average_train_features.unsqueeze(0)
         if len(average_train_features.size()) > len(feat_s.size()):
             mean = average_train_features.squeeze(-1).squeeze(-1)
@@ -83,9 +98,10 @@ class BaseCentering(FeatureTransform):
             mean = average_train_features
         return (feat_s - mean), (feat_q - mean)
 
+
 class L2norm(FeatureTransform):
 
-    def forward(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
@@ -94,7 +110,7 @@ class L2norm(FeatureTransform):
 
 class Pool(FeatureTransform):
 
-    def forward(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
@@ -106,7 +122,7 @@ class DebiasedCentering(FeatureTransform):
     def __init__(self, ratio: float):
         self.ratio = ratio
 
-    def forward(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """

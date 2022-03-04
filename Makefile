@@ -9,7 +9,7 @@ DATADIR=data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
-TRANSFORMS=debiased_centering l2_norm
+TRANSFORMS="Pool L2norm"
 LAYERS=1
 COMBIN=1
 EXP=default
@@ -40,7 +40,7 @@ train:
 		        --inference_method SimpleShot \
 		        --n_tasks 500 \
 		        --n_shot $${shot} \
-		        --transforms  $(TRANSFORMS) \
+		        --feature_transforms  $(TRANSFORMS) \
 		        --pool \
 		        --backbone $(BACKBONE) \
 		        --dataset $${dataset} \
@@ -76,9 +76,7 @@ run:
 			        --n_shot $${shot} \
 			        --layers $(LAYERS) \
 			        --outlier_detectors $${detector} \
-			        --transforms  $(TRANSFORMS) \
-			        --pool \
-			        --aggreg l2_bar \
+			        --feature_transforms  $(TRANSFORMS) \
 			        --backbone $(BACKBONE) \
 			        --model_source $(MODEL_SRC) \
 			        --balanced $(BALANCED) \
@@ -109,7 +107,6 @@ run_scratch:
 			        --image_size $(RESOLUTION) \
 			        --outlier_detectors $${detector} \
 			        --transforms  $(TRANSFORMS) \
-			        --pool \
 			        --aggreg l2_bar \
 			        --backbone $(BACKBONE) \
 			        --model_source feat \
@@ -150,8 +147,8 @@ run_snatcher:
 	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in alternate; do \
-		make TRANSFORMS="$${centering}_centering l2_norm" run ;\
+	for centering in Alternate; do \
+		make TRANSFORMS="Pool $${centering}Centering L2norm" run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\
 # 	for centering in base debiased tarjan transductive kcenter; do \

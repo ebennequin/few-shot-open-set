@@ -4,8 +4,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple, List, Dict
-from .feature_transforms import __dict__ as ALL_FEATURE_TRANSFORMS
-from .aggregations import __dict__ as ALL_AGGREG
 
 
 class AbstractFewShotMethod(nn.Module):
@@ -15,20 +13,14 @@ class AbstractFewShotMethod(nn.Module):
 
     def __init__(
         self,
-        prepool_transforms: List[str],
-        postpool_transforms: List[str],
-        pool: bool,
         average_train_features: Tensor,
         std_train_features: Tensor,
         softmax_temperature: float = 1.0,
     ):
         super().__init__()
         self.softmax_temperature = softmax_temperature
-        self.prepool_transforms = prepool_transforms
-        self.postpool_transforms = postpool_transforms
         self.average_train_features = average_train_features
         self.std_train_features = std_train_features
-        self.pool = pool
         self.prototypes: Tensor
 
     def forward(

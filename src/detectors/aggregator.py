@@ -1,11 +1,13 @@
 import numpy as np
 from src.detectors import AbstractDetector
 import inspect
+from typing import List
 
 
 class NaiveAggregator(AbstractDetector):
 
-    def __init__(self, detectors):
+    def __init__(self, detectors: List[AbstractDetector]):
+        assert isinstance(detectors, List), detectors
         self.detectors = detectors
         self.standardize = False
 

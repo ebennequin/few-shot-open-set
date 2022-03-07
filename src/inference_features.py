@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
+    parser.add_argument("--data_dir", type=Path)
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_query", type=int, default=10)
@@ -131,7 +132,7 @@ def main(args):
     train_std = {}
     for i, layer in enumerate(args.layers):
         features, _, train_mean[i], train_std[i] = get_test_features(
-            args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
+            args.data_dir, args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
         )
         for class_ in features:
             feature_dic[class_.item()][layer] = features[class_]
@@ -183,10 +184,10 @@ def main(args):
 
             for aggreg_transform in all_transforms:
 
+                set_random_seed(args.random_seed)
                 logger.info(aggreg_detector.detectors)
                 logger.info(aggreg_transform.transform_list)
 
-                set_random_seed(args.random_seed)
                 args.current_sequence = str(aggreg_detector.detectors) + str(aggreg_transform.transform_list)
 
                 metrics = detect_outliers(layers=args.layers,

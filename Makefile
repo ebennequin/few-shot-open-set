@@ -1,11 +1,11 @@
 
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
+USER=malik
 
 # Simu options
-DATADIR=data
+DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
@@ -70,7 +70,7 @@ run:
 			for shot in $(SHOTS); do \
 			    python3 -m src.inference_features \
 			        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${dataset}/$(BACKBONE)'($(MODEL_SRC))'/$${shot} \
-			        --mode 'tune' \
+			        --data_dir $(DATADIR) \
 			        --inference_method SimpleShot \
 			        --n_tasks $(N_TASKS) \
 			        --n_shot $${shot} \
@@ -147,7 +147,7 @@ run_snatcher:
 	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in Alternate; do \
+	for centering in Entropic Alternate; do \
 		make TRANSFORMS="Pool $${centering}Centering L2norm" run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\

@@ -171,11 +171,13 @@ def get_train_features(backbone, dataset, training_method, layer, path: Optional
     return average_train_features, std_train_features
 
 
-def get_test_features(backbone, src_dataset, tgt_dataset, training_method, model_source,
+def get_test_features(data_dir, backbone, src_dataset, tgt_dataset, training_method, model_source,
                       layer, path: Optional[Path] = None) -> Tuple[Dict, Dict, ndarray]:
+    if not isinstance(data_dir, Path):
+        data_dir = Path(data_dir)
     pickle_basename = f"{backbone}_{src_dataset}_{model_source}_{layer}.pickle"
-    features_path = Path("data/features") / src_dataset / tgt_dataset / "test" / training_method / pickle_basename
-    avg_train_features_path = Path("data/features") / src_dataset / tgt_dataset / "train" / training_method / pickle_basename
+    features_path = data_dir / "features" / src_dataset / tgt_dataset / "test" / training_method / pickle_basename
+    avg_train_features_path = data_dir / "features" / src_dataset / tgt_dataset / "train" / training_method / pickle_basename
     logger.info(f"Loading features from {features_path}")
 
     with open(features_path, "rb") as stream:

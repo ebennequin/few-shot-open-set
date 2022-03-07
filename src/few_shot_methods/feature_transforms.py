@@ -25,6 +25,46 @@ def l2_norm(feat_s: Tensor, feat_q: Tensor, **kwargs):
     return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
 
 
+def entropic_centering(feat_s: Tensor, feat_q: Tensor, lambda_=1.0, **kwargs):
+    """
+    feat: Tensor shape [N, hidden_dim, *]
+    """
+    # mu = kwargs['average_train_features'].squeeze()
+    mu = torch.zeros(1, feat_s.size(-1))
+    mu.requires_grad_()
+    optimizer = torch.optim.SGD([mu], lr=1.0)
+    # cos = torch.nn.CosineSimilarity(dim=-1)
+
+    raw_feat_s = feat_s.clone()
+    raw_feat_q = feat_q.clone()
+
+    loss_values = []
+
+    for i in range(10):
+
+        # 1 --- Find potential outliers
+
+        feat_s = F.normalize(raw_feat_s - mu, dim=1)
+        feat_q = F.normalize(raw_feat_q - mu, dim=1)
+        # prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+
+        similarities = feat_q @ (feat_s.mean(0, keepdim=True).t())  # [N, 1]
+        outlierness = (-lambda_ * similarities).sigmoid()  # [N, 1]
+        p_outlier = torch.cat([outlierness, 1 - outlierness], dim=1) 
+        entropy = - (p_outlier * torch.log(p_outlier + 1e-10)).sum(-1).mean()
+
+        # 2 --- Update mu
+        optimizer.zero_grad()
+        entropy.backward()
+        optimizer.step()
+        loss_values.append(entropy.item())
+
+    # kwargs['intra_task_metrics']['outlier_prec'].append(outlier_prec)
+    # kwargs['intra_task_metrics']['inlier_prec'].append(inlier_prec)
+    kwargs['intra_task_metrics']['entropy'].append(loss_values)
+    return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()
+
+
 def alternate_centering(feat_s: Tensor, feat_q: Tensor, lambda_=1.0, **kwargs):
     """
     feat: Tensor shape [N, hidden_dim, *]

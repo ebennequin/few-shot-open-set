@@ -148,28 +148,43 @@ def main(args):
     ][0].from_cli_args(args)
 
     detector_names = args.outlier_detectors.split('-')
+    transform_names = args.feature_transforms
 
     if args.mode == 'benchmark':
 
         # ================ Prepare detector ===================
 
         detectors = []
+        transforms = []
         for x in detector_names:
-            detector_args = eval(f'args.{x}.current_params')[args.n_shot]  # take default args
+            detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
             if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
                 detector_args['args'] = args
             detectors.append(ALL_DETECTORS[x](**detector_args))
-        args.current_sequence = [str(x) for x in detectors]
         outlier_detector = ALL_DETECTORS['aggregator'](detectors)
+        for x in transform_names:
+            if x in vars(args.transforms):
+                transform_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
+                transforms.append(TRANSFORMS[x](**transform_args))
+            else:
+                transforms.append(TRANSFORMS[x]())
+        transforms = TRANSFORMS['SequentialTransform'](transforms)
+
+        logger.info(outlier_detector.detectors)
+        logger.info(transforms.transform_list)
+
+        args.current_sequence = str(outlier_detector.detectors) + str(transforms.transform_list)
+
         metrics = detect_outliers(layers=args.layers,
+                                  transforms=transforms,
+                                  train_mean=train_mean,
+                                  train_std=train_std,
                                   few_shot_classifier=few_shot_classifier,
                                   detector=outlier_detector,
                                   data_loader=data_loader,
                                   n_way=args.n_way,
                                   n_query=args.n_query,
-                                  on_features=True,
-                                  train_mean=train_mean,
-                                  train_std=train_std)
+                                  on_features=True)
         # Saving results
         save_results(args, metrics)
 
@@ -178,7 +193,7 @@ def main(args):
         # For each detector type, create all relevant detectors
 
         detectors_to_try = get_all_detectors(detector_names)
-        all_transforms = get_all_transforms(args.feature_transforms)
+        all_transforms = get_all_transforms(transform_names)
 
         for aggreg_detector in detectors_to_try:
 

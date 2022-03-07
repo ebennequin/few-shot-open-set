@@ -24,7 +24,7 @@ OVERRIDE=True
 MODE=tune
 
 # Tasks
-N_TASKS=5000
+N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
 MISC_ARG=alpha
@@ -156,7 +156,7 @@ run_centering:
 # ========== Experiments ===========
 
 benchmark:
-	for dataset in tiered_imagenet; do \
+	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
 # 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\

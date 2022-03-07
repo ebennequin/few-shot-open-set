@@ -15,6 +15,9 @@ from typing import List
 
 class FeatureTransform:
 
+    def __init__(self):
+        pass
+
     @classmethod
     def from_cli_args(cls, args):
         signature = inspect.signature(cls.__init__)
@@ -24,6 +27,22 @@ class FeatureTransform:
 
     def __call__(self, feat_s, feat_q, **kwargs):
         raise NotImplementedError
+
+    def __str__(self):
+        arg_names = list(inspect.signature(self.__init__).parameters)
+        if len(arg_names):
+            args = [f"{k}={getattr(self, k)}" for k in arg_names]
+            return f"{type(self).__name__}({','.join(args)})"
+        else:
+            return type(self).__name__
+
+    def __repr__(self):
+        arg_names = list(inspect.signature(self.__init__).parameters)
+        if len(arg_names):
+            args = [f"{k}={getattr(self, k)}" for k in arg_names]
+            return f"{type(self).__name__}({','.join(args)})"
+        else:
+            return type(self).__name__
 
 
 class SequentialTransform(FeatureTransform):
@@ -39,18 +58,24 @@ class SequentialTransform(FeatureTransform):
 
 class AlternateCentering(FeatureTransform):
 
-    def __init__(self, lambda_: float, lr: float, n_iter: int):
+    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str):
         super().__init__()
         self.lambda_ = lambda_
         self.lr = lr
         self.n_iter = n_iter
+        self.init = init
 
     def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        # mu = kwargs['average_train_features'].squeeze()
-        mu = torch.zeros(1, feat_s.size(-1))
+        if self.init == 'base':
+            mu = kwargs['train_mean'].squeeze()
+        elif self.init == 'zero':
+            mu = torch.zeros(1, feat_s.size(-1))
+        elif self.init == 'prototype':
+            prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+            mu = prototypes.mean(0, keepdim=True)
         mu.requires_grad_()
         optimizer = torch.optim.SGD([mu], lr=self.lr)
         # cos = torch.nn.CosineSimilarity(dim=-1)
@@ -88,14 +113,14 @@ class BaseCentering(FeatureTransform):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        average_train_features: Tensor = kwargs['train_mean']
-        # average_train_features = average_train_features.unsqueeze(0)
-        if len(average_train_features.size()) > len(feat_s.size()):
-            mean = average_train_features.squeeze(-1).squeeze(-1)
-        elif len(average_train_features.size()) < len(feat_s.size()):
-            mean = average_train_features.unsqueeze(-1).unsqueeze(-1)
+        train_mean: Tensor = kwargs['train_mean']
+        # train_mean = train_mean.unsqueeze(0)
+        if len(train_mean.size()) > len(feat_s.size()):
+            mean = train_mean.squeeze(-1).squeeze(-1)
+        elif len(train_mean.size()) < len(feat_s.size()):
+            mean = train_mean.unsqueeze(-1).unsqueeze(-1)
         else:
-            mean = average_train_features
+            mean = train_mean
         return (feat_s - mean), (feat_q - mean)
 
 

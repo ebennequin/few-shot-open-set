@@ -1,7 +1,7 @@
 transforms:
   AlternateCentering:
-    current_params: {1: {'lambda_': 1.0, 'lr': 0.1, 'n_iter': 100},
-                     5: {'lambda_': 1.0, 'lr': 0.1, 'n_iter': 100}}
+    current_params: {1: {'lambda_': 1.0, 'lr': 0.1, 'n_iter': 100, 'init': 'base'},
+                     5: {'lambda_': 1.0, 'lr': 0.1, 'n_iter': 100, 'init': 'base'}}
     tuning:
-      hparams2tune: ['lambda_', 'lr']
-      hparam_values: [[0.5, 0.75, 1.0, 1.25, 1.5], [0.1, 0.5, 1.0]]
+      hparams2tune: ['lambda_', 'lr', 'n_iter', 'init']
+      hparam_values: [[1.0, 1.25, 1.5, 2.0, 5.0, 10.0, 20], [0.1, 0.5, 1.0], [10, 50, 100], ['base', 'zero', 'prototype']]

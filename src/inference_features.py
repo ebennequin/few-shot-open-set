@@ -127,10 +127,10 @@ def main(args):
     # ================ Prepare data ===================
 
     feature_dic = defaultdict(dict)
-    average_train_features = {}
-    std_train_features = {}
+    train_mean = {}
+    train_std = {}
     for i, layer in enumerate(args.layers):
-        features, _, average_train_features[i], std_train_features[i] = get_test_features(
+        features, _, train_mean[i], train_std[i] = get_test_features(
             args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
         )
         for class_ in features:
@@ -144,7 +144,7 @@ def main(args):
         class_
         for class_ in ALL_FEW_SHOT_CLASSIFIERS
         if class_.__name__ == args.inference_method
-    ][0].from_cli_args(args, average_train_features, std_train_features)
+    ][0].from_cli_args(args)
 
     detector_names = args.outlier_detectors.split('-')
 
@@ -166,7 +166,9 @@ def main(args):
                                   data_loader=data_loader,
                                   n_way=args.n_way,
                                   n_query=args.n_query,
-                                  on_features=True)
+                                  on_features=True,
+                                  train_mean=train_mean,
+                                  train_std=train_std)
         # Saving results
         save_results(args, metrics)
 
@@ -185,10 +187,12 @@ def main(args):
                 logger.info(aggreg_transform.transform_list)
 
                 set_random_seed(args.random_seed)
-                args.current_sequence = str(aggreg_detector)
+                args.current_sequence = str(aggreg_detector.detectors) + str(aggreg_transform.transform_list)
 
                 metrics = detect_outliers(layers=args.layers,
                                           transforms=aggreg_transform,
+                                          train_mean=train_mean,
+                                          train_std=train_std,
                                           few_shot_classifier=few_shot_classifier,
                                           detector=aggreg_detector,
                                           data_loader=data_loader,
@@ -196,8 +200,8 @@ def main(args):
                                           n_query=args.n_query,
                                           on_features=True)
 
-            # Saving results
-            save_results(args, metrics)
+                # Saving results
+                save_results(args, metrics)
 
 
 def get_all_transforms(transform_names: List[str]):
@@ -279,7 +283,9 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(layers, transforms, few_shot_classifier, detector, data_loader, n_way, n_query, on_features: bool, model=None):
+def detect_outliers(layers, transforms, few_shot_classifier,
+                    detector, data_loader, n_way, n_query, train_mean, train_std,
+                    on_features: bool, model=None):
 
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(list)
@@ -305,6 +311,8 @@ def detect_outliers(layers, transforms, few_shot_classifier, detector, data_load
             support_features[layer], query_features[layer] = transforms(
                       feat_s=support_features[layer],
                       feat_q=query_features[layer],
+                      train_mean=train_mean[layer],
+                      train_std=train_std[layer],
                       support_labels=support_labels,
                       query_labels=query_labels,
                       outliers=outliers,

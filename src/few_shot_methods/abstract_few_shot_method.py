@@ -13,14 +13,10 @@ class AbstractFewShotMethod(nn.Module):
 
     def __init__(
         self,
-        average_train_features: Tensor,
-        std_train_features: Tensor,
         softmax_temperature: float = 1.0,
     ):
         super().__init__()
         self.softmax_temperature = softmax_temperature
-        self.average_train_features = average_train_features
-        self.std_train_features = std_train_features
         self.prototypes: Tensor
 
     def forward(
@@ -51,10 +47,8 @@ class AbstractFewShotMethod(nn.Module):
         )
 
     @classmethod
-    def from_cli_args(cls, args, average_train_features, std_train_features):
+    def from_cli_args(cls, args):
         signature = inspect.signature(cls.__init__)
         return cls(
             **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()},
-            average_train_features=average_train_features,
-            std_train_features=std_train_features
         )

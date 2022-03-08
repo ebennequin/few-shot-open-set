@@ -7,8 +7,8 @@ transforms:
       hparam_values: [[1.0, 1.25, 1.5, 2.0, 5.0, 10.0, 20], [0.1, 0.5, 1.0], [10, 50, 100], ['base', 'zero', 'prototype']]
 
   EntropicCentering:
-    current_params: {1: {'lambda_': 10.0, 'lr': 0.1, 'n_iter': 100, 'init': 'debiased', 'n_neighbors': 3},
-                    5: {'lambda_': 10.0, 'lr': 0.1, 'n_iter': 100, 'init': 'debiased', 'n_neighbors': 10}}
+    current_params: {1: {'lambda_': 5, 'lr': 0.001, 'n_iter': 100, 'init': 'base', 'n_neighbors': 2},
+                    5: {'lambda_': 5, 'lr': 0.001, 'n_iter': 100, 'init': 'base', 'n_neighbors': 10}}
     tuning:
       hparams2tune: ['lambda_', 'lr', 'n_iter', 'init', 'n_neighbors']
       hparam_values: [[1.0, 5.0, 10.0], [0.1, 0.5, 1.0, 2.0], [10, 100], ['base'], [1, 2, 3, 4]]

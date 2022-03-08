@@ -92,7 +92,6 @@ class AlternateCentering(FeatureTransform):
         for i in range(self.n_iter):
 
             # 1 --- Find potential outliers
-
             feat_s = F.normalize(raw_feat_s - mu, dim=1)
             feat_q = F.normalize(raw_feat_q - mu, dim=1)
             # prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
@@ -135,7 +134,7 @@ class EntropicCentering(FeatureTransform):
         elif self.init == 'debiased':
             mu = DebiasedCentering(1 / 8).compute_mean(feat_s, feat_q, **kwargs)
         mu.requires_grad_()
-        optimizer = torch.optim.SGD([mu], lr=self.lr)
+        optimizer = torch.optim.Adam([mu], lr=self.lr)
         # cos = torch.nn.CosineSimilarity(dim=-1)
 
         raw_feat_s = feat_s.clone()
@@ -150,18 +149,20 @@ class EntropicCentering(FeatureTransform):
             feat_q = F.normalize(raw_feat_q - mu, dim=1)
 
             # Get affinities
-            dist = torch.cdist(feat_q, feat_s)  # [Nq, Ns]
-            n_neighbors = min(self.n_neighbors, feat_s.size(0))
+            with torch.no_grad():
+                dist = torch.cdist(feat_q, feat_s)  # [Nq, Ns]
+                n_neighbors = min(self.n_neighbors, feat_s.size(0))
 
-            knn_index = dist.topk(n_neighbors, -1, largest=False).indices  # [N, knn]
+                knn_index = dist.topk(n_neighbors, dim=-1, largest=False).indices  # [N, knn]
 
-            W = torch.zeros(feat_q.size(0), feat_s.size(0))
-            W.scatter_(dim=-1, index=knn_index, value=1.0)  # [Nq, Ns]
+                W = torch.zeros(feat_q.size(0), feat_s.size(0))
+                W.scatter_(dim=-1, index=knn_index, value=1.0)  # [Nq, Ns]
 
             similarities = ((feat_q @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)
 
             # similarities = feat_q @ (feat_s.mean(0, keepdim=True).t())  # [N, 1]
-            outlierness_prob = (-self.lambda_ * similarities).sigmoid()  # [N, 1]
+            outlierness_prob = (-self.lambda_ * similarities - bias).sigmoid()  # [N, 1]
+            # if i == 0:
             p_outlier = torch.cat([outlierness_prob, 1 - outlierness_prob], dim=1) 
             entropy = - (p_outlier * torch.log(p_outlier + 1e-10)).sum(-1).mean()
 
@@ -184,6 +185,7 @@ class EntropicCentering(FeatureTransform):
                 fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), -similarities.numpy())
                 aucs.append(auc_fn(fp_rate, tp_rate))
 
+        logger.warning((outlierness_prob, entropy))
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
         return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()

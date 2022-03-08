@@ -70,38 +70,6 @@ def plot_twin_hist(outliers_df: pd.DataFrame, title: str, plot: bool):
         st.pyplot(fig, clear_figure=True)
 
 
-def show_all_metrics_and_plots(args, metrics: dict, title: str, objective=0.9):
-    """
-    Print all metrics and plot all plots for a given set of outlier predictions.
-    Args:
-        outliers_df: contains a column "outlier" of booleans, and a column "outlier_score" of floats
-        title: title of the plots
-        objective: two of the metrics are the maximum precision (resp. recall) possible for a fixed
-            recall (resp. precision) threshold
-    """
-
-    acc = metrics['acc'].mean().item()
-    roc_auc = metrics['auc'].mean().item()
-    logger.info(f"ROC AUC: {np.round(100 * roc_auc, 2)}")
-    logger.info(f"Accuracy: {np.round(100 * acc, 2)}")
-
-    # precisions, recalls, _ = precision_recall_curve(
-    #     outliers_df.outlier, -outliers_df.outlier_score
-    # )
-    # precision_at_recall_objective = precisions[
-    #     next(i for i, value in enumerate(recalls) if value < objective)
-    # ]
-    # recall_at_precision_objective = recalls[
-    #     next(i for i, value in enumerate(precisions) if value > objective)
-    # ]
-    # print(f"Precision for recall={objective}: {precision_at_recall_objective}")
-    # print(f"Recall for precision={objective}: {recall_at_precision_objective}")
-
-    # plot_twin_hist(outliers_df, title=title, plot=args.streamlit)
-
-    return roc_auc, acc
-
-
 def update_csv(args: argparse.Namespace,
                metrics: dict,
                path: str):

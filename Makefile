@@ -147,7 +147,7 @@ run_snatcher:
 	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in Entropic Alternate; do \
+	for centering in Alternate; do \
 		make TRANSFORMS="Pool $${centering}Centering L2norm" run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\

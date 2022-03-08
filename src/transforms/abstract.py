@@ -29,7 +29,7 @@ class FeatureTransform:
             **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()},
         )
 
-    def __call__(self, feat_s, feat_q, **kwargs):
+    def __call__(self, raw_feat_s, raw_feat_q, **kwargs):
         raise NotImplementedError
 
     def __str__(self):
@@ -54,40 +54,47 @@ class SequentialTransform(FeatureTransform):
     def __init__(self, transform_list: List[FeatureTransform]):
         self.transform_list = transform_list
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         for transf in self.transform_list:
-            feat_s, feat_q = transf(feat_s, feat_q, **kwargs)
-        return feat_s, feat_q
+            raw_feat_s, raw_feat_q = transf(raw_feat_s, raw_feat_q, **kwargs)
+        return raw_feat_s, raw_feat_q
 
 
 class AlternateCentering(FeatureTransform):
 
-    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str):
+    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int):
         super().__init__()
         self.lambda_ = lambda_
         self.lr = lr
         self.n_iter = n_iter
         self.init = init
+        self.n_neighbors = n_neighbors
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
+        raw_feat_s = raw_feat_s.cuda()
+        raw_feat_q = raw_feat_q.cuda()
+
         if self.init == 'base':
-            mu = kwargs['train_mean'].squeeze()
+            mu = kwargs['train_mean'].squeeze().cuda()
         elif self.init == 'zero':
-            mu = torch.zeros(1, feat_s.size(-1))
+            mu = torch.zeros(1, raw_feat_s.size(-1)).cuda()
         elif self.init == 'prototype':
-            prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+            prototypes = compute_prototypes(raw_feat_s, kwargs["support_labels"])  # [K, d]
             mu = prototypes.mean(0, keepdim=True)
+        elif self.init == 'debiased':
+            mu = DebiasedCentering(1 / 8).compute_mean(raw_feat_s, raw_feat_q, **kwargs)
         mu.requires_grad_()
+
         optimizer = torch.optim.SGD([mu], lr=self.lr)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.n_iter, eta_min=1e-2)
+
         # cos = torch.nn.CosineSimilarity(dim=-1)
 
-        raw_feat_s = feat_s.clone()
-        raw_feat_q = feat_q.clone()
-
         loss_values = []
+        aucs = []
 
         for i in range(self.n_iter):
 
@@ -95,19 +102,34 @@ class AlternateCentering(FeatureTransform):
             feat_s = F.normalize(raw_feat_s - mu, dim=1)
             feat_q = F.normalize(raw_feat_q - mu, dim=1)
             # prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+            with torch.no_grad():
+                dist = torch.cdist(feat_q, feat_s)  # [Nq, Ns]
+                n_neighbors = min(self.n_neighbors, feat_s.size(0))
+                knn_index = dist.topk(n_neighbors, dim=-1, largest=False).indices  # [N, knn]
 
-            similarities = feat_q @ feat_s.mean(0, keepdim=True).t()  # [N, 1]
+                W = torch.zeros(feat_q.size(0), feat_s.size(0)).cuda()
+                W.scatter_(dim=-1, index=knn_index, value=1.0)  # [Nq, Ns]
+
+            similarities = ((feat_q @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)  # [N, 1]
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = (outlierness * similarities).mean()
+            loss = (outlierness * similarities).sum()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             loss_values.append(loss.item())
 
+            # scheduler.step()
+
+            with torch.no_grad():
+                loss_values.append(loss.item())
+                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+                aucs.append(auc_fn(fp_rate, tp_rate))
+        self.final_auc = aucs[-1]
         kwargs['intra_task_metrics']['loss'].append(loss_values)
-        return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()
+        kwargs['intra_task_metrics']['auc'].append(aucs)
+        return (raw_feat_s - mu).cpu().detach(), (raw_feat_q - mu).cpu().detach()
 
 
 class EntropicCentering(FeatureTransform):
@@ -120,25 +142,43 @@ class EntropicCentering(FeatureTransform):
         self.init = init
         self.n_neighbors = n_neighbors
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
-        """
-        feat: Tensor shape [N, hidden_dim, *]
-        """
+    def init_params(self, raw_feat_s, raw_feat_q, **kwargs):
         if self.init == 'base':
             mu = kwargs['train_mean'].squeeze()
         elif self.init == 'zero':
-            mu = torch.zeros(1, feat_s.size(-1))
+            mu = torch.zeros(1, raw_feat_s.size(-1))
         elif self.init == 'prototype':
-            prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
+            prototypes = compute_prototypes(raw_feat_s, kwargs["support_labels"])  # [K, d]
             mu = prototypes.mean(0, keepdim=True)
         elif self.init == 'debiased':
-            mu = DebiasedCentering(1 / 8).compute_mean(feat_s, feat_q, **kwargs)
-        mu.requires_grad_()
-        optimizer = torch.optim.Adam([mu], lr=self.lr)
-        # cos = torch.nn.CosineSimilarity(dim=-1)
+            mu = DebiasedCentering(1 / 8).compute_mean(raw_feat_s, raw_feat_q, **kwargs)
 
-        raw_feat_s = feat_s.clone()
-        raw_feat_q = feat_q.clone()
+        feat_s = F.normalize(raw_feat_s - mu, dim=1)
+        feat_q = F.normalize(raw_feat_q - mu, dim=1)
+        dist = torch.cdist(feat_q, feat_s)  # [Nq, Ns]
+        n_neighbors = min(self.n_neighbors, feat_s.size(0))
+        knn_index = dist.topk(n_neighbors, dim=-1, largest=False).indices  # [N, knn]
+
+        W = torch.zeros(feat_q.size(0), feat_s.size(0))
+        W.scatter_(dim=-1, index=knn_index, value=1.0)  # [Nq, Ns]
+
+        similarities = ((feat_q @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)
+        bias = similarities.mean()
+        return mu, bias
+
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
+        """
+        feat: Tensor shape [N, hidden_dim, *]
+        """
+
+        mu, bias = self.init_params(raw_feat_s, raw_feat_q, **kwargs)
+
+        # logger.warning(bias)
+        
+        mu.requires_grad_()
+        bias.requires_grad_()
+        optimizer = torch.optim.SGD([mu, bias], lr=self.lr)
+        # cos = torch.nn.CosineSimilarity(dim=-1)
 
         loss_values = []
         aucs = []
@@ -161,7 +201,7 @@ class EntropicCentering(FeatureTransform):
             similarities = ((feat_q @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)
 
             # similarities = feat_q @ (feat_s.mean(0, keepdim=True).t())  # [N, 1]
-            outlierness_prob = (-self.lambda_ * similarities - bias).sigmoid()  # [N, 1]
+            outlierness_prob = (-self.lambda_ * (similarities - bias)).sigmoid()  # [N, 1]
             # if i == 0:
             p_outlier = torch.cat([outlierness_prob, 1 - outlierness_prob], dim=1) 
             entropy = - (p_outlier * torch.log(p_outlier + 1e-10)).sum(-1).mean()
@@ -182,10 +222,11 @@ class EntropicCentering(FeatureTransform):
                 # distances, _ = knn.kneighbors(X=feat_q.numpy(), n_neighbors=5, return_distance=True)
                 # # outlier_scores_2 = distances.mean(-1)
                 # assert np.all(outlier_scores == outlier_scores_2), (outlier_scores, outlier_scores_2)
-                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), -similarities.numpy())
+                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness_prob.numpy())
                 aucs.append(auc_fn(fp_rate, tp_rate))
 
-        logger.warning((outlierness_prob, entropy))
+        # logger.warning((outlierness_prob, entropy))
+        # logger.warning(outlierness_prob)
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
         return raw_feat_s - mu.detach(), raw_feat_q - mu.detach()
@@ -193,37 +234,37 @@ class EntropicCentering(FeatureTransform):
 
 class BaseCentering(FeatureTransform):
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
         train_mean: Tensor = kwargs['train_mean']
         # train_mean = train_mean.unsqueeze(0)
-        if len(train_mean.size()) > len(feat_s.size()):
+        if len(train_mean.size()) > len(raw_feat_s.size()):
             mean = train_mean.squeeze(-1).squeeze(-1)
-        elif len(train_mean.size()) < len(feat_s.size()):
+        elif len(train_mean.size()) < len(raw_feat_s.size()):
             mean = train_mean.unsqueeze(-1).unsqueeze(-1)
         else:
             mean = train_mean
-        return (feat_s - mean), (feat_q - mean)
+        return (raw_feat_s - mean), (raw_feat_q - mean)
 
 
 class L2norm(FeatureTransform):
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        return F.normalize(feat_s, dim=1), F.normalize(feat_q, dim=1)
+        return F.normalize(raw_feat_s, dim=1), F.normalize(raw_feat_q, dim=1)
 
 
 class Pool(FeatureTransform):
 
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        return feat_s.mean((-2, -1)), feat_q.mean((-2, -1))
+        return raw_feat_s.mean((-2, -1)), raw_feat_q.mean((-2, -1))
 
 
 class DebiasedCentering(FeatureTransform):
@@ -238,12 +279,11 @@ class DebiasedCentering(FeatureTransform):
         mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
         return mean
 
-
-    def __call__(self, feat_s: Tensor, feat_q: Tensor, **kwargs):
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
         # all_feats = torch.cat([feat_s, feat_q], 0)
-        mean = self.compute_mean(feat_s, feat_q, **kwargs)
+        mean = self.compute_mean(raw_feat_s, raw_feat_q, **kwargs)
         assert len(mean.size()) == 2, mean.size()
-        return feat_s - mean, feat_q - mean
+        return raw_feat_s - mean, raw_feat_q - mean

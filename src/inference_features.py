@@ -26,7 +26,7 @@ from typing import Tuple, List, Dict
 from pathlib import Path
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.detectors import ALL_DETECTORS
-from src.utils.plots_and_metrics import show_all_metrics_and_plots, update_csv
+from src.utils.plots_and_metrics import update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
@@ -230,7 +230,7 @@ def get_all_transforms(transform_names: List[str]):
         if x in vars(args.transforms):
             module_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
             params2tune = eval(f'args.transforms.{x}.tuning.hparams2tune')
-            values2tune = eval(f'args.transforms.{x}.tuning.hparam_values')
+            values2tune = eval(f'args.transforms.{x}.tuning.hparam_values')[args.n_shot]
             values_combinations = itertools.product(*values2tune)
             for some_combin in values_combinations:
                 # Override default args
@@ -278,10 +278,11 @@ def get_all_detectors(detector_names: List[str]):
 
 
 def save_results(args, metrics):
-    roc_auc, acc = show_all_metrics_and_plots(args, metrics, title='')
+    for metric_name in metrics:
+        logger.info(f"{metric_name}: {np.round(100 * metrics[metric_name], 2)}")
+
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
-    metrics = {'acc': np.round(acc, 4), 'roc_auc': np.round(roc_auc, 4)}
     update_csv(args, metrics, path=res_root / 'out.csv')
 
 
@@ -321,12 +322,10 @@ def detect_outliers(layers, transforms, few_shot_classifier,
             query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
         # ====== Transforming features ======
-        # if task_id == 0:
-        #     tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'pre_norm')
         for layer in support_features:
             support_features[layer], query_features[layer] = transforms(
-                      feat_s=support_features[layer],
-                      feat_q=query_features[layer],
+                      raw_feat_s=support_features[layer],
+                      raw_feat_q=query_features[layer],
                       train_mean=train_mean[layer],
                       train_std=train_std[layer],
                       support_labels=support_labels,
@@ -334,8 +333,6 @@ def detect_outliers(layers, transforms, few_shot_classifier,
                       outliers=outliers,
                       intra_task_metrics=intra_task_metrics,
                       figures=figures)
-        # if task_id == 0:
-        #     tsne_plot(figures, support_features, query_features, support_labels, query_labels, 'post_norm')
 
         # ====== OOD detection ======
         outlier_scores = []
@@ -354,16 +351,20 @@ def detect_outliers(layers, transforms, few_shot_classifier,
         predictions = all_probs.argmax(-1)
 
         # ====== Tracking metrics ======
-        acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean()
+        acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean().item()
         fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), outlier_scores.numpy())
         precision, recall, _ = precision_recall_curve(outliers.numpy(), outlier_scores.numpy())
         auc = auc_fn(fp_rate, tp_rate)
 
         for metric_name in ['auc', 'acc']:
             metrics[metric_name].append(eval(metric_name))
+        for t in transforms.transform_list:
+            if hasattr(t, 'final_auc'):
+                metrics['transform_auc'].append(t.final_auc)
+        # logger.warning(metrics)
 
     for metric_name in metrics:
-        metrics[metric_name] = torch.Tensor(metrics[metric_name])
+        metrics[metric_name] = np.round(torch.Tensor(metrics[metric_name]).mean().item(), 4)
 
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)

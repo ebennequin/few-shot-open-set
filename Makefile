@@ -21,7 +21,7 @@ DEBUG=False
 GPUS=0
 SIMU_PARAMS=current_sequence
 OVERRIDE=True
-MODE=tune
+MODE=benchmark
 
 # Tasks
 N_TASKS=1000
@@ -154,7 +154,6 @@ run_centering:
 # 	for centering in base debiased tarjan transductive kcenter; do \
 
 # ========== Experiments ===========
-
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
@@ -178,7 +177,7 @@ cross_domain:
 
 imbalance:
 	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
-		for backbone in resnet12 wrn2810; do \
+		for backbone in resnet12; do \
 			make BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
 		done ;\
 	done ;\

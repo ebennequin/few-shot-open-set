@@ -85,8 +85,9 @@ class AlternateCentering(FeatureTransform):
             prototypes = compute_prototypes(raw_feat_s, kwargs["support_labels"])  # [K, d]
             mu = prototypes.mean(0, keepdim=True)
         elif self.init == 'debiased':
-            mu = DebiasedCentering(1 / 2).compute_mean(raw_feat_s, raw_feat_q, **kwargs)
+            mu = DebiasedCentering(1 / 8).compute_mean(raw_feat_s, raw_feat_q, **kwargs)
         elif self.init == 'mean':
+            # prototypes = compute_prototypes(raw_feat_s, kwargs["support_labels"])  # [K, d]
             mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         mu.requires_grad_()
 
@@ -117,7 +118,8 @@ class AlternateCentering(FeatureTransform):
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = 2 * (outlierness * similarities).mean() - similarities.mean()
+            loss = (outlierness * similarities).sum() - \
+                ((1 - outlierness) * similarities).sum()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

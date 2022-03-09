@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
 
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -363,8 +364,11 @@ def detect_outliers(layers, transforms, few_shot_classifier,
                 metrics['transform_auc'].append(t.final_auc)
         # logger.warning(metrics)
 
+    final_metrics = {}
     for metric_name in metrics:
-        metrics[metric_name] = np.round(torch.Tensor(metrics[metric_name]).mean().item(), 4)
+        mean, std = compute_confidence_interval(np.array(metrics[metric_name]), ignore_value=255)
+        final_metrics[f"mean_{metric_name}"] = np.round(mean, 4)
+        final_metrics[f"std_{metric_name}"] = np.round(std, 4)
 
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
@@ -387,7 +391,7 @@ def detect_outliers(layers, transforms, few_shot_classifier,
     # Save figures
     for title, fig in figures.items():
         fig.savefig(res_root / f'{title}.png')
-    return metrics
+    return final_metrics
 
 
 def compute_confidence_interval(data: np.ndarray, axis=0, ignore_value=None,) -> Tuple[np.ndarray, np.ndarray]:

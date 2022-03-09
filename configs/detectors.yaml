@@ -8,8 +8,8 @@ detectors:
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
   knn:
-    current_params: {1: {'n_neighbors': 4, method: 'mean'},
-                     5: {'n_neighbors': 15, method: 'mean'}}
+    current_params: {1: {'n_neighbors': 2, method: 'mean'},
+                     5: {'n_neighbors': 5, method: 'mean'}}
     tuning:
       hparams2tune: ['n_neighbors', 'method']
       hparam_values: {1: [[1, 2, 3, 4], ['mean']],

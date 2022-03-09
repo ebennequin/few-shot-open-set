@@ -1,11 +1,11 @@
 transforms:
   AlternateCentering:
-    current_params: {1: {'lambda_': 1.0, 'lr': 1.0, 'n_iter': 5, 'init': 'mean', 'n_neighbors': 2},
-                     5: {'lambda_': 1.0, 'lr': 1.0, 'n_iter': 5, 'init': 'mean', 'n_neighbors': 3}}
+    current_params: {1: {'lambda_': 10.0, 'lr': 10, 'n_iter': 20, 'init': 'base', 'n_neighbors': 1},
+                     5: {'lambda_': 10.0, 'lr': 10, 'n_iter': 20, 'init': 'base', 'n_neighbors': 5}}
     tuning:
-      hparams2tune: ['lambda_', 'lr', 'n_neighbors', 'init']
-      hparam_values: {1: [[1.0, 5.0, 10.0], [0.1, 1.0, 10], [1, 2, 3, 4], ['mean', 'base']],
-                      5: [[1.0, 5.0, 10.0], [0.1, 1.0, 10], [5, 10, 15, 20], ['mean', 'base']]}
+      hparams2tune: ['lambda_', 'lr', 'n_neighbors']
+      hparam_values: {1: [[1.0, 5.0, 10.0], [10, 1.0, 0.1], [1, 2, 3, 4]],
+                      5: [[1.0, 5.0, 10.0], [0.1, 0.01], [5, 10, 15, 20]]}
 
   EntropicCentering:
     current_params: {1: {'lambda_': 1, 'lr': 0.1, 'n_iter': 100, 'init': 'base', 'n_neighbors': 2},

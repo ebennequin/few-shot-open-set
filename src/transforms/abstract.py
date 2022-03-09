@@ -99,7 +99,7 @@ class AlternateCentering(FeatureTransform):
         loss_values = []
         aucs = []
         marg_entropy = []
-
+        diff_with_oracle = []
         for i in range(self.n_iter):
 
             # 1 --- Find potential outliers
@@ -118,8 +118,7 @@ class AlternateCentering(FeatureTransform):
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = (outlierness * similarities).sum() - \
-                ((1 - outlierness) * similarities).sum()
+            loss = (outlierness * similarities).mean()  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -130,12 +129,14 @@ class AlternateCentering(FeatureTransform):
                 loss_values.append(loss.item())
                 marg_probas = torch.cat([outlierness, 1 - outlierness], dim=1).mean(0)
                 marg_entropy.append(- (marg_probas * torch.log(marg_probas)).sum().item())
-                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), -similarities.cpu().numpy())
+                diff_with_oracle.append(abs(marg_probas[0].item() - (kwargs['outliers'].sum() / kwargs['outliers'].size(0)).item()))
                 aucs.append(auc_fn(fp_rate, tp_rate))
         self.final_auc = aucs[-1]
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
         kwargs['intra_task_metrics']['marg_entropy'].append(marg_entropy)
+        kwargs['intra_task_metrics']['diff_with_oracle'].append(diff_with_oracle)
         return (raw_feat_s - mu).cpu().detach(), (raw_feat_q - mu).cpu().detach()
 
 
@@ -292,5 +293,17 @@ class DebiasedCentering(FeatureTransform):
         """
         # all_feats = torch.cat([feat_s, feat_q], 0)
         mean = self.compute_mean(raw_feat_s, raw_feat_q, **kwargs)
+        assert len(mean.size()) == 2, mean.size()
+        return raw_feat_s - mean, raw_feat_q - mean
+
+
+class MeanCentering(FeatureTransform):
+
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
+        """
+        feat: Tensor shape [N, hidden_dim, *]
+        """
+        # all_feats = torch.cat([feat_s, feat_q], 0)
+        mean = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         assert len(mean.size()) == 2, mean.size()
         return raw_feat_s - mean, raw_feat_q - mean

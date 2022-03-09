@@ -23,6 +23,7 @@ import yaml
 import numpy as np
 import itertools
 from typing import Tuple, List, Dict
+import seaborn as sns
 from pathlib import Path
 from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
 from src.detectors import ALL_DETECTORS
@@ -362,7 +363,7 @@ def detect_outliers(layers, transforms, few_shot_classifier,
         for t in transforms.transform_list:
             if hasattr(t, 'final_auc'):
                 metrics['transform_auc'].append(t.final_auc)
-        # logger.warning(metrics)
+        metrics['outlier_ratio'].append(outliers.sum().item() / outliers.size(0))
 
     final_metrics = {}
     for metric_name in metrics:
@@ -386,7 +387,23 @@ def detect_outliers(layers, transforms, few_shot_classifier,
             ax.fill_between(x, m - pm, m + pm, alpha=0.5)
         plt.savefig(res_root / f'{metric_name}.png')
         plt.clf()
+    bins = np.linspace(0, 1, 10)
+    inds = np.digitize(metrics['outlier_ratio'], bins) - 1
+    binned_aucs = []
+    bin_importance = []
+    for i in range(len(bins)):
+        if sum(inds == i):
+            relevant_measure = metrics['auc'] if not ('transform_auc' in metrics) else metrics['transform_auc']
+            binned_aucs.append(np.array(relevant_measure)[np.where(inds == i)].mean())
+        else:
+            binned_aucs.append(0.)
+        bin_importance.append((sum(inds == i) + 1e-10) / inds.shape[0])
 
+    bars = plt.bar(bins, binned_aucs, width=0.1, align='edge')
+    for i, b in enumerate(bars):
+        b.set_color(plt.cm.Blues(bin_importance[i]))
+    plt.savefig(res_root / f'binned_auc.png')
+    plt.clf()
 
     # Save figures
     for title, fig in figures.items():

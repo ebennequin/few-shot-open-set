@@ -248,7 +248,7 @@ class OpenQuerySampler(TaskSampler):
 def get_dirichlet_proportion(alpha, n_tasks, n_ways, total_samples):
     alpha = np.full(n_ways, alpha)
     prob_dist = np.random.dirichlet(alpha, n_tasks)
-    total_samples = (total_samples * prob_dist).round().clip(1).astype(np.int32)
+    total_samples = (total_samples * prob_dist).round().astype(np.int32)
     return total_samples
 
 

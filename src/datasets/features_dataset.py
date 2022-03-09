@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-
+from loguru import logger   
 import pandas as pd
 import torch
 from numpy import ndarray
@@ -37,5 +37,5 @@ class FeaturesDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, item: int) -> Tuple[torch.Tensor, int]:
-        return self.data[item], self.labels[item]
+    def __getitem__(self, item: torch.Tensor) -> Tuple[torch.Tensor, int]:
+        return self.data[item.long()], self.labels[item.long()]

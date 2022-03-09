@@ -97,6 +97,7 @@ class AlternateCentering(FeatureTransform):
 
         loss_values = []
         aucs = []
+        marg_entropy = []
 
         for i in range(self.n_iter):
 
@@ -116,7 +117,7 @@ class AlternateCentering(FeatureTransform):
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = (outlierness * similarities).mean()
+            loss = 2 * (outlierness * similarities).mean() - similarities.mean()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -125,11 +126,14 @@ class AlternateCentering(FeatureTransform):
 
             with torch.no_grad():
                 loss_values.append(loss.item())
+                marg_probas = torch.cat([outlierness, 1 - outlierness], dim=1).mean(0)
+                marg_entropy.append(- (marg_probas * torch.log(marg_probas)).sum().item())
                 fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
                 aucs.append(auc_fn(fp_rate, tp_rate))
         self.final_auc = aucs[-1]
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
+        kwargs['intra_task_metrics']['marg_entropy'].append(marg_entropy)
         return (raw_feat_s - mu).cpu().detach(), (raw_feat_q - mu).cpu().detach()
 
 

@@ -1,7 +1,7 @@
 
 # Server options
 SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
 USER=malik
 
 # Simu options
@@ -231,6 +231,10 @@ deploy:
 	rsync -avm --exclude '*.pyc' src $(SERVER_IP):${SERVER_PATH}/ ;\
 	rsync -avm --exclude '*.pyc' scripts $(SERVER_IP):${SERVER_PATH}/ ;\
 	rsync -avm --exclude '*.pyc' configs $(SERVER_IP):${SERVER_PATH}/ ;\
+
+import:
+	rsync -avm $(SERVER_IP):${SERVER_PATH}/results ./ ;\
+
 
 data/mini_imagenet.tar.gz:
 	tar -czvf  data/mini_imagenet.tar.gz -C data/ mini_imagenet

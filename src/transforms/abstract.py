@@ -115,10 +115,11 @@ class AlternateCentering(FeatureTransform):
                 W.scatter_(dim=-1, index=knn_index, value=1.0)  # [Nq, Ns]
 
             similarities = ((feat_q @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)  # [N, 1]
+            support_self_similarity = ((feat_s @ feat_s.t())).mean()  # [Ns, Ns]
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = (outlierness * similarities).mean()  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
+            loss = (outlierness * similarities).mean() - support_self_similarity  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

@@ -1,11 +1,11 @@
 
 # Server options
 SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
 USER=malik
 
 # Simu options
-DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
+DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set-Test
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn

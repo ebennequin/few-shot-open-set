@@ -119,7 +119,7 @@ class AlternateCentering(FeatureTransform):
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = (outlierness * similarities).mean() - support_self_similarity  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
+            loss = - support_self_similarity + (outlierness * similarities).mean()  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

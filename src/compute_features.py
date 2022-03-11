@@ -41,7 +41,7 @@ def main(args):
     logger.info("Building model...")
     if args.model_source == 'url':
         weights = None
-        stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth" # used for saving features downstream
+        stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}"  # used for saving features downstream
     else:
         weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         stem = weights.stem

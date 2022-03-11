@@ -64,6 +64,14 @@ class SequentialTransform(FeatureTransform):
         return raw_feat_s, raw_feat_q
 
 
+class Trivial(FeatureTransform):
+
+    name = 'Trivial'
+
+    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
+        return raw_feat_s, raw_feat_q
+
+
 class AlternateCentering(FeatureTransform):
 
     def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int):
@@ -280,7 +288,10 @@ class Pool(FeatureTransform):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        return raw_feat_s.mean((-2, -1)), raw_feat_q.mean((-2, -1))
+        if len(raw_feat_s.size()) > 2:
+            return raw_feat_s.mean((-2, -1)), raw_feat_q.mean((-2, -1))
+        else:
+            return raw_feat_s, raw_feat_q
 
 
 class DebiasedCentering(FeatureTransform):

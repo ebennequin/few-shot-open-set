@@ -130,7 +130,7 @@ extract_standard:
 
 	# Extract for cross-domain
 	for tgt_dataset in cub aircraft; do \
-		for backbone in efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
 			make BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
@@ -144,7 +144,7 @@ extract_snatcher:
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 run_snatcher:
-	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
+	make TRANSFORMS="Pool Trivial" DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
 	for centering in Base Alternate; do \
@@ -157,25 +157,25 @@ run_centering:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet18 wrn2810; do \
-			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
-# 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
+		for backbone in wrn2810; do \
+			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
+# 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
 		done ;\
 	done ;\
 
 
 cross_domain:
 	# Tiered -> CUB, Aircraft
-	for backbone in resnet12 wrn2810; do \
-		for tgt_dataset in cub aircraft; do \
-			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
-		done ; \
-	done ;\
+# 	for backbone in resnet12 wrn2810; do \
+# 		for tgt_dataset in cub aircraft; do \
+# 			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+# 		done ; \
+# 	done ;\
 
 	# ImageNet -> CUB Aircraft with all kinds of models
-	for tgt_dataset in cub aircraft; do \
-		for backbone in efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-			make EXP=cross_domain BACKBONE=vitb16 MODEL_SRC='url' \
+	for tgt_dataset in aircraft; do \
+		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
 				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
 		done ;\
 	done ;\

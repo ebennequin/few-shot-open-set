@@ -399,10 +399,14 @@ def detect_outliers(layers, transforms, few_shot_classifier,
             binned_aucs.append(0.)
         bin_importance.append((sum(inds == i) + 1e-10) / inds.shape[0])
 
-    bars = plt.bar(bins, binned_aucs, width=0.1, align='edge')
+    bars = plt.bar(bins, binned_aucs, width=0.1, align='edge', label="{} (ROCAUC={:.2f})".format(
+        transforms.transform_list[1].name, 100 * final_metrics['mean_auc'] if not ('mean_transform_auc' in final_metrics) else 100 * final_metrics['mean_transform_auc']))
+    plt.legend()
+    plt.xlabel(r'Outlier/Inlier ratio in query set')
+    plt.ylabel(r'Average AUROC')
     for i, b in enumerate(bars):
         b.set_color(plt.cm.Blues(bin_importance[i]))
-    plt.savefig(res_root / f'binned_auc.png')
+    plt.savefig(res_root / f'{transforms.transform_list[1].name}_binned_auc.png')
     plt.clf()
 
     # Save figures

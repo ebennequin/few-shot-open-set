@@ -40,6 +40,10 @@ class FeatureTransform:
         else:
             return type(self).__name__
 
+    def compute_auc(self, outlierness, **kwargs):
+        fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+        return auc_fn(fp_rate, tp_rate)
+
     def __repr__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
         if len(arg_names):
@@ -69,6 +73,7 @@ class AlternateCentering(FeatureTransform):
         self.n_iter = n_iter
         self.init = init
         self.n_neighbors = n_neighbors
+        self.name = "Alternate Inference (transductive)"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
@@ -119,7 +124,7 @@ class AlternateCentering(FeatureTransform):
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
-            loss = - support_self_similarity + (outlierness * similarities).mean()  # 1 / (1 - outlierness).sum() * ((1 - outlierness) * similarities).sum()
+            loss = (outlierness * similarities).mean() - support_self_similarity  #- ((1 - outlierness) * similarities).mean() 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -130,9 +135,8 @@ class AlternateCentering(FeatureTransform):
                 loss_values.append(loss.item())
                 marg_probas = torch.cat([outlierness, 1 - outlierness], dim=1).mean(0)
                 marg_entropy.append(- (marg_probas * torch.log(marg_probas)).sum().item())
-                fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), -similarities.cpu().numpy())
                 diff_with_oracle.append(abs(marg_probas[0].item() - (kwargs['outliers'].sum() / kwargs['outliers'].size(0)).item()))
-                aucs.append(auc_fn(fp_rate, tp_rate))
+                aucs.append(self.compute_auc(outlierness, **kwargs))
         self.final_auc = aucs[-1]
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
@@ -243,6 +247,8 @@ class EntropicCentering(FeatureTransform):
 
 class BaseCentering(FeatureTransform):
 
+    name = 'Base Centering'
+
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
@@ -264,6 +270,7 @@ class L2norm(FeatureTransform):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
+
         return F.normalize(raw_feat_s, dim=1), F.normalize(raw_feat_q, dim=1)
 
 

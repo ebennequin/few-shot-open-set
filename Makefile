@@ -5,7 +5,7 @@ SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
 USER=malik
 
 # Simu options
-DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
@@ -123,14 +123,14 @@ run_scratch:
 extract_standard:
 	# Extract for RN and WRN
 # 	for tgt_dataset in mini_imagenet tiered_imagenet; do \
-# 		for backbone in resnet12; do \
+# 		for backbone in resnet12 wrn2810; do \
 # 			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 	# Extract for cross-domain
 	for tgt_dataset in cub aircraft; do \
-		for backbone in resnet12 efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+		for backbone in efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
 			make BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
@@ -147,20 +147,22 @@ run_snatcher:
 	make TRANSFORMS=trivial DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in Alternate; do \
+	for centering in Base Alternate; do \
 		make TRANSFORMS="Pool $${centering}Centering L2norm" run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\
 # 	for centering in base debiased tarjan transductive kcenter; do \
 
 # ========== Experiments ===========
+
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12; do \
+		for backbone in resnet18 wrn2810; do \
 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
 # 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
 	done ;\
+
 
 cross_domain:
 	# Tiered -> CUB, Aircraft
@@ -169,10 +171,18 @@ cross_domain:
 			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
 		done ; \
 	done ;\
-	# ImageNet -> CUB Aircraft with ViT
+
+	# ImageNet -> CUB Aircraft with all kinds of models
 	for tgt_dataset in cub aircraft; do \
-		make EXP=cross_domain BACKBONE=vitb16 MODEL_SRC='luke' \
-			SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+		for backbone in efficientnet_b4 deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+			make EXP=cross_domain BACKBONE=vitb16 MODEL_SRC='url' \
+				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+		done ;\
+	done ;\
+
+layers:
+	for layers in 2 3 4; do \
+		make EXP=layers LAYERS=$${layers} SIMU_PARAMS="current_sequence layers" benchmark ;\
 	done ;\
 
 imbalance:

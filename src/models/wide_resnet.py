@@ -4,8 +4,21 @@ import torch.nn.functional as F
 from typing import List
 from torch import Tensor
 import sys
+from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 import numpy as np
 
+
+def _cfg(url='', **kwargs):
+    return {
+        'input_size': (3, 84, 84),
+        'mean': IMAGENET_DEFAULT_MEAN, 'std': IMAGENET_DEFAULT_STD,
+        **kwargs
+    }
+
+
+default_cfgs = {
+    'wrn2810': _cfg(),
+}
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=True)

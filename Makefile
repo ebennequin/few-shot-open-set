@@ -9,7 +9,7 @@ DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 DETECTORS=knn
-TRANSFORMS="Pool L2norm"
+TRANSFORMS="Pool"
 LAYERS=1
 COMBIN=1
 EXP=default
@@ -144,11 +144,11 @@ extract_snatcher:
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 run_snatcher:
-	make TRANSFORMS="Pool Trivial" DETECTORS='snatcher_f' TRAINING='feat' run ;\
+	make TRANSFORMS="Pool" DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for centering in Base Alternate; do \
-		make TRANSFORMS="Pool $${centering}Centering L2norm" run ;\
+	for detector in alternate; do \
+		make DETECTORS=$${detector} run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\
 # 	for centering in base debiased tarjan transductive kcenter; do \
@@ -157,9 +157,9 @@ run_centering:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in wrn2810; do \
-			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
-# 			make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
+		for backbone in resnet12 wrn2810; do \
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
+# 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
 	done ;\
 

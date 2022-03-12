@@ -4,21 +4,31 @@ from easyfsl.utils import compute_prototypes
 from src.constants import MISC_MODULES
 from loguru import logger
 import torch.nn.functional as F
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc as auc_fn
+from .abstract_detector import AbstractDetector
 
 
-class AbstractDetector:
-    """
-    Abstract class for an outlier detector
-    """
-    def __init__(self, args, temperature):
+class AlternateDetector(AbstractDetector):
 
-        self.temperature = 64.
+    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int):
+        super().__init__()
+        self.lambda_ = lambda_
+        self.lr = lr
+        self.n_iter = n_iter
+        self.init = init
+        self.n_neighbors = n_neighbors
+        self.name = 'AlternateDetector'
 
     def fit(self, support_features, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
         self.raw_feat_s = support_features
+
+    def compute_auc(self, outlierness, **kwargs):
+        fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+        return auc_fn(fp_rate, tp_rate)
 
     def decision_function(self, raw_feat_q, **kwargs):
 
@@ -34,15 +44,14 @@ class AbstractDetector:
         elif self.init == 'zero':
             mu = torch.zeros(1, raw_feat_s.size(-1)).cuda()
         elif self.init == 'mean':
-            # prototypes = compute_prototypes(raw_feat_s, kwargs["support_labels"])  # [K, d]
             mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         mu.requires_grad_()
-
         optimizer = torch.optim.SGD([mu], lr=self.lr)
 
         for i in range(self.n_iter):
 
             # 1 --- Find potential outliers
+
             feat_s = F.normalize(raw_feat_s - mu, dim=1)
             feat_q = F.normalize(raw_feat_q - mu, dim=1)
             # prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
@@ -59,6 +68,7 @@ class AbstractDetector:
             outlierness = (-self.lambda_ * similarities).detach().sigmoid()  # [N, 1]
 
             # 2 --- Update mu
+
             loss = (outlierness * similarities).mean() - support_self_similarity  #- ((1 - outlierness) * similarities).mean() 
             optimizer.zero_grad()
             loss.backward()
@@ -72,10 +82,8 @@ class AbstractDetector:
                 marg_entropy.append(- (marg_probas * torch.log(marg_probas)).sum().item())
                 diff_with_oracle.append(abs(marg_probas[0].item() - (kwargs['outliers'].sum() / kwargs['outliers'].size(0)).item()))
                 aucs.append(self.compute_auc(outlierness, **kwargs))
-        self.final_auc = aucs[-1]
         kwargs['intra_task_metrics']['loss'].append(loss_values)
         kwargs['intra_task_metrics']['auc'].append(aucs)
         kwargs['intra_task_metrics']['marg_entropy'].append(marg_entropy)
         kwargs['intra_task_metrics']['diff_with_oracle'].append(diff_with_oracle)
-        return (raw_feat_s - mu).cpu().detach(), (raw_feat_q - mu).cpu().detach()
-
+        return outlierness.cpu().numpy().squeeze()

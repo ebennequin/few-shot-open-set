@@ -58,6 +58,12 @@ class SequentialTransform(FeatureTransform):
     def __init__(self, transform_list: List[FeatureTransform]):
         self.transform_list = transform_list
 
+    def __str__(self):
+        return str(self.transform_list)
+
+    def __repr__(self):
+        return repr(self.transform_list)
+
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         for transf in self.transform_list:
             raw_feat_s, raw_feat_q = transf(raw_feat_s, raw_feat_q, **kwargs)

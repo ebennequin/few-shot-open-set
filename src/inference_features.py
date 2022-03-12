@@ -93,7 +93,7 @@ def parse_args() -> argparse.Namespace:
                         help="Name the experiment for easy grouping.")
     parser.add_argument("--general_hparams", type=str, nargs='+',
                         default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
-                                 'inference_method', 'n_way', 'n_shot', 'transforms'],
+                                 'inference_method', 'n_way', 'n_shot'],
                         help="Important params that will appear in .csv result file.",)
     parser.add_argument("--simu_hparams", type=str, nargs='*', default=[],
                         help="Important params that will appear in .csv result file.")
@@ -172,10 +172,10 @@ def main(args):
                 transforms.append(TRANSFORMS[x]())
         transforms = TRANSFORMS['SequentialTransform'](transforms)
 
-        logger.info(outlier_detector.detectors)
-        logger.info(transforms.transform_list)
+        logger.info(outlier_detector)
+        logger.info(transforms)
 
-        args.current_sequence = str(outlier_detector.detectors) + str(transforms.transform_list)
+        args.current_sequence = str(outlier_detector) + str(transforms)
 
         metrics = detect_outliers(layers=args.layers,
                                   transforms=transforms,
@@ -339,10 +339,20 @@ def detect_outliers(layers, transforms, few_shot_classifier,
         # ====== OOD detection ======
         outlier_scores = []
         for layer in support_features:
-            detector.fit(support_features[layer], support_labels)
-            raw_scores = torch.from_numpy(detector.decision_function(support_features[layer], query_features[layer]))
+            detector.fit(support_features[layer], support_labels=support_labels)
+            raw_scores = torch.from_numpy(
+                   detector.decision_function(
+                        query_features[layer],
+                        train_mean=train_mean[layer],
+                        train_std=train_std[layer],
+                        support_labels=support_labels,
+                        query_labels=query_labels,
+                        outliers=outliers,
+                        intra_task_metrics=intra_task_metrics,
+                        figures=figures
+                     )
+                )
             outlier_scores.append(raw_scores)
-            # outlier_scores.append((raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min()))  # [?,]
         outlier_scores = torch.stack(outlier_scores, 0).mean(0)
 
         # ====== Few-shot classifier ======
@@ -360,9 +370,6 @@ def detect_outliers(layers, transforms, few_shot_classifier,
 
         for metric_name in ['auc', 'acc']:
             metrics[metric_name].append(eval(metric_name))
-        for t in transforms.transform_list:
-            if hasattr(t, 'final_auc'):
-                metrics['transform_auc'].append(t.final_auc)
         metrics['outlier_ratio'].append(outliers.sum().item() / outliers.size(0))
 
     final_metrics = {}
@@ -393,20 +400,20 @@ def detect_outliers(layers, transforms, few_shot_classifier,
     bin_importance = []
     for i in range(len(bins)):
         if sum(inds == i):
-            relevant_measure = metrics['auc'] if not ('transform_auc' in metrics) else metrics['transform_auc']
+            relevant_measure = metrics['auc']
             binned_aucs.append(np.array(relevant_measure)[np.where(inds == i)].mean())
         else:
             binned_aucs.append(0.)
         bin_importance.append((sum(inds == i) + 1e-10) / inds.shape[0])
 
     bars = plt.bar(bins, binned_aucs, width=0.1, align='edge', label="{} (ROCAUC={:.2f})".format(
-        transforms.transform_list[1].name, 100 * final_metrics['mean_auc'] if not ('mean_transform_auc' in final_metrics) else 100 * final_metrics['mean_transform_auc']))
+         str(transforms) + str(detector), 100 * final_metrics['mean_auc']))
     plt.legend()
     plt.xlabel(r'Outlier/Inlier ratio in query set')
     plt.ylabel(r'Average AUROC')
     for i, b in enumerate(bars):
         b.set_color(plt.cm.Blues(bin_importance[i]))
-    plt.savefig(res_root / f'{transforms.transform_list[1].name}_binned_auc.png')
+    plt.savefig(res_root / f'{str(transforms)}+{str(detector)}_binned_auc.png')
     plt.clf()
 
     # Save figures

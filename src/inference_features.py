@@ -307,7 +307,7 @@ def detect_outliers(layers, transforms, few_shot_classifier,
                     on_features: bool, model=None):
 
     metrics = defaultdict(list)
-    intra_task_metrics = defaultdict(list)
+    intra_task_metrics = defaultdict(lambda: defaultdict(list))
     figures = {}
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
 
@@ -380,19 +380,21 @@ def detect_outliers(layers, transforms, few_shot_classifier,
 
     res_root = Path('results') / args.exp_name
     res_root.mkdir(exist_ok=True, parents=True)
-    for metric_name, values in intra_task_metrics.items():
-        array = np.array(values)
-        assert len(array.shape) == 2
-        m, pm = compute_confidence_interval(array, ignore_value=255)
+    for title in intra_task_metrics.keys():
         fig = plt.Figure((10, 10), dpi=200)
-        ax = plt.gca()
-        if array.shape[0] == 1:
-            ax.scatter([0], m, c='r')
-        else:
-            x = np.arange(len(m))
-            ax.plot(m)
-            ax.fill_between(x, m - pm, m + pm, alpha=0.5)
-        plt.savefig(res_root / f'{metric_name}.png')
+        for legend, values in intra_task_metrics[title] .items():
+            array = np.array(values)
+            assert len(array.shape) == 2
+            m, pm = compute_confidence_interval(array, ignore_value=255)
+            ax = plt.gca()
+            if array.shape[0] == 1:
+                ax.scatter([0], m, c='r')
+            else:
+                x = np.arange(len(m))
+                ax.plot(m, label=legend)
+                ax.fill_between(x, m - pm, m + pm, alpha=0.5)
+        plt.legend()
+        plt.savefig(res_root / f'{title}.png')
         plt.clf()
     bins = np.linspace(0, 1, 10)
     inds = np.digitize(metrics['outlier_ratio'], bins) - 1

@@ -147,7 +147,7 @@ run_snatcher:
 	make TRANSFORMS="Pool" DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for detector in alternate; do \
+	for detector in repri; do \
 		make DETECTORS=$${detector} run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\

@@ -166,19 +166,19 @@ benchmark:
 
 cross_domain:
 	# Tiered -> CUB, Aircraft
-# 	for backbone in resnet12 wrn2810; do \
-# 		for tgt_dataset in cub aircraft; do \
-# 			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
-# 		done ; \
-# 	done ;\
+	for backbone in resnet12 wrn2810; do \
+		for tgt_dataset in cub; do \
+			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+		done ; \
+	done ;\
 
 	# ImageNet -> CUB Aircraft with all kinds of models
-	for tgt_dataset in aircraft; do \
-		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
-				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
-		done ;\
-	done ;\
+# 	for tgt_dataset in aircraft; do \
+# 		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+# 			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
+# 				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+# 		done ;\
+# 	done ;\
 
 layers:
 	for layers in 2 3 4; do \

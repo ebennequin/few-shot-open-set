@@ -12,7 +12,7 @@ from copy import deepcopy
 
 class RepriDetector(AbstractDetector):
 
-    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int, weight=1.0):
+    def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int, optimizer_name: str, weight=1.0):
         super().__init__()
         self.lambda_ = lambda_
         self.lr = lr
@@ -21,6 +21,7 @@ class RepriDetector(AbstractDetector):
         self.n_neighbors = n_neighbors
         self.weight = weight
         self.name = 'AlternateDetector'
+        self.optimizer_name = optimizer_name
 
     def fit(self, support_features, **kwargs):
         """
@@ -59,7 +60,7 @@ class RepriDetector(AbstractDetector):
         elif self.init == 'mean':
             mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         mu.requires_grad_()
-        optimizer = torch.optim.SGD([mu], lr=self.lr)
+        optimizer = eval(f'torch.optim.{self.optimizer_name}([mu], lr=self.lr)')
 
         for i in range(self.n_iter):
 

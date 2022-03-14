@@ -6,7 +6,7 @@ from torch import Tensor
 from typing import Tuple, List, Dict
 
 
-class AbstractFewShotMethod(nn.Module):
+class FewShotMethod(nn.Module):
     """
     Abstract class for few-shot methods
     """

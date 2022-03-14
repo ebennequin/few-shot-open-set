@@ -5,7 +5,7 @@ from torch import nn
 import inspect
 
 
-class AbstractDetector:
+class FeatureDetector:
     """
     Abstract class for an outlier detector
     """

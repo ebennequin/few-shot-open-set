@@ -1,9 +1,9 @@
-from .abstract_detector import *
+from .abstract import *
 from .aggregator import NaiveAggregator
 from .snatcher import SNATCHERF
 from .alternate_detector import AlternateDetector
 from .repri import RepriDetector
-import pyod
+from .finetune import FinetuneDetector
 from pyod.models.knn import KNN
 
 ALL_DETECTORS = {
@@ -11,5 +11,6 @@ ALL_DETECTORS = {
     'knn': KNN,
     'snatcher_f': SNATCHERF,
     'alternate': AlternateDetector,
-    'repri': RepriDetector
+    'repri': RepriDetector,
+    'finetune': FinetuneDetector,
     }

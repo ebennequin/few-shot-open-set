@@ -1,16 +1,16 @@
 import torch
-from .abstract_detector import AbstractDetector
+from .abstract_detector import FeatureDetector
 from easyfsl.utils import compute_prototypes
 from src.constants import MISC_MODULES
 from loguru import logger
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve
 from sklearn.metrics import auc as auc_fn
-from .abstract_detector import AbstractDetector
+from .abstract import FeatureDetector
 from copy import deepcopy
 
 
-class RepriDetector(AbstractDetector):
+class RepriDetector(FeatureDetector):
 
     def __init__(self, lambda_: float, lr: float, n_iter: int, init: str, n_neighbors: int, optimizer_name: str, weight=1.0):
         super().__init__()
@@ -115,7 +115,6 @@ class RepriDetector(AbstractDetector):
                 aucs.append(self.compute_auc(probas_q[:, 0], **kwargs))
         kwargs['intra_task_metrics']['main_losses']['ce'].append(ces)
         kwargs['intra_task_metrics']['main_losses']['kl'].append(kls)
-        kwargs['intra_task_metrics']['max_entropy']['kl'].append(kls)
         kwargs['intra_task_metrics']['main_losses']['entropy'].append(entropies)
         kwargs['intra_task_metrics']['secondary_loss']['inlier_entropy'].append(inlier_entropy)
         kwargs['intra_task_metrics']['secondary_loss']['outlier_entropy'].append(outlier_entropy)

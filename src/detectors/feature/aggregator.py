@@ -1,13 +1,13 @@
 import numpy as np
-from src.detectors import AbstractDetector
+from .abstract import FeatureDetector
 import inspect
 from typing import List
 from loguru import logger
 
 
-class NaiveAggregator(AbstractDetector):
+class NaiveAggregator(FeatureDetector):
 
-    def __init__(self, detectors: List[AbstractDetector]):
+    def __init__(self, detectors: List[FeatureDetector]):
         assert isinstance(detectors, List), detectors
         self.detectors = detectors
 

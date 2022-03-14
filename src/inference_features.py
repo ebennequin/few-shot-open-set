@@ -7,7 +7,8 @@ import argparse
 from collections import defaultdict
 from src.utils.utils import (
     set_random_seed,
-    merge_from_dict
+    merge_from_dict,
+    get_modules_to_try
 )
 import torch
 import torch.nn as nn
@@ -25,14 +26,18 @@ import itertools
 from typing import Tuple, List, Dict
 import seaborn as sns
 from pathlib import Path
-from src.few_shot_methods import ALL_FEW_SHOT_CLASSIFIERS
-from src.detectors import ALL_DETECTORS
+
+from src.classifiers import CLASSIFIERS
+from src.detectors.feature import FEATURE_DETECTORS
+from src.detectors.proba import PROBA_DETECTORS
+from src.all_in_one import ALL_IN_ONE_METHODS
+
+from src.models import __dict__ as BACKBONES
+from src.transforms import __dict__ as TRANSFORMS
 from src.utils.plots_and_metrics import update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
-from src.models import __dict__ as BACKBONES
-from src.transforms import __dict__ as TRANSFORMS
 
 
 def str2bool(v):
@@ -70,7 +75,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--layers", type=int)
 
     # Detector
-    parser.add_argument("--outlier_detectors", type=str)
+    parser.add_argument("--feature_detector", type=str)
     parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Transform
@@ -79,7 +84,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--transforms_config_file", type=str, default="configs/transforms.yaml")
 
     # Method
-    parser.add_argument("--inference_method", type=str, default="SimpleShot")
+    parser.add_argument("--classifier", type=str, default="SimpleShot")
     parser.add_argument("--softmax_temperature", type=float, default=1.0)
     parser.add_argument("--inference_lr", type=float, default=1e-3,
                         help="Learning rate used for methods that perform \
@@ -92,8 +97,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exp_name", type=str, default='default',
                         help="Name the experiment for easy grouping.")
     parser.add_argument("--general_hparams", type=str, nargs='+',
-                        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'outlier_detectors',
-                                 'inference_method', 'n_way', 'n_shot'],
+                        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'feature_detectors',
+                                 'classifier', 'n_way', 'n_shot'],
                         help="Important params that will appear in .csv result file.",)
     parser.add_argument("--simu_hparams", type=str, nargs='*', default=[],
                         help="Important params that will appear in .csv result file.")
@@ -141,142 +146,149 @@ def main(args):
     data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
                                   args.n_query, args.n_tasks, args.n_workers, feature_dic)
 
-    # ================ Prepare Few-Shot Classifier ===================
+    # ================ Prepare Transforms + Detector + Classifier ===================
 
-    few_shot_classifier = [
-        class_
-        for class_ in ALL_FEW_SHOT_CLASSIFIERS
-        if class_.__name__ == args.inference_method
-    ][0].from_cli_args(args)
-
-    detector_names = args.outlier_detectors.split('-')
     transform_names = args.feature_transforms
 
-    if args.mode == 'benchmark':
+    # ==== Prepare transforms ====
 
-        # ================ Prepare detector ===================
+    transforms = []
+    for x in transform_names:
+        transforms.append(TRANSFORMS[x]())
+    transforms = TRANSFORMS['SequentialTransform'](transforms)
 
-        detectors = []
-        transforms = []
-        for x in detector_names:
-            detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
-            if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
-                detector_args['args'] = args
-            detectors.append(ALL_DETECTORS[x](**detector_args))
-        outlier_detector = ALL_DETECTORS['aggregator'](detectors)
-        for x in transform_names:
-            if x in vars(args.transforms):
-                transform_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
-                transforms.append(TRANSFORMS[x](**transform_args))
-            else:
-                transforms.append(TRANSFORMS[x]())
-        transforms = TRANSFORMS['SequentialTransform'](transforms)
+    if args.outlier_detector in ALL_IN_ONE_METHODS:
 
-        logger.info(outlier_detector)
+        # ==== Prepare all in one detector ====
+
+        all_in_one_detectors = get_modules_to_try(args, 'feature_detectors', args.outlier_detector,
+                                                  ALL_IN_ONE_METHODS, args.tune == 'all_in_one')
+        feature_detectors = proba_detectors = classifier = [None]
+
+    else:
+        # ==== Prepare few-shot classifier ====
+
+        classifiers = get_modules_to_try(args, 'classifiers', args.classifier,
+                                         CLASSIFIERS, args.tune == 'classifier')
+
+        # ==== Prepare feature detector ====
+
+        feature_detectors = get_modules_to_try(args, 'feature_detectors', args.outlier_detector,
+                                               FEATURE_DETECTORS, args.tune == 'feature_detector')
+
+        # ==== Prepare proba detector ====
+        proba_detectors = get_modules_to_try(args, 'proba_detectors', args.proba_detector,
+                                             PROBA_DETECTORS, args.tune == 'proba_detector')
+
+        all_in_one_detectors = [None]
+
+    for feature_d, proba_d, classifier, all_in_one in itertools.product(
+                feature_detectors, proba_detectors, classifiers):
+        logger.info(feature_detector)
         logger.info(transforms)
 
-        args.current_sequence = str(outlier_detector) + str(transforms)
+        args.current_sequence = str(feature_detector) + str(transforms)
 
         metrics = detect_outliers(layers=args.layers,
                                   transforms=transforms,
                                   train_mean=train_mean,
                                   train_std=train_std,
-                                  few_shot_classifier=few_shot_classifier,
-                                  detector=outlier_detector,
+                                  classifier=classifier,
+                                  detector=feature_detector,
                                   data_loader=data_loader,
                                   n_way=args.n_way,
                                   n_query=args.n_query,
                                   on_features=True)
-        # Saving results
-        save_results(args, metrics)
+    # Saving results
+    save_results(args, metrics)
 
-    elif args.mode == 'tune':
+#     elif args.mode == 'tune':
 
-        # For each detector type, create all relevant detectors
+#         # Which model do we need to tune
 
-        detectors_to_try = get_all_detectors(detector_names)
-        all_transforms = get_all_transforms(transform_names)
+#         detectors_to_try = get_FEATURE_DETECTORS(detector_names)
+#         all_transforms = get_all_transforms(transform_names)
 
-        for aggreg_detector in detectors_to_try:
+#         for aggreg_detector in detectors_to_try:
 
-            for aggreg_transform in all_transforms:
+#             for aggreg_transform in all_transforms:
 
-                set_random_seed(args.random_seed)
-                logger.info(aggreg_detector.detectors)
-                logger.info(aggreg_transform.transform_list)
+#                 set_random_seed(args.random_seed)
+#                 logger.info(aggreg_detector.detectors)
+#                 logger.info(aggreg_transform.transform_list)
 
-                args.current_sequence = str(aggreg_detector.detectors) + str(aggreg_transform.transform_list)
+#                 args.current_sequence = str(aggreg_detector.detectors) + str(aggreg_transform.transform_list)
 
-                metrics = detect_outliers(layers=args.layers,
-                                          transforms=aggreg_transform,
-                                          train_mean=train_mean,
-                                          train_std=train_std,
-                                          few_shot_classifier=few_shot_classifier,
-                                          detector=aggreg_detector,
-                                          data_loader=data_loader,
-                                          n_way=args.n_way,
-                                          n_query=args.n_query,
-                                          on_features=True)
+#                 metrics = detect_outliers(layers=args.layers,
+#                                           transforms=aggreg_transform,
+#                                           train_mean=train_mean,
+#                                           train_std=train_std,
+#                                           classifier=classifier,
+#                                           detector=aggreg_detector,
+#                                           data_loader=data_loader,
+#                                           n_way=args.n_way,
+#                                           n_query=args.n_query,
+#                                           on_features=True)
 
-                # Saving results
-                save_results(args, metrics)
-
-
-def get_all_transforms(transform_names: List[str]):
-
-    """
-    ['a', 'b', 'c']
-    """
-    modules_to_try = defaultdict(list)  # {'a': [a1, a2, a3],  'b': [b1, b2, b3], 'b': [c1]}
-    for x in transform_names:
-        if x in vars(args.transforms):
-            module_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
-            params2tune = eval(f'args.transforms.{x}.tuning.hparams2tune')
-            values2tune = eval(f'args.transforms.{x}.tuning.hparam_values')[args.n_shot]
-            values_combinations = itertools.product(*values2tune)
-            for some_combin in values_combinations:
-                # Override default args
-                for k, v in zip(params2tune, some_combin):
-                    module_args[k] = v
-                if "args" in inspect.getfullargspec(TRANSFORMS[x].__init__).args:
-                    module_args['args'] = args
-                modules_to_try[x].append(TRANSFORMS[x](**module_args))
-        else:  # some methods just don't have any argument
-            modules_to_try[x].append(TRANSFORMS[x]())
-
-    transforms_products = itertools.product(*modules_to_try.values())  # [(a1, b1, c1), (a2, b1, c1), ....]
-    all_transforms = [TRANSFORMS['SequentialTransform'](x) for x in transforms_products]
-    return all_transforms
+#                 # Saving results
+#                 save_results(args, metrics)
 
 
-def get_all_detectors(detector_names: List[str]):
-    """
-    ['a', 'b']
-    """
-    detectors_to_try = defaultdict(list)  # {'a': [a1, a2, a3, a4], 'b': [b1, b2]}
-    for x in detector_names:
-        detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
-        params2tune = eval(f'args.detectors.{x}.tuning.hparams2tune')
-        values2tune = eval(f'args.detectors.{x}.tuning.hparam_values')[args.n_shot]
-        values_combinations = itertools.product(*values2tune)
-        for some_combin in values_combinations:
-            # Override default args
-            for k, v in zip(params2tune, some_combin):
-                detector_args[k] = v
-            if "args" in inspect.getfullargspec(ALL_DETECTORS[x].__init__).args:
-                detector_args['args'] = args
-            detectors_to_try[x].append(ALL_DETECTORS[x](**detector_args))
+# def get_all_transforms(transform_names: List[str]):
 
-    # For each detector type, create all relevant detectors
-    for x in detectors_to_try:
-        n_combinations = itertools.combinations(detectors_to_try[x], args.combination_size)
-        detectors_to_try[x] = [list(x) for x in n_combinations]  # {'a': [[a1, a2], [a2, a3], ..], 'b': [[b1, b2]], ...}
+#     """
+#     ['a', 'b', 'c']
+#     """
+#     modules_to_try = defaultdict(list)  # {'a': [a1, a2, a3],  'b': [b1, b2, b3], 'b': [c1]}
+#     for x in transform_names:
+#         if x in vars(args.transforms):
+#             module_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
+#             params2tune = eval(f'args.transforms.{x}.tuning.hparams2tune')
+#             values2tune = eval(f'args.transforms.{x}.tuning.hparam_values')[args.n_shot]
+#             values_combinations = itertools.product(*values2tune)
+#             for some_combin in values_combinations:
+#                 # Override default args
+#                 for k, v in zip(params2tune, some_combin):
+#                     module_args[k] = v
+#                 if "args" in inspect.getfullargspec(TRANSFORMS[x].__init__).args:
+#                     module_args['args'] = args
+#                 modules_to_try[x].append(TRANSFORMS[x](**module_args))
+#         else:  # some methods just don't have any argument
+#             modules_to_try[x].append(TRANSFORMS[x]())
 
-    # Finally, form the product across detector types
-    sequences_to_try = list(itertools.product(*list(detectors_to_try.values())))  # [[[a1, a2], [b2, b3]], ...]
-    sequences_to_try = [list(itertools.chain(*x)) for x in sequences_to_try]  # [[a1, a2, b2, b3], ...]
-    sequences_to_try = [ALL_DETECTORS['aggregator'](x) for x in sequences_to_try]
-    return sequences_to_try
+#     transforms_products = itertools.product(*modules_to_try.values())  # [(a1, b1, c1), (a2, b1, c1), ....]
+#     all_transforms = [TRANSFORMS['SequentialTransform'](x) for x in transforms_products]
+#     return all_transforms
+
+
+# def get_FEATURE_DETECTORS(detector_names: List[str]):
+#     """
+#     ['a', 'b']
+#     """
+#     detectors_to_try = defaultdict(list)  # {'a': [a1, a2, a3, a4], 'b': [b1, b2]}
+#     for x in detector_names:
+#         detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
+#         params2tune = eval(f'args.detectors.{x}.tuning.hparams2tune')
+#         values2tune = eval(f'args.detectors.{x}.tuning.hparam_values')[args.n_shot]
+#         values_combinations = itertools.product(*values2tune)
+#         for some_combin in values_combinations:
+#             # Override default args
+#             for k, v in zip(params2tune, some_combin):
+#                 detector_args[k] = v
+#             if "args" in inspect.getfullargspec(FEATURE_DETECTORS[x].__init__).args:
+#                 detector_args['args'] = args
+#             detectors_to_try[x].append(FEATURE_DETECTORS[x](**detector_args))
+
+#     # For each detector type, create all relevant detectors
+#     for x in detectors_to_try:
+#         n_combinations = itertools.combinations(detectors_to_try[x], args.combination_size)
+#         detectors_to_try[x] = [list(x) for x in n_combinations]  # {'a': [[a1, a2], [a2, a3], ..], 'b': [[b1, b2]], ...}
+
+#     # Finally, form the product across detector types
+#     sequences_to_try = list(itertools.product(*list(detectors_to_try.values())))  # [[[a1, a2], [b2, b3]], ...]
+#     sequences_to_try = [list(itertools.chain(*x)) for x in sequences_to_try]  # [[a1, a2, b2, b3], ...]
+#     sequences_to_try = [FEATURE_DETECTORS['aggregator'](x) for x in sequences_to_try]
+#     return sequences_to_try
 
 
 def save_results(args, metrics):
@@ -302,7 +314,7 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(layers, transforms, few_shot_classifier,
+def detect_outliers(layers, transforms, classifier,
                     detector, data_loader, n_way, n_query, train_mean, train_std,
                     on_features: bool, model=None):
 
@@ -358,7 +370,7 @@ def detect_outliers(layers, transforms, few_shot_classifier,
         # ====== Few-shot classifier ======
         all_probs = []
         for layer in support_features:
-            all_probs.append(few_shot_classifier(support_features[layer], query_features[layer], support_labels)[1])
+            all_probs.append(classifier(support_features[layer], query_features[layer], support_labels)[1])
         all_probs = torch.stack(all_probs, 0).mean(0)
         predictions = all_probs.argmax(-1)
 

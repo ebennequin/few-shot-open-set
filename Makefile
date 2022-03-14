@@ -147,7 +147,7 @@ run_snatcher:
 	make TRANSFORMS="Pool" DETECTORS='snatcher_f' TRAINING='feat' run ;\
 
 run_centering:
-	for detector in repri; do \
+	for detector in finetune; do \
 		make DETECTORS=$${detector} run ;\
 	done ;\
 # 	make TRANSFORMS="l2_norm" run ;\
@@ -173,12 +173,12 @@ cross_domain:
 	done ;\
 
 	# ImageNet -> CUB Aircraft with all kinds of models
-# 	for tgt_dataset in aircraft; do \
-# 		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-# 			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
-# 				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
-# 		done ;\
-# 	done ;\
+	for tgt_dataset in aircraft; do \
+		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
+				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+		done ;\
+	done ;\
 
 layers:
 	for layers in 2 3 4; do \

@@ -3,11 +3,11 @@ from typing import Tuple
 import torch.nn.functional as F
 from torch import Tensor
 
-from src.few_shot_methods import AbstractFewShotMethod
+from abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class BDCSPN(AbstractFewShotMethod):
+class BDCSPN(FewShotMethod):
 
     """
     Implementation of BD-CSPN (ECCV 2020) https://arxiv.org/abs/1911.10713

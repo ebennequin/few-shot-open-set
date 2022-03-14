@@ -2,7 +2,7 @@ from typing import Tuple
 
 from torch import Tensor
 
-from src.few_shot_methods import AbstractFewShotMethod
+from abstract import AbstractFewShotMethod
 from easyfsl.utils import compute_prototypes
 
 

@@ -1,5 +1,6 @@
 import random
-from typing import Tuple, Dict, Optional
+import inspect
+from typing import Tuple, Dict, Optional, Any, List
 import numpy as np
 import torch
 from loguru import logger
@@ -17,8 +18,9 @@ from collections import OrderedDict, defaultdict
 import argparse
 import torch.distributed as dist
 from loguru import logger
-
+import itertools
     
+
 def set_random_seed(seed: int):
     """
     Set random, numpy and torch random seed, for reproducibility of the training
@@ -184,3 +186,30 @@ def find_free_port() -> int:
     port = sock.getsockname()[1]
     sock.close()
     return port
+
+
+def get_modules_to_try(args, module_group: str, module_name: str,
+                       module_pool: Dict[str, Any], tune: bool):
+
+    modules_to_try: List[Any] = []
+
+    if tune:
+        logger.warning(f"Tuning over {module_group} activated")
+        module_args = eval(f'args.{module_group}.{module_name}.current_params')[args.n_shot]  # take default args
+        params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
+        values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[args.n_shot]
+        values_combinations = itertools.product(*values2tune)
+        for some_combin in values_combinations:
+            # Override default args
+            for k, v in zip(params2tune, some_combin):
+                module_args[k] = v
+            if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
+                module_args['args'] = args
+            modules_to_try.append(module_pool[module_name](**module_args))
+
+    else:
+        module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
+        if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
+            module_args['args'] = args
+        modules_to_try = module_pool[module_name](**module_args)
+    return modules_to_try

@@ -4,11 +4,11 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from src.few_shot_methods import AbstractFewShotMethod
+from abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class AbstractTIM(AbstractFewShotMethod):
+class AbstractTIM(FewShotMethod):
     """
     Implementation of TIM method (NeurIPS 2020) https://arxiv.org/abs/2008.11297
     This is an abstract class.

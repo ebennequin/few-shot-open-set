@@ -4,11 +4,11 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from src.few_shot_methods import AbstractFewShotMethod
+from abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class Finetune(AbstractFewShotMethod):
+class Finetune(FewShotMethod):
     """
     Implementation of Finetune (or Baseline method) (ICLR 2019) https://arxiv.org/abs/1904.04232
     This is an inductive method.

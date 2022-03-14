@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from abstract import FewShotMethod
+from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 

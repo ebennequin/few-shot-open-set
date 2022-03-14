@@ -1,7 +1,4 @@
 import torch
-from .abstract_detector import FeatureDetector
-from easyfsl.utils import compute_prototypes
-from src.constants import MISC_MODULES
 from loguru import logger
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve
@@ -30,7 +27,7 @@ class AlternateDetector(FeatureDetector):
         fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
         return auc_fn(fp_rate, tp_rate)
 
-    def decision_function(self, raw_feat_q, **kwargs):
+    def __call__(self, query_features, **kwargs):
 
         loss_values = []
         aucs = []
@@ -39,7 +36,7 @@ class AlternateDetector(FeatureDetector):
         inlier_entropy = []
         outlier_entropy = []
         raw_feat_s = self.raw_feat_s.cuda()
-        raw_feat_q = raw_feat_q.cuda()
+        raw_feat_q = query_features.cuda()
 
         if self.init == 'base':
             mu = kwargs['train_mean'].squeeze().cuda()

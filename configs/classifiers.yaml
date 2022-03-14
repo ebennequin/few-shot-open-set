@@ -1,0 +1,10 @@
+classifiers:
+  TIM:
+    default: {
+        1: {
+          'softmax_temperature': 1.0,
+          'inference_steps': 10,
+          'inference_lr': 0.001,
+          'loss_weights': [1.0, 1.0, 0.1]
+           },
+             }

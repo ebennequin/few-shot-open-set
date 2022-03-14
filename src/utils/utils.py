@@ -192,24 +192,35 @@ def get_modules_to_try(args, module_group: str, module_name: str,
                        module_pool: Dict[str, Any], tune: bool):
 
     modules_to_try: List[Any] = []
+    # logger.warning(module_pool)
 
     if tune:
         logger.warning(f"Tuning over {module_group} activated")
-        module_args = eval(f'args.{module_group}.{module_name}.current_params')[args.n_shot]  # take default args
-        params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
-        values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[args.n_shot]
-        values_combinations = itertools.product(*values2tune)
-        for some_combin in values_combinations:
-            # Override default args
-            for k, v in zip(params2tune, some_combin):
-                module_args[k] = v
+        if module_name in vars(eval(f'args.{module_group}')): 
+            module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
+
+            if 'tuning' in vars(eval(f'args.{module_group}.{module_name}')):
+                params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
+                values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[args.n_shot]
+                values_combinations = itertools.product(*values2tune)
+                for some_combin in values_combinations:
+                    # Override default args
+                    for k, v in zip(params2tune, some_combin):
+                        module_args[k] = v
+                    if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
+                        module_args['args'] = args
+                    modules_to_try.append(module_pool[module_name](**module_args))
+            else:
+                logger.warning(f"Module {module_name} has no specified grid to search over. Using default arguments.")
+                modules_to_try.append(module_pool[module_name](**module_args))
+        else:
+            modules_to_try.append(module_pool[module_name]())
+    else:
+        if module_name in vars(eval(f'args.{module_group}')):
+            module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
             if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
                 module_args['args'] = args
-            modules_to_try.append(module_pool[module_name](**module_args))
-
-    else:
-        module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
-        if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
-            module_args['args'] = args
-        modules_to_try = module_pool[module_name](**module_args)
+            modules_to_try = [module_pool[module_name](**module_args)]
+        else:
+            modules_to_try = [module_pool[module_name]()]
     return modules_to_try

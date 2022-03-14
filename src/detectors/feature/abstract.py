@@ -12,10 +12,7 @@ class FeatureDetector:
     def __init__(self, *args, **kwargs):
         pass
 
-    def fit(self, support_features):
-        raise NotImplementedError
-
-    def decision_function(self, support_features, query_features):
+    def __call__(self, support_features, query_features, **kwargs):
         raise NotImplementedError
 
     def __str__(self):

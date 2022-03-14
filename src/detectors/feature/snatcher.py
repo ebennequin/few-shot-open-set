@@ -29,7 +29,7 @@ class SNATCHERF(FeatureDetector):
     def fit(self, support_features, support_labels):
         self.prototypes = compute_prototypes(support_features, support_labels).to(self.device).unsqueeze(0)  # [Nk, d]
 
-    def decision_function(self, query_features):
+    def forward(self, query_features):
         """
         query_features [Ns, d]
         """

@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from abstract import FewShotMethod
+from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
@@ -17,19 +17,16 @@ class AbstractTIM(FewShotMethod):
 
     def __init__(
         self,
-        prepool_transforms: List[str],
-        postpool_transforms: List[str],
-        average_train_features: Tensor,
         softmax_temperature: float = 1.0,
-        normalize_features: bool = False,
         inference_steps: int = 10,
         inference_lr: float = 1e-3,
         loss_weights: List[float] = None,
     ):
-        super().__init__(prepool_transforms, postpool_transforms, average_train_features, softmax_temperature)
+        super().__init__()
         self.loss_weights = [1.0, 1.0, 0.1] if loss_weights is None else loss_weights
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
+        self.softmax_temperature = softmax_temperature
 
 
 class TIM_GD(AbstractTIM):

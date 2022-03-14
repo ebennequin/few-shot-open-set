@@ -2,11 +2,11 @@ from typing import Tuple
 
 from torch import Tensor
 
-from abstract import AbstractFewShotMethod
+from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class SimpleShot(AbstractFewShotMethod):
+class SimpleShot(FewShotMethod):
     """
     Implementation of SimpleShot method https://arxiv.org/abs/1911.04623
     This is an inductive method.

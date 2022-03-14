@@ -23,14 +23,14 @@ import inspect
 import yaml
 import numpy as np
 import itertools
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Any
 import seaborn as sns
 from pathlib import Path
 
-from src.classifiers import CLASSIFIERS
-from src.detectors.feature import FEATURE_DETECTORS
-from src.detectors.proba import PROBA_DETECTORS
-from src.all_in_one import ALL_IN_ONE_METHODS
+from src.classifiers import __dict__ as CLASSIFIERS
+from src.detectors.feature import __dict__ as FEATURE_DETECTORS
+from src.detectors.proba import __dict__ as PROBA_DETECTORS
+from src.all_in_one import __dict__ as ALL_IN_ONE_METHODS
 
 from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
@@ -76,6 +76,7 @@ def parse_args() -> argparse.Namespace:
 
     # Detector
     parser.add_argument("--feature_detector", type=str)
+    parser.add_argument("--proba_detector", type=str)
     parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Transform
@@ -83,7 +84,7 @@ def parse_args() -> argparse.Namespace:
                         help="What type of transformation to apply after spatial pooling.")
     parser.add_argument("--transforms_config_file", type=str, default="configs/transforms.yaml")
 
-    # Method
+    # Classifier
     parser.add_argument("--classifier", type=str, default="SimpleShot")
     parser.add_argument("--softmax_temperature", type=float, default=1.0)
     parser.add_argument("--inference_lr", type=float, default=1e-3,
@@ -91,6 +92,7 @@ def parse_args() -> argparse.Namespace:
                         gradient-based inference.")
     parser.add_argument("--inference_steps", type=float, default=10,
                         help="Steps used for gradient-based inferences.")
+    parser.add_argument("--classifiers_config_file", type=str, default="configs/classifiers.yaml")
 
     # Logging / Saving results
 
@@ -105,8 +107,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--override", type=str2bool, help='Whether to override results already present in the .csv out file.')
 
     # Tuning
-    parser.add_argument("--combination_size", type=int, default=2)
-    parser.add_argument("--mode", type=str, default='benchmark')
+    parser.add_argument("--tune", nargs='+', default=[])
     parser.add_argument("--debug", type=str2bool)
 
     args = parser.parse_args()
@@ -115,7 +116,7 @@ def parse_args() -> argparse.Namespace:
         args.n_tasks = 5
 
     # Merge external config files
-    for file in [args.detector_config_file, args.transforms_config_file]:
+    for file in [args.detector_config_file, args.transforms_config_file, args.classifiers_config_file]:
         with open(file) as f:
             parsed_yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
         merge_from_dict(args, parsed_yaml_dict)
@@ -157,138 +158,47 @@ def main(args):
         transforms.append(TRANSFORMS[x]())
     transforms = TRANSFORMS['SequentialTransform'](transforms)
 
-    if args.outlier_detector in ALL_IN_ONE_METHODS:
+    if args.feature_detector in ALL_IN_ONE_METHODS:
 
         # ==== Prepare all in one detector ====
 
-        all_in_one_detectors = get_modules_to_try(args, 'feature_detectors', args.outlier_detector,
-                                                  ALL_IN_ONE_METHODS, args.tune == 'all_in_one')
-        feature_detectors = proba_detectors = classifier = [None]
+        feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
+                                               ALL_IN_ONE_METHODS, 'all_in_one' in args.tune)
+        proba_detectors = classifier = [None]
 
     else:
         # ==== Prepare few-shot classifier ====
 
         classifiers = get_modules_to_try(args, 'classifiers', args.classifier,
-                                         CLASSIFIERS, args.tune == 'classifier')
+                                         CLASSIFIERS, 'classifier' in args.tune)
 
         # ==== Prepare feature detector ====
 
-        feature_detectors = get_modules_to_try(args, 'feature_detectors', args.outlier_detector,
-                                               FEATURE_DETECTORS, args.tune == 'feature_detector')
+        feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
+                                               FEATURE_DETECTORS, 'feature_detector' in args.tune)
 
         # ==== Prepare proba detector ====
         proba_detectors = get_modules_to_try(args, 'proba_detectors', args.proba_detector,
-                                             PROBA_DETECTORS, args.tune == 'proba_detector')
+                                             PROBA_DETECTORS, 'proba_detector' in args.tune)
 
-        all_in_one_detectors = [None]
-
-    for feature_d, proba_d, classifier, all_in_one in itertools.product(
+    for feature_d, proba_d, classifier in itertools.product(
                 feature_detectors, proba_detectors, classifiers):
-        logger.info(feature_detector)
         logger.info(transforms)
-
-        args.current_sequence = str(feature_detector) + str(transforms)
+        logger.info((feature_d, proba_d, classifier))
 
         metrics = detect_outliers(layers=args.layers,
                                   transforms=transforms,
                                   train_mean=train_mean,
                                   train_std=train_std,
                                   classifier=classifier,
-                                  detector=feature_detector,
+                                  feature_detector=feature_d,
+                                  proba_detector=proba_d,
                                   data_loader=data_loader,
                                   n_way=args.n_way,
                                   n_query=args.n_query,
                                   on_features=True)
     # Saving results
     save_results(args, metrics)
-
-#     elif args.mode == 'tune':
-
-#         # Which model do we need to tune
-
-#         detectors_to_try = get_FEATURE_DETECTORS(detector_names)
-#         all_transforms = get_all_transforms(transform_names)
-
-#         for aggreg_detector in detectors_to_try:
-
-#             for aggreg_transform in all_transforms:
-
-#                 set_random_seed(args.random_seed)
-#                 logger.info(aggreg_detector.detectors)
-#                 logger.info(aggreg_transform.transform_list)
-
-#                 args.current_sequence = str(aggreg_detector.detectors) + str(aggreg_transform.transform_list)
-
-#                 metrics = detect_outliers(layers=args.layers,
-#                                           transforms=aggreg_transform,
-#                                           train_mean=train_mean,
-#                                           train_std=train_std,
-#                                           classifier=classifier,
-#                                           detector=aggreg_detector,
-#                                           data_loader=data_loader,
-#                                           n_way=args.n_way,
-#                                           n_query=args.n_query,
-#                                           on_features=True)
-
-#                 # Saving results
-#                 save_results(args, metrics)
-
-
-# def get_all_transforms(transform_names: List[str]):
-
-#     """
-#     ['a', 'b', 'c']
-#     """
-#     modules_to_try = defaultdict(list)  # {'a': [a1, a2, a3],  'b': [b1, b2, b3], 'b': [c1]}
-#     for x in transform_names:
-#         if x in vars(args.transforms):
-#             module_args = eval(f'args.transforms.{x}.current_params')[args.n_shot]  # take default args
-#             params2tune = eval(f'args.transforms.{x}.tuning.hparams2tune')
-#             values2tune = eval(f'args.transforms.{x}.tuning.hparam_values')[args.n_shot]
-#             values_combinations = itertools.product(*values2tune)
-#             for some_combin in values_combinations:
-#                 # Override default args
-#                 for k, v in zip(params2tune, some_combin):
-#                     module_args[k] = v
-#                 if "args" in inspect.getfullargspec(TRANSFORMS[x].__init__).args:
-#                     module_args['args'] = args
-#                 modules_to_try[x].append(TRANSFORMS[x](**module_args))
-#         else:  # some methods just don't have any argument
-#             modules_to_try[x].append(TRANSFORMS[x]())
-
-#     transforms_products = itertools.product(*modules_to_try.values())  # [(a1, b1, c1), (a2, b1, c1), ....]
-#     all_transforms = [TRANSFORMS['SequentialTransform'](x) for x in transforms_products]
-#     return all_transforms
-
-
-# def get_FEATURE_DETECTORS(detector_names: List[str]):
-#     """
-#     ['a', 'b']
-#     """
-#     detectors_to_try = defaultdict(list)  # {'a': [a1, a2, a3, a4], 'b': [b1, b2]}
-#     for x in detector_names:
-#         detector_args = eval(f'args.detectors.{x}.current_params')[args.n_shot]  # take default args
-#         params2tune = eval(f'args.detectors.{x}.tuning.hparams2tune')
-#         values2tune = eval(f'args.detectors.{x}.tuning.hparam_values')[args.n_shot]
-#         values_combinations = itertools.product(*values2tune)
-#         for some_combin in values_combinations:
-#             # Override default args
-#             for k, v in zip(params2tune, some_combin):
-#                 detector_args[k] = v
-#             if "args" in inspect.getfullargspec(FEATURE_DETECTORS[x].__init__).args:
-#                 detector_args['args'] = args
-#             detectors_to_try[x].append(FEATURE_DETECTORS[x](**detector_args))
-
-#     # For each detector type, create all relevant detectors
-#     for x in detectors_to_try:
-#         n_combinations = itertools.combinations(detectors_to_try[x], args.combination_size)
-#         detectors_to_try[x] = [list(x) for x in n_combinations]  # {'a': [[a1, a2], [a2, a3], ..], 'b': [[b1, b2]], ...}
-
-#     # Finally, form the product across detector types
-#     sequences_to_try = list(itertools.product(*list(detectors_to_try.values())))  # [[[a1, a2], [b2, b3]], ...]
-#     sequences_to_try = [list(itertools.chain(*x)) for x in sequences_to_try]  # [[a1, a2, b2, b3], ...]
-#     sequences_to_try = [FEATURE_DETECTORS['aggregator'](x) for x in sequences_to_try]
-#     return sequences_to_try
 
 
 def save_results(args, metrics):
@@ -314,13 +224,12 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(layers, transforms, classifier,
-                    detector, data_loader, n_way, n_query, train_mean, train_std,
-                    on_features: bool, model=None):
+def detect_outliers(layers, transforms, classifier, feature_detector, proba_detector,
+                    data_loader, n_way, n_query, train_mean, train_std, on_features: bool, model=None):
 
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
-    figures = {}
+    figures: Dict[str, Any] = {}
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
 
         # ====== Extract features ======
@@ -348,13 +257,15 @@ def detect_outliers(layers, transforms, classifier,
                       intra_task_metrics=intra_task_metrics,
                       figures=figures)
 
-        # ====== OOD detection ======
-        outlier_scores = []
+        # ====== Classification + OOD detection ======
+
+        outlier_scores = defaultdict(list)
+        soft_preds_q = []
+
         for layer in support_features:
-            detector.fit(support_features[layer], support_labels=support_labels)
-            raw_scores = torch.from_numpy(
-                   detector.decision_function(
-                        query_features[layer],
+            output = feature_detector(
+                        support_features=support_features[layer],
+                        query_features=query_features[layer],
                         train_mean=train_mean[layer],
                         train_std=train_std[layer],
                         support_labels=support_labels,
@@ -363,25 +274,36 @@ def detect_outliers(layers, transforms, classifier,
                         intra_task_metrics=intra_task_metrics,
                         figures=figures
                      )
-                )
-            outlier_scores.append(raw_scores)
-        outlier_scores = torch.stack(outlier_scores, 0).mean(0)
+            if feature_detector.type == 'all_in_one':
+                probas_s, probas_q, outlier_scores = output
+            else:
+                proba_s, probas_q = classifier(support_features=support_features[layer],
+                                               query_features=query_features[layer],
+                                               support_labels=support_labels)
+                outlier_scores['probas'].append(
+                                        proba_detector(support_probas=probas_s,
+                                                       query_probas=probas_q)
+                                          )
 
-        # ====== Few-shot classifier ======
-        all_probs = []
-        for layer in support_features:
-            all_probs.append(classifier(support_features[layer], query_features[layer], support_labels)[1])
-        all_probs = torch.stack(all_probs, 0).mean(0)
+            outlier_scores['features'].append(outlier_scores)
+            soft_preds_q.append(probas_q)
+        
+        # ====== Aggregate scores and probas across layers ======
+
+        for score_type, scores in outlier_scores.items():
+            outlier_scores[score_type] = torch.stack(scores, 0).mean(0)
+        all_probs = torch.stack(soft_preds_q, 0).mean(0)
         predictions = all_probs.argmax(-1)
 
         # ====== Tracking metrics ======
-        acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean().item()
-        fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), outlier_scores.numpy())
-        precision, recall, _ = precision_recall_curve(outliers.numpy(), outlier_scores.numpy())
-        auc = auc_fn(fp_rate, tp_rate)
 
-        for metric_name in ['auc', 'acc']:
-            metrics[metric_name].append(eval(metric_name))
+        for score_type, scores in outlier_scores:
+            fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), scores.numpy())
+            precision, recall, _ = precision_recall_curve(outliers.numpy(), scores.numpy())
+            metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
+
+        acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean().item()
+        metrics['acc'].append(acc)
         metrics['outlier_ratio'].append(outliers.sum().item() / outliers.size(0))
 
     final_metrics = {}

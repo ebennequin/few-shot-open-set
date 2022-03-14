@@ -1,4 +1,4 @@
-detectors:
+feature_detectors:
   snatcher_f:
     default: {1: {'temperature': 64.},
                      5: {'temperature': 64.}
@@ -7,14 +7,14 @@ detectors:
       hparams2tune: ['temperature']
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
-  knn:
+  kNNDetector:
     default: {1: {'n_neighbors': 3, method: 'mean'},
                      5: {'n_neighbors': 3, method: 'mean'}}
     tuning:
       hparams2tune: ['n_neighbors', 'method']
       hparam_values: {1: [[4], ['mean']],
                       5: [[10], ['mean']]}
-  alternate:
+  AlternateDetector:
     default: {1: {'lambda_': 1., 'lr': 1., 'n_iter': 00, 'init': 'base', 'n_neighbors': 1},
                      5: {'lambda_': 1., 'lr': 1., 'n_iter': 10, 'init': 'base', 'n_neighbors': 3}}
     tuning:
@@ -22,7 +22,7 @@ detectors:
       hparam_values: {1: [[1, 2, 3, 4]],
                       5: [[3, 5, 7, 10, 13]]}
 
-  repri:
+  RePRIDetector:
     default: {1: {'lambda_': 1., 'lr': 3., 'n_iter': 200, 'init': 'base', 'n_neighbors': 1, 'weight': 3., 'optimizer_name': 'SGD'},
                      5: {'lambda_': 1, 'lr': 3., 'n_iter': 200, 'init': 'base', 'n_neighbors': 3, 'weight': 3., 'optimizer_name': 'SGD'}}
     tuning:
@@ -30,10 +30,19 @@ detectors:
       hparam_values: {1: [[1, 3], [1, 5, 10], [20, 50], [1.0, 3.0, 5.0], [1.0, 3.0, 5.0]],
                       5: [[1, 3], [1, 5, 10], [20, 50], [1.0, 3.0, 5.0], [1.0, 3.0, 5.0]]}
 
-  finetune:
+  FinetuneDetector:
     default: {1: {'lambda_': 1., 'lr': 1., 'n_iter': 100, 'init': 'base', 'n_neighbors': 1, 'optimizer_name': 'SGD'},
                      5: {'lambda_': 1, 'lr': 1., 'n_iter': 100, 'init': 'base', 'n_neighbors': 3, 'optimizer_name': 'SGD'}}
     tuning:
       hparams2tune: ['n_neighbors', 'lambda_', 'n_iter', 'lr', 'weight']
       hparam_values: {1: [[1, 3], [1, 5, 10], [20, 50], [1.0, 3.0, 5.0], [1.0, 3.0, 5.0]],
                       5: [[1, 3], [1, 5, 10], [20, 50], [1.0, 3.0, 5.0], [1.0, 3.0, 5.0]]}
+
+proba_detectors:
+  kNNDetector:
+    default: {1: {'n_neighbors': 3, method: 'mean', 'distance': 'kl'},
+              5: {'n_neighbors': 3, method: 'mean', 'distance': 'kl'}}
+    tuning:
+      hparams2tune: ['n_neighbors', 'method']
+      hparam_values: {1: [[4], ['mean']],
+                      5: [[10], ['mean']]}

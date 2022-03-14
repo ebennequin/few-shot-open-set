@@ -10,10 +10,8 @@ class EntropyDetector(ProbaDetector):
     """
     Abstract class for an outlier detector
     """
-    def __init__(self, *args, **kwargs):
-        pass
 
-    def decision_function(self, support_probas, query_probas):
+    def decision_function(self, support_probas, query_probas, **kwargs):
         """
         support_probas: [Ns, K]
         query_probas: [Nq, K]

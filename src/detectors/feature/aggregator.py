@@ -17,21 +17,11 @@ class NaiveAggregator(FeatureDetector):
     def __repr__(self):
         return repr(self.detectors)
 
-    def fit(self, support_features, **kwargs):
-        for detector in self.detectors:
-            if "kwargs" in inspect.getfullargspec(detector.fit).args:
-                detector.fit(support_features, **kwargs)
-            else:
-                detector.fit(support_features)
-
-    def decision_function(self, query_features, **kwargs):
+    def __call__(self, support_features, query_features, **kwargs):
         n_clf = len(self.detectors)
         test_scores = np.zeros([query_features.shape[0], n_clf])  # [Q, n_clf]
         for i, detector in enumerate(self.detectors):
-            if inspect.getfullargspec(detector.decision_function).varkw == 'kwargs':
-                detector_scores = detector.decision_function(query_features, **kwargs)
-            else:
-                detector.decision_function(query_features)
+            detector_scores = detector.__call__(support_features, query_features, **kwargs)
             test_scores[:, i] = detector_scores
         test_scores_norm = test_scores
         outlier_scores = test_scores_norm.mean(axis=-1)

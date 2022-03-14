@@ -3,7 +3,7 @@ from typing import Tuple
 import torch.nn.functional as F
 from torch import Tensor
 
-from abstract import FewShotMethod
+from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 

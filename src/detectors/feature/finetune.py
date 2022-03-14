@@ -1,5 +1,4 @@
 import torch
-from .abstract_detector import FeatureDetector
 from easyfsl.utils import compute_prototypes
 from src.constants import MISC_MODULES
 from loguru import logger
@@ -22,12 +21,6 @@ class FinetuneDetector(FeatureDetector):
         self.name = 'FinetuneDetector'
         self.optimizer_name = optimizer_name
 
-    def fit(self, support_features, **kwargs):
-        """
-        feat: Tensor shape [N, hidden_dim, *]
-        """
-        self.raw_feat_s = support_features
-
     def compute_auc(self, outlierness, **kwargs):
         fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
         return auc_fn(fp_rate, tp_rate)
@@ -38,7 +31,7 @@ class FinetuneDetector(FeatureDetector):
         outlierness = (-self.lambda_ * similarities).sigmoid()  # [N, 1]
         return torch.cat([outlierness, 1 - outlierness], dim=1)
 
-    def decision_function(self, raw_feat_q, **kwargs):
+    def __call__(self, support_features, query_features, **kwargs):
 
         loss_values = []
         aucs = []
@@ -49,8 +42,8 @@ class FinetuneDetector(FeatureDetector):
         entropies = []
         ces = []
         kls = []
-        raw_feat_s = self.raw_feat_s.cuda()
-        raw_feat_q = raw_feat_q.cuda()
+        raw_feat_s = support_features.cuda()
+        raw_feat_q = query_features.cuda()
 
         if self.init == 'base':
             mu = kwargs['train_mean'].squeeze().cuda()

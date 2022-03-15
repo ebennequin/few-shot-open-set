@@ -197,10 +197,12 @@ def get_modules_to_try(args, module_group: str, module_name: str,
     if tune:
         logger.warning(f"Tuning over {module_group} activated")
         if module_name in vars(eval(f'args.{module_group}')): 
-            module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
+            shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.default') else 1
+            module_args = eval(f'args.{module_group}.{module_name}.default')[shot]  # take default args
             if 'tuning' in vars(eval(f'args.{module_group}.{module_name}')):
                 params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
-                values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[args.n_shot]
+                shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.tuning.hparam_values') else 1
+                values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[shot]
                 values_combinations = itertools.product(*values2tune)
                 for some_combin in values_combinations:
                     # Override default args
@@ -217,10 +219,9 @@ def get_modules_to_try(args, module_group: str, module_name: str,
     else:
         module_args = {}
         if module_name in vars(eval(f'args.{module_group}')):
-            module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
+            shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.default') else 1
+            module_args = eval(f'args.{module_group}.{module_name}.default')[shot]  # take default args
         if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
             module_args['args'] = args
         modules_to_try = [module_pool[module_name](**module_args)]
-        # modules_to_try = [module_pool[module_name]()]
-        # else:
     return modules_to_try

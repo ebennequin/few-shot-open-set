@@ -7,21 +7,10 @@ classifiers:
           'inference_lr': 0.001,
           'loss_weights': [1.0, 1.0, 0.5]
            },
-        5: {
-            'softmax_temperature': 5.0,
-            'inference_steps': 100,
-            'inference_lr': 0.001,
-            'loss_weights': [1.0, 1.0, 0.5]
-             },
              }
   MAP:
     default: {
         1: {
-            'alpha': 0.2,
-            'inference_steps': 20,
-            'lam': 10,
-           },
-        5: {
             'alpha': 0.2,
             'inference_steps': 20,
             'lam': 10,
@@ -34,10 +23,6 @@ classifiers:
             'temperature': 1,
             'use_euclidean': True,
            },
-        5: {
-            'temperature': 1,
-            'use_euclidean': True,
-           },
              }
 
   SemiFEAT:
@@ -46,8 +31,15 @@ classifiers:
             'temperature': 1,
             'use_euclidean': True,
            },
-        5: {
-            'temperature': 1,
-            'use_euclidean': True,
-           },
              }
+  ICI:
+    default: {
+        1: {
+             'classifier': 'lr',
+             'step': 5,
+             'max_iter': 'auto',
+             'reduce': 'pca',
+             'd': 5,
+             'norm_name': 'l2',
+            },
+          }

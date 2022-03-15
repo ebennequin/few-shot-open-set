@@ -1,43 +1,37 @@
 from typing import Tuple, List
-
 import torch
 import torch.nn.functional as F
-from torch import Tensor
 from loguru import logger
 from .abstract import FewShotMethod
-from easyfsl.utils import compute_prototypes
 import math
-import random
 
 import numpy as np
-import sklearn
 from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import normalize
 
 
-class ICI(object):
+class ICI(FewShotMethod):
 
-    def __init__(self, classifier='lr', num_class=None, step=5, max_iter='auto',
-                 reduce='pca', d=5, norm='l2'):
+    def __init__(self, classifier: str, step: int, max_iter: str, reduce: str, d: int, norm_name: str):
+        super().__init__()
         self.step = step
         self.max_iter = max_iter
-        self.num_class = num_class
+        self.reduce = reduce
+        self.d = d
+        self.norm_name = norm_name
         self.initial_embed(reduce, d)
-        self.initial_norm(norm)
+        self.initial_norm(norm_name)
         self.initial_classifier(classifier)
         self.elasticnet = ElasticNet(alpha=1.0, l1_ratio=1.0, fit_intercept=True,
                                      normalize=True, warm_start=True, selection='cyclic')
 
-    def predict(self, support_features, query_features, support_labels, **kwargs):
-        support_X, support_y = self.support_X, self.support_y
-        way, num_support = self.num_class, len(support_X)
-        query_X = self.norm(X)
-        if unlabel_X is None:
-            unlabel_X = query_X
-        else:
-            unlabel_X = self.norm(unlabel_X)
+    def forward(self, support_features, query_features, support_labels, **kwargs):
+        support_X, support_y = self.norm(support_features.numpy()), support_labels.numpy()
+        way, num_support = support_labels.unique().size(0), len(support_X)
+        query_X = self.norm(query_features.numpy())
+        unlabel_X = query_X
         num_unlabel = unlabel_X.shape[0]
-        assert self.support_X is not None
+
         embeddings = np.concatenate([support_X, unlabel_X])
         X = self.embed(embeddings)
         H = np.dot(np.dot(X, np.linalg.inv(np.dot(X.T, X))), X.T)
@@ -46,35 +40,42 @@ class ICI(object):
             # set a big number
             self.max_iter = num_support + num_unlabel
         elif self.max_iter == 'fix':
-            self.max_iter = math.ceil(num_unlabel/self.step)
+            self.max_iter = math.ceil(num_unlabel / self.step)
         else:
             assert float(self.max_iter).is_integer()
+
         support_set = np.arange(num_support).tolist()
-        self.classifier.fit(self.support_X, self.support_y)
-        if show_detail:
-            acc_list = []
+
+        # Train classifier
+        self.classifier.fit(support_X, support_y)
+        
         for _ in range(self.max_iter):
-            if show_detail:
-                predicts = self.classifier.predict(query_X)
-                acc_list.append(np.mean(predicts == query_y))
+
+            # Get pseudo labels
             pseudo_y = self.classifier.predict(unlabel_X)
             y = np.concatenate([support_y, pseudo_y])
             Y = self.label2onehot(y, way)
             y_hat = np.dot(X_hat, Y)
+
+            # Expand based on credibility of pseudo labels
             support_set = self.expand(support_set, X_hat, y_hat, way, num_support, pseudo_y,
                                       embeddings, y)
             y = np.argmax(Y, axis=1)
+
+            # Re-train classifier
             self.classifier.fit(embeddings[support_set], y[support_set])
             if len(support_set) == len(embeddings):
                 break
-        predicts = self.classifier.predict(query_X)
+        preds_q = torch.from_numpy(self.classifier.predict(query_X))
+        preds_s = torch.from_numpy(self.classifier.predict(support_X))
 
-        return predicts
+        return F.one_hot(preds_s, way).float(), F.one_hot(preds_q, way).float()
 
     def expand(self, support_set, X_hat, y_hat, way, num_support, pseudo_y, embeddings, targets):
+
+        # Get the path (i.e the evolution of |gamma_i| as a function of lambda increasing)
         _, coefs, _ = self.elasticnet.path(X_hat, y_hat, l1_ratio=1.0)
-        coefs = np.sum(np.abs(coefs.transpose(2, 1, 0)[
-                       ::-1, num_support:, :]), axis=2)
+        coefs = np.sum(np.abs(coefs.transpose(2, 1, 0)[::-1, num_support:, :]), axis=2)
         selected = np.zeros(way)
         for gamma in coefs:
             for i, g in enumerate(gamma):

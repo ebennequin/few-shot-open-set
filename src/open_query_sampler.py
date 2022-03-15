@@ -19,8 +19,8 @@ class TaskSampler(Sampler):
     """
 
     def __init__(
-        self, dataset: Dataset, n_way: int, n_shot: int, n_query: int, n_tasks: int,
-        balanced: bool, alpha,
+        self, dataset: Dataset, n_way: int, n_shot: int, n_id_query: int, n_ood_query: int,
+        n_tasks: int, balanced: bool, alpha: float,
     ):
         """
         Args:
@@ -34,7 +34,8 @@ class TaskSampler(Sampler):
         super().__init__(data_source=None)
         self.n_way = n_way
         self.n_shot = n_shot
-        self.n_query = n_query
+        self.n_id_query = n_id_query
+        self.n_ood_query = n_ood_query
         self.n_tasks = n_tasks
         self.balanced = balanced
         self.alpha = alpha
@@ -69,13 +70,13 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
             support_labels = all_labels[: self.n_way]
             open_set_labels = all_labels[self.n_way:]
             if self.balanced:
-                id_samples_per_class = [self.n_query] * self.n_way
-                ood_samples_per_class = [self.n_query] * self.n_way
+                id_samples_per_class = [self.n_id_query] * self.n_way
+                ood_samples_per_class = [self.n_ood_query] * self.n_way
             else:
                 query_samples_per_class = get_dirichlet_proportion([self.alpha] * self.n_way * 2,
                                                                    1,
                                                                    2 * self.n_way,
-                                                                   self.n_way * 2 * self.n_query
+                                                                   self.n_way * (self.n_id_query + self.n_ood_query)
                                                                    )[0]
                 id_samples_per_class = query_samples_per_class[:self.n_way]
                 ood_samples_per_class = query_samples_per_class[self.n_way:]
@@ -143,7 +144,8 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
         for layer in layers:
             support_images[layer] = torch.stack([x[0][layer] for x in support_data], 0)  # [Ns, d_layer]
             query_images[layer] = torch.stack([x[0][layer] for x in id_query], 0)  # [Ns, d_layer]
-            query_images[layer] = torch.cat([query_images[layer], torch.stack([x[0][layer] for x in ood_query], 0)])
+            if len(ood_query):
+                query_images[layer] = torch.cat([query_images[layer], torch.stack([x[0][layer] for x in ood_query], 0)])
 
         return (
             support_images,
@@ -162,13 +164,13 @@ class OpenQuerySampler(TaskSampler):
             support_labels = all_labels[: self.n_way]
             open_set_labels = all_labels[self.n_way:]
             if self.balanced:
-                id_samples_per_class = [self.n_query] * self.n_way
-                ood_samples_per_class = [self.n_query] * self.n_way
+                id_samples_per_class = [self.n_id_query] * self.n_way
+                ood_samples_per_class = [self.n_ood_query] * self.n_way
             else:
                 query_samples_per_class = get_dirichlet_proportion([self.alpha] * self.n_way * 2,
                                                                    1,
                                                                    2 * self.n_way,
-                                                                   self.n_way * 2 * self.n_query
+                                                                   self.n_way * (self.n_id_query + self.n_ood_query)
                                                                    )[0]
                 id_samples_per_class = query_samples_per_class[:self.n_way]
                 ood_samples_per_class = query_samples_per_class[self.n_way:]
@@ -234,7 +236,8 @@ class OpenQuerySampler(TaskSampler):
         # Preparing features
         support_images = torch.stack([x[0] for x in support_data], 0)  # [Ns, d_layer]
         query_images = torch.stack([x[0] for x in id_query], 0)  # [Ns, d_layer]
-        query_images = torch.cat([query_images, torch.stack([x[0] for x in ood_query], 0)])
+        if len(ood_query):
+            query_images = torch.cat([query_images, torch.stack([x[0] for x in ood_query], 0)])
 
         return (
             support_images,

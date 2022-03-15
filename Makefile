@@ -9,17 +9,21 @@ SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 
 
+# Modules
 TRANSFORMS=Pool
 FEATURE_DETECTOR=kNNDetector
 PROBA_DETECTOR=kNNDetector
 CLASSIFIER=SimpleShot
 
+
+# Model
 LAYERS=1
-EXP=default
-RESOLUTION=84
 BACKBONE=resnet12
 MODEL_SRC=feat
 TRAINING=standard
+
+# Misc
+EXP=default
 DEBUG=False
 GPUS=0
 SIMU_PARAMS=current_sequence
@@ -27,6 +31,8 @@ OVERRIDE=True
 TUNE=""
 
 # Tasks
+RESOLUTION=84
+OOD_QUERY=10
 N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
@@ -81,6 +87,7 @@ run:
 		        --feature_transforms  $(TRANSFORMS) \
 		        --backbone $(BACKBONE) \
 		        --model_source $(MODEL_SRC) \
+		        --n_ood_query $(OOD_QUERY) \
 		        --balanced $(BALANCED) \
 		        --training $(TRAINING) \
 				--src_dataset $(SRC_DATASET) \
@@ -132,15 +139,18 @@ run_feature_detectors:
 baselines:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12 wrn2810; do \
-			make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
-					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
-			make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run_proba_detectors ;\
 			for classifier in TIM_GD BDCSPN SimpleShot; do \
-				make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run_proba_detectors ;\
+				make TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run_proba_detectors ;\
 			done ;\
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
+					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run_proba_detectors ;\
 		done ;\
 	done ;\
+
+no_ood:
+	make EXP=no_ood OOD_QUERY=0 baselines
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \

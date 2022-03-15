@@ -127,8 +127,8 @@ def get_classic_loader(args, dataset_name, training=False, shuffle=False, split=
     return dataset, sampler, data_loader
 
 
-def get_task_loader(args, split, dataset_name, n_way,
-                    n_shot, n_query, n_tasks, n_workers,
+def get_task_loader(args, split: str, dataset_name: str, n_way: int,
+                    n_shot: int, n_id_query: int, n_ood_query: int, n_tasks: int, n_workers: int,
                     features_dict=None, training: bool = False):
 
     if features_dict is not None:
@@ -137,7 +137,8 @@ def get_task_loader(args, split, dataset_name, n_way,
             dataset=dataset,
             n_way=n_way,
             n_shot=n_shot,
-            n_query=n_query,
+            n_id_query=n_id_query,
+            n_ood_query=n_ood_query,
             n_tasks=n_tasks,
             balanced=args.balanced_tasks,
             alpha=args.alpha,
@@ -148,7 +149,8 @@ def get_task_loader(args, split, dataset_name, n_way,
             dataset=dataset,
             n_way=n_way,
             n_shot=n_shot,
-            n_query=n_query,
+            n_id_query=n_id_query,
+            n_ood_query=n_ood_query,
             n_tasks=n_tasks,
             balanced=args.balanced_tasks,
             alpha=args.alpha

@@ -61,7 +61,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data_dir", type=Path)
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
-    parser.add_argument("--n_query", type=int, default=10)
+    parser.add_argument("--n_id_query", type=int, default=10)
+    parser.add_argument("--n_ood_query", type=int, default=10)
     parser.add_argument("--n_tasks", type=int, default=500)
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
@@ -146,7 +147,7 @@ def main(args):
         for class_ in features:
             feature_dic[class_.item()][layer] = features[class_]
     data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
-                                  args.n_query, args.n_tasks, args.n_workers, feature_dic)
+                                  args.n_id_query, args.n_ood_query, args.n_tasks, args.n_workers, feature_dic)
 
     # ================ Prepare Transforms + Detector + Classifier ===================
 
@@ -195,7 +196,8 @@ def main(args):
 
         set_random_seed(args.random_seed)
 
-        metrics = detect_outliers(layers=args.layers,
+        metrics = detect_outliers(args=args,
+                                  layers=args.layers,
                                   transforms=transforms,
                                   train_mean=train_mean,
                                   train_std=train_std,
@@ -203,8 +205,6 @@ def main(args):
                                   feature_detector=feature_d,
                                   proba_detector=proba_d,
                                   data_loader=data_loader,
-                                  n_way=args.n_way,
-                                  n_query=args.n_query,
                                   on_features=True)
         # Saving results
         save_results(args, metrics)
@@ -233,8 +233,8 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(layers, transforms, classifier, feature_detector, proba_detector,
-                    data_loader, n_way, n_query, train_mean, train_std, on_features: bool, model=None):
+def detect_outliers(args, layers, transforms, classifier, feature_detector, proba_detector,
+                    data_loader, train_mean, train_std, on_features: bool, model=None):
 
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
@@ -258,15 +258,16 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
         # ====== Transforming features ======
         for layer in support_features:
             support_features[layer], query_features[layer] = transforms(
-                      raw_feat_s=support_features[layer],
-                      raw_feat_q=query_features[layer],
-                      train_mean=train_mean[layer],
-                      train_std=train_std[layer],
-                      support_labels=support_labels,
-                      query_labels=query_labels,
-                      outliers=outliers,
-                      intra_task_metrics=intra_task_metrics,
-                      figures=figures)
+                  raw_feat_s=support_features[layer],
+                  raw_feat_q=query_features[layer],
+                  train_mean=train_mean[layer],
+                  train_std=train_std[layer],
+                  support_labels=support_labels,
+                  query_labels=query_labels,
+                  outliers=outliers,
+                  intra_task_metrics=intra_task_metrics,
+                  figures=figures
+            )
 
         # ====== Classification + OOD detection ======
 
@@ -275,16 +276,16 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
 
         for layer in support_features:
             output = feature_detector(
-                        support_features=support_features[layer],
-                        query_features=query_features[layer],
-                        train_mean=train_mean[layer],
-                        train_std=train_std[layer],
-                        support_labels=support_labels,
-                        query_labels=query_labels,
-                        outliers=outliers,
-                        intra_task_metrics=intra_task_metrics,
-                        figures=figures
-                     )
+                support_features=support_features[layer],
+                query_features=query_features[layer],
+                train_mean=train_mean[layer],
+                train_std=train_std[layer],
+                support_labels=support_labels,
+                query_labels=query_labels,
+                outliers=outliers,
+                intra_task_metrics=intra_task_metrics,
+                figures=figures
+            )
             if isinstance(feature_detector, AllInOne):
                 probas_s, probas_q, scores = output
             else:
@@ -296,9 +297,9 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
                                                 query_labels=query_labels,
                                                 outliers=outliers)
                 outlier_scores['probas'].append(
-                                        proba_detector(support_probas=probas_s,
-                                                       query_probas=probas_q)
-                                          )
+                    proba_detector(support_probas=probas_s,
+                                   query_probas=probas_q)
+                )
 
             outlier_scores['features'].append(scores)
             soft_preds_q.append(probas_q)
@@ -311,15 +312,14 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
         predictions = all_probs.argmax(-1)
 
         # ====== Tracking metrics ======
-
-        for score_type, scores in outlier_scores.items():
-            fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), scores.numpy())
-            precision, recall, _ = precision_recall_curve(outliers.numpy(), scores.numpy())
-            metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
-
         acc = (predictions[outliers == 0] == query_labels[outliers == 0]).float().mean().item()
         metrics['acc'].append(acc)
-        metrics['outlier_ratio'].append(outliers.sum().item() / outliers.size(0))
+        if args.n_ood_query:
+            for score_type, scores in outlier_scores.items():
+                fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), scores.numpy())
+                precision, recall, _ = precision_recall_curve(outliers.numpy(), scores.numpy())
+                metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
+            metrics['outlier_ratio'].append(outliers.sum().item() / outliers.size(0))
 
     final_metrics = {}
     for metric_name in metrics:

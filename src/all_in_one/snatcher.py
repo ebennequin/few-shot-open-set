@@ -1,7 +1,6 @@
 import torch
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
-from src.constants import TRAINED_MODELS_DIR
 from src.models import __dict__ as BACKBONES
 from src.utils.utils import strip_prefix
 from loguru import logger
@@ -25,7 +24,7 @@ class SnatcherF(AllInOne):
         else:
             raise ValueError('')
         self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
-        weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        weights = args.data_dir / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         state_dict = torch.load(weights)['params']
         state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")

@@ -5,3 +5,4 @@ from .finetune import Finetune
 from .pt_map import MAP
 from .feat import FEAT
 from .semi_feat import SemiFEAT
+from .ici import ICI

@@ -31,7 +31,7 @@ class kNNDetector(ProbaDetector):
         elif self.method == 'largest':
             outlier_scores = closest_distances[:, -1]
 
-        return outlier_scores
+        return outlier_scores.squeeze()
 
 
 def kl(prob_a, prob_b):

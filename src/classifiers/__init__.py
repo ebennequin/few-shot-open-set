@@ -3,3 +3,5 @@ from .bd_cspn import BDCSPN
 from .simpleshot import SimpleShot
 from .finetune import Finetune
 from .pt_map import MAP
+from .feat import FEAT
+from .semi_feat import SemiFEAT

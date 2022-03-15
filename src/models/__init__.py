@@ -3,6 +3,7 @@ from .custom_resnet import default_cfgs as custom_resnet_config
 from .visiontransformer import default_cfgs as vit_config
 from .efficientnet import default_cfgs as efficientnet_config
 from .wide_resnet import default_cfgs as wideres_config
+from .misc import *
 
 from .resnet import *
 from .wide_resnet import *

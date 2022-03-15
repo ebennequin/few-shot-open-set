@@ -215,11 +215,12 @@ def get_modules_to_try(args, module_group: str, module_name: str,
         else:
             modules_to_try.append(module_pool[module_name]())
     else:
+        module_args = {}
         if module_name in vars(eval(f'args.{module_group}')):
             module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
-            if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
-                module_args['args'] = args
-            modules_to_try = [module_pool[module_name](**module_args)]
-        else:
-            modules_to_try = [module_pool[module_name]()]
+        if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
+            module_args['args'] = args
+        modules_to_try = [module_pool[module_name](**module_args)]
+        # modules_to_try = [module_pool[module_name]()]
+        # else:
     return modules_to_try

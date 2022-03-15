@@ -27,3 +27,27 @@ classifiers:
             'lam': 10,
            },
              }
+
+  FEAT:
+    default: {
+        1: {
+            'temperature': 1,
+            'use_euclidean': True,
+           },
+        5: {
+            'temperature': 1,
+            'use_euclidean': True,
+           },
+             }
+
+  SemiFEAT:
+    default: {
+        1: {
+            'temperature': 1,
+            'use_euclidean': True,
+           },
+        5: {
+            'temperature': 1,
+            'use_euclidean': True,
+           },
+             }

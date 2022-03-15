@@ -89,16 +89,3 @@ class MultiHeadAttention(nn.Module):
             output = output
 
         return output, resout
-    
-
-def SnaTCHerF(args):
-    if args.backbone == 'resnet12':
-        hdim = 640
-    elif args.backbone == 'resnet18':
-        hdim = 512
-    elif args.backbone == 'wrn2810':
-        hdim = 640
-    else:
-        raise ValueError('')
-        
-    return MultiHeadAttention(args, 1, hdim, hdim, hdim, dropout=0.5)

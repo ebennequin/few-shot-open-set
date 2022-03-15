@@ -9,11 +9,11 @@ SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 
 
+TRANSFORMS=Pool
 FEATURE_DETECTOR=kNNDetector
 PROBA_DETECTOR=kNNDetector
 CLASSIFIER=SimpleShot
 
-TRANSFORMS=Pool L2norm
 LAYERS=1
 EXP=default
 RESOLUTION=84
@@ -111,15 +111,11 @@ extract_standard:
 	done ;\
 
 
-
 extract_snatcher:
 	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
 	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
-
-run_snatcher:
-	make FEATURE_DETECTOR='snatcher_f' TRAINING='feat' run ;\
 
 run_proba_detectors:
 	for detector in EntropyDetector MaxProbDetector; do \
@@ -136,6 +132,8 @@ run_feature_detectors:
 baselines:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12 wrn2810; do \
+			make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
+					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
 			make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
 				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run_proba_detectors ;\
 			for classifier in TIM_GD BDCSPN SimpleShot; do \

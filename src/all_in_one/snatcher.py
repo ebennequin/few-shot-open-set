@@ -1,7 +1,8 @@
 import torch
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
-from src.constants import MISC_MODULES, TRAINED_MODELS_DIR
+from src.constants import TRAINED_MODELS_DIR
+from src.models import __dict__ as BACKBONES
 from src.utils.utils import strip_prefix
 from loguru import logger
 
@@ -9,13 +10,21 @@ from loguru import logger
 class SnatcherF(AllInOne):
     """
     """
-    def __init__(self, args, temperature):
+    def __init__(self, args, temperature: float):
 
         self.temperature = 64.
         self.device = args.device
 
         # Load attention module
-        self.attn_model = MISC_MODULES['snatcher_f'](args)
+        if args.backbone == 'resnet12':
+            hdim = 640
+        elif args.backbone == 'resnet18':
+            hdim = 512
+        elif args.backbone == 'wrn2810':
+            hdim = 640
+        else:
+            raise ValueError('')
+        self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
         weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         state_dict = torch.load(weights)['params']
         state_dict = strip_prefix(state_dict, "module.")

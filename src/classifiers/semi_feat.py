@@ -1,85 +1,66 @@
 from typing import Tuple, List
-
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from loguru import logger
-from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
+import numpy as np
+
+from .abstract import FewShotMethod
+from src.models import __dict__ as BACKBONES
+from src.constants import TRAINED_MODELS_DIR
+from src.utils.utils import strip_prefix
 
 
 class SemiFEAT(FewShotMethod):
-    def __init__(self, args):
+    def __init__(self, args, use_euclidean: bool, temperature: float):
         super().__init__(args)
-        if args.backbone_class == 'ConvNet':
-            hdim = 64
-        elif args.backbone_class == 'Res12':
+        self.use_euclidean = use_euclidean
+        self.temperature = temperature
+
+        # Load attention module
+        if args.backbone == 'resnet12':
             hdim = 640
-        elif args.backbone_class == 'Res18':
+        elif args.backbone == 'resnet18':
             hdim = 512
-        elif args.backbone_class == 'WRN':
+        elif args.backbone == 'wrn2810':
             hdim = 640
         else:
             raise ValueError('')
-        
-        self.slf_attn = MultiHeadAttention(1, hdim, hdim, hdim, dropout=0.5)          
-        
-    def forward(self, instance_embs, support_idx, query_idx):
-        emb_dim = instance_embs.size(-1)
+        self.device = args.device
+        self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
+        weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        state_dict = torch.load(weights)['params']
+        state_dict = strip_prefix(state_dict, "module.")
+        state_dict = strip_prefix(state_dict, "slf_attn.")
+        missing_keys, unexpected = self.attn_model.load_state_dict(state_dict, strict=False)
+        logger.info(f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}")
 
-        # organize support/query data
-        support = instance_embs[support_idx.contiguous().view(-1)].contiguous().view(*(support_idx.shape + (-1,)))
-        query   = instance_embs[query_idx.contiguous().view(-1)].contiguous().view(  *(query_idx.shape   + (-1,)))
-    
+        self.attn_model.eval()
+        self.attn_model = self.attn_model.to(self.device)
+
+    def forward(self, support_features, query_features, support_labels, **kwargs):
+
+        support_features, query_features = support_features.cuda(), query_features.cuda()
+        support_features, query_features = support_features.cuda(), query_features.cuda()
+        support_labels = support_labels.cuda()
+
         # get mean of the support
-        proto = support.mean(dim=1) # Ntask x NK x d
-        num_batch = proto.shape[0]
-        num_proto = proto.shape[1]
-        num_query = np.prod(query_idx.shape[-2:])
+        proto = compute_prototypes(support_features, support_labels).unsqueeze(0)  # NK x d
     
         # query: (num_batch, num_query, num_proto, num_emb)
         # proto: (num_batch, num_proto, num_emb)
-        whole_set = torch.cat([proto, query.view(num_batch, -1, emb_dim)], 1)
-        proto = self.slf_attn(proto, whole_set, whole_set)        
-        if self.args.use_euclidean:
-            query = query.view(-1, emb_dim).unsqueeze(1) # (Nbatch*Nq*Nw, 1, d)
-            proto = proto.unsqueeze(1).expand(num_batch, num_query, num_proto, emb_dim).contiguous()
-            proto = proto.view(num_batch*num_query, num_proto, emb_dim) # (Nbatch x Nq, Nk, d)
+        whole_set = torch.cat([proto, query_features.unsqueeze(0)], 1)
 
-            logits = - torch.sum((proto - query) ** 2, 2) / self.args.temperature
-        else:
-            proto = F.normalize(proto, dim=-1) # normalize for cosine distance
-            query = query.view(num_batch, -1, emb_dim) # (Nbatch,  Nq*Nw, d)
+        with torch.no_grad():
+            proto = self.attn_model(proto, whole_set, whole_set)[0][0]
 
-            logits = torch.bmm(query, proto.permute([0,2,1])) / self.args.temperature
-            logits = logits.view(-1, num_proto)
-        
-        # for regularization
-        if self.training:
-            aux_task = torch.cat([support.view(1, self.args.shot, self.args.way, emb_dim), 
-                                  query.view(1, self.args.query, self.args.way, emb_dim)], 1) # T x (K+Kq) x N x d
-            num_query = np.prod(aux_task.shape[1:3])
-            aux_task = aux_task.permute([0, 2, 1, 3])
-            aux_task = aux_task.contiguous().view(-1, self.args.shot + self.args.query, emb_dim)
-            # apply the transformation over the Aug Task
-            aux_emb = self.slf_attn(aux_task, aux_task, aux_task) # T x N x (K+Kq) x d
-            # compute class mean
-            aux_emb = aux_emb.view(num_batch, self.args.way, self.args.shot + self.args.query, emb_dim)
-            aux_center = torch.mean(aux_emb, 2) # T x N x d
-            
-            if self.args.use_euclidean:
-                aux_task = aux_task.permute([1,0,2]).contiguous().view(-1, emb_dim).unsqueeze(1) # (Nbatch*Nq*Nw, 1, d)
-                aux_center = aux_center.unsqueeze(1).expand(num_batch, num_query, num_proto, emb_dim).contiguous()
-                aux_center = aux_center.view(num_batch*num_query, num_proto, emb_dim) # (Nbatch x Nq, Nk, d)
-    
-                logits_reg = - torch.sum((aux_center - aux_task) ** 2, 2) / self.args.temperature2
+            if self.use_euclidean:
+                logits_s = - (torch.cdist(support_features, proto) ** 2 / self.temperature)  # [Nq, K]
+                logits_q = - (torch.cdist(query_features, proto) ** 2 / self.temperature)  # [Nq, K]
             else:
-                aux_center = F.normalize(aux_center, dim=-1) # normalize for cosine distance
-                aux_task = aux_task.permute([1,0,2]).contiguous().view(num_batch, -1, emb_dim) # (Nbatch,  Nq*Nw, d)
-    
-                logits_reg = torch.bmm(aux_task, aux_center.permute([0,2,1])) / self.args.temperature2
-                logits_reg = logits_reg.view(-1, num_proto)            
-            
-            return logits, logits_reg            
-        else:
-            return logits   
+                proto = F.normalize(proto, dim=-1)  # normalize for cosine distance
+                logits_s = torch.bmm(support_features, proto.t()) / self.temperature  # [Nq, K]
+                logits_q = torch.bmm(query_features, proto.t()) / self.temperature  # [Nq, K]
+
+            return logits_s.softmax(-1).cpu(), logits_q.softmax(-1).cpu()

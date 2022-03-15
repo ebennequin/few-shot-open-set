@@ -1,6 +1,5 @@
 import torch
 from easyfsl.utils import compute_prototypes
-from src.constants import MISC_MODULES
 from loguru import logger
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve

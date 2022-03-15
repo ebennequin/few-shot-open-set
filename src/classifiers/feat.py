@@ -1,50 +1,63 @@
 from typing import Tuple, List
-
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 from loguru import logger
-from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 import numpy as np
 
+from .abstract import FewShotMethod
+from src.models import __dict__ as BACKBONES
+from src.constants import TRAINED_MODELS_DIR
+from src.utils.utils import strip_prefix
+
+
 class FEAT(FewShotMethod):
-    def __init__(self, args):
+    def __init__(self, args, use_euclidean: bool, temperature: float):
         super().__init__(args)
-        if args.backbone_class == 'ConvNet':
-            hdim = 64
-        elif args.backbone_class == 'Res12':
+        self.use_euclidean = use_euclidean
+        self.temperature = temperature
+
+        # Load attention module
+        if args.backbone == 'resnet12':
             hdim = 640
-        elif args.backbone_class == 'Res18':
+        elif args.backbone == 'resnet18':
             hdim = 512
-        elif args.backbone_class == 'WRN':
+        elif args.backbone == 'wrn2810':
             hdim = 640
         else:
             raise ValueError('')
-        
-        self.slf_attn = MultiHeadAttention(1, hdim, hdim, hdim, dropout=0.5)          
+        self.device = args.device
+        self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
+        weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        state_dict = torch.load(weights)['params']
+        state_dict = strip_prefix(state_dict, "module.")
+        state_dict = strip_prefix(state_dict, "slf_attn.")
+        missing_keys, unexpected = self.attn_model.load_state_dict(state_dict, strict=False)
+        logger.info(f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}")
+
+        self.attn_model.eval()
+        self.attn_model = self.attn_model.to(self.device)
         
     def forward(self, support_features, query_features, support_labels, **kwargs):
 
-        emb_dim = support_features.size(-1)
+        support_features, query_features = support_features.cuda(), query_features.cuda()
+        support_labels, query_labels = support_labels.cuda(), kwargs['query_labels'].cuda()
 
         # get mean of the support
-        proto = compute_prototypes(support_features, support_labels)  # NK x d
+        proto = compute_prototypes(support_features, support_labels).unsqueeze(0)  # NK x d
 
         # query: (num_batch, num_query, num_proto, num_emb)
         # proto: (num_batch, num_proto, num_emb)
-        proto = self.slf_attn(proto, proto, proto)        
-        if self.args.use_euclidean:
-            query = query_features  # (Nbatch*Nq*Nw, d)
-            # proto = proto.unsqueeze(0).expand(num_query, num_proto, emb_dim).contiguous()
-            # proto = proto.view(num_batch*num_query, num_proto, emb_dim) # (Nbatch x Nq, Nk, d)
+        with torch.no_grad():
+            proto = self.attn_model(proto, proto, proto)[0][0]
 
-            # logits = - torch.sum((proto - query) ** 2, 2) / self.args.temperature
-            logits_s = - (torch.cdist(proto, support_features) ** 2 / self.temperature)  # [Nq, K]
-            logits_q = - (torch.cdist(proto, query_features) ** 2 / self.temperature)  # [Nq, K]
-        else:
-            proto = F.normalize(proto, dim=-1)  # normalize for cosine distance
-            logits_s = torch.bmm(query, proto.t()) / self.args.temperature  # [Nq, K]
-            logits_q = torch.bmm(query, proto.t()) / self.args.temperature  # [Nq, K]
+            if self.use_euclidean:
+                logits_s = - (torch.cdist(support_features, proto) ** 2 / self.temperature)  # [Nq, K]
+                logits_q = - (torch.cdist(query_features, proto) ** 2 / self.temperature)  # [Nq, K]
+            else:
+                proto = F.normalize(proto, dim=-1)  # normalize for cosine distance
+                logits_s = torch.bmm(support_features, proto.t()) / self.temperature  # [Nq, K]
+                logits_q = torch.bmm(query_features, proto.t()) / self.temperature  # [Nq, K]
 
         return logits_s.softmax(-1).cpu(), logits_q.softmax(-1).cpu()

@@ -31,7 +31,7 @@ class kNNDetector(FeatureDetector):
         elif self.method == 'largest':
             outlier_scores = closest_distances[:, -1]
 
-        return outlier_scores
+        return outlier_scores.squeeze()
 
 
 def l2(feat_a, feat_b):

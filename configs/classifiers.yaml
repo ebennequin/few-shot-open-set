@@ -1,10 +1,29 @@
 classifiers:
-  TIM:
+  TIM_GD:
     default: {
         1: {
-          'softmax_temperature': 1.0,
-          'inference_steps': 10,
+          'softmax_temperature': 5.0,
+          'inference_steps': 100,
           'inference_lr': 0.001,
-          'loss_weights': [1.0, 1.0, 0.1]
+          'loss_weights': [1.0, 1.0, 0.5]
+           },
+        5: {
+            'softmax_temperature': 5.0,
+            'inference_steps': 100,
+            'inference_lr': 0.001,
+            'loss_weights': [1.0, 1.0, 0.5]
+             },
+             }
+  MAP:
+    default: {
+        1: {
+            'alpha': 0.2,
+            'inference_steps': 20,
+            'lam': 10,
+           },
+        5: {
+            'alpha': 0.2,
+            'inference_steps': 20,
+            'lam': 10,
            },
              }

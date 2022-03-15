@@ -9,7 +9,7 @@ class FeatureDetector:
     """
     Abstract class for an outlier detector
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         pass
 
     def __call__(self, support_features, query_features, **kwargs):

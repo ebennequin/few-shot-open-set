@@ -7,9 +7,13 @@ USER=malik
 DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
+
+
 FEATURE_DETECTOR=kNNDetector
-PROBA_DETECTOR=EntropyDetector
-TRANSFORMS="Pool"
+PROBA_DETECTOR=kNNDetector
+CLASSIFIER=SimpleShot
+
+TRANSFORMS=Pool L2norm
 LAYERS=1
 EXP=default
 RESOLUTION=84
@@ -40,7 +44,6 @@ train:
 		        --n_tasks 500 \
 		        --n_shot $${shot} \
 		        --feature_transforms  $(TRANSFORMS) \
-		        --pool \
 		        --backbone $(BACKBONE) \
 		        --dataset $${dataset} \
 		        --debug $(DEBUG) \
@@ -69,7 +72,7 @@ run:
 		    python3 -m src.inference_features \
 		        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${dataset}/$(BACKBONE)'($(MODEL_SRC))'/$${shot} \
 		        --data_dir $(DATADIR) \
-		        --classifier SimpleShot \
+		        --classifier $(CLASSIFIER) \
 		        --n_tasks $(N_TASKS) \
 		        --n_shot $${shot} \
 		        --layers $(LAYERS) \
@@ -118,17 +121,33 @@ extract_snatcher:
 run_snatcher:
 	make FEATURE_DETECTOR='snatcher_f' TRAINING='feat' run ;\
 
-run_centering:
+run_proba_detectors:
+	for detector in EntropyDetector MaxProbDetector; do \
+		make PROBA_DETECTOR=$${detector} run ;\
+	done ;\
+
+run_feature_detectors:
 	for feature_detector in FinetuneDetector; do \
 		make FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 
 # ========== Experiments ===========
 
+baselines:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for backbone in resnet12 wrn2810; do \
+			make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run_proba_detectors ;\
+			for classifier in TIM_GD BDCSPN SimpleShot; do \
+				make EXP=baselines SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run_proba_detectors ;\
+			done ;\
+		done ;\
+	done ;\
+
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12 wrn2810; do \
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_centering ;\
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_proba_detectors ;\
 # 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
 		done ;\
 	done ;\
@@ -138,7 +157,7 @@ cross_domain:
 	# Tiered -> CUB, Aircraft
 	for backbone in resnet12 wrn2810; do \
 		for tgt_dataset in cub; do \
-			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_feature_detectors ;\
 		done ; \
 	done ;\
 
@@ -146,7 +165,7 @@ cross_domain:
 	for tgt_dataset in aircraft; do \
 		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
 			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
-				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_centering ;\
+				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_feature_detectors ;\
 		done ;\
 	done ;\
 
@@ -158,14 +177,14 @@ layers:
 imbalance:
 	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
 		for backbone in resnet12; do \
-			make BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_centering; \
+			make BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_feature_detectors; \
 		done ;\
 	done ;\
 
 nquery_influence:
 	for n_query in 1 5 10 15 20; do \
 		for backbone in resnet12; do \
-			make EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_centering; \
+			make EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_feature_detectors; \
 		done ;\
 	done ;\
 

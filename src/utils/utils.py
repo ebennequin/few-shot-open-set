@@ -198,7 +198,6 @@ def get_modules_to_try(args, module_group: str, module_name: str,
         logger.warning(f"Tuning over {module_group} activated")
         if module_name in vars(eval(f'args.{module_group}')): 
             module_args = eval(f'args.{module_group}.{module_name}.default')[args.n_shot]  # take default args
-
             if 'tuning' in vars(eval(f'args.{module_group}.{module_name}')):
                 params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
                 values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[args.n_shot]

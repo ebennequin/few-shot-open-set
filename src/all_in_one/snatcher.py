@@ -1,12 +1,12 @@
 import torch
-from .abstract import FeatureDetector
+from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 from src.constants import MISC_MODULES, TRAINED_MODELS_DIR
 from src.utils.utils import strip_prefix
 from loguru import logger
 
 
-class SNATCHERF(FeatureDetector):
+class SnatcherF(AllInOne):
     """
     """
     def __init__(self, args, temperature):
@@ -26,26 +26,26 @@ class SNATCHERF(FeatureDetector):
         self.attn_model.eval()
         self.attn_model = self.attn_model.to(self.device)
 
-    def fit(self, support_features, support_labels):
-        self.prototypes = compute_prototypes(support_features, support_labels).to(self.device).unsqueeze(0)  # [Nk, d]
-
-    def forward(self, query_features):
+    def __call__(self, support_features, support_labels, query_features, **kwargs):
         """
         query_features [Ns, d]
         """
+        prototypes = compute_prototypes(support_features, support_labels).to(self.device).unsqueeze(0)  # [Nk, d]
+
         query_features = query_features.to(self.device)
 
-        proto = self.attn_model(self.prototypes, self.prototypes, self.prototypes)[0][0]  # [K, d]
+        proto = self.attn_model(prototypes, prototypes, prototypes)[0][0]  # [K, d]
 
-        logits = - torch.cdist(query_features, proto) ** 2 / self.temperature  # [Nq, K]
+        logits_s = - torch.cdist(support_features, proto) ** 2 / self.temperature  # [Nq, K]
+        logits_q = - torch.cdist(query_features, proto) ** 2 / self.temperature  # [Nq, K]
 
         """ Snatcher """
-        outlier_scores = torch.zeros(logits.size(0))
+        outlier_scores = torch.zeros(logits_q.size(0))
         with torch.no_grad():
-            for j in range(logits.size(0)):
+            for j in range(logits_q.size(0)):
                 pproto = self.prototypes.clone().detach()  # [K, d]
                 """ Algorithm 1 Line 1 """
-                c = logits[j].argmax(0)
+                c = logits_q[j].argmax(0)
                 """ Algorithm 1 Line 2 """
                 pproto[0, c] = query_features[j]
                 """ Algorithm 1 Line 3 """
@@ -53,4 +53,4 @@ class SNATCHERF(FeatureDetector):
                 pdiff = (pproto - proto).pow(2).sum(-1).sum() / self.temperature
                 """ pdiff: d_SnaTCHer in Algorithm 1 """
                 outlier_scores[j] = pdiff
-        return outlier_scores
+        return logits_s.softmax(-1), logits_q.softmax(-1), outlier_scores

@@ -108,4 +108,4 @@ class FinetuneDetector(FeatureDetector):
         kwargs['intra_task_metrics']['secondary_loss']['outlier_entropy'].append(outlier_entropy)
         kwargs['intra_task_metrics']['main_metrics']['auc'].append(aucs)
         kwargs['intra_task_metrics']['secondary_metrics']['marg_diff_oracle'].append(diff_with_oracle)
-        return probas_q[:, 0].detach().cpu().numpy().squeeze()
+        return probas_q[:, 0].detach().cpu().squeeze()

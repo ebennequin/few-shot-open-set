@@ -52,3 +52,19 @@ class FewShotMethod(nn.Module):
         return cls(
             **{k: v for k, v in args._get_kwargs() if k in signature.parameters.keys()},
         )
+
+    def __str__(self):
+        arg_names = list(inspect.signature(self.__init__).parameters)
+        if len(arg_names):
+            args = [f"{k}={getattr(self, k)}" for k in arg_names]
+            return f"{type(self).__name__}({','.join(args)})"
+        else:
+            return type(self).__name__
+
+    def __repr__(self):
+        arg_names = list(inspect.signature(self.__init__).parameters)
+        if len(arg_names):
+            args = [f"{k}={getattr(self, k)}" for k in arg_names]
+            return f"{type(self).__name__}({','.join(args)})"
+        else:
+            return type(self).__name__

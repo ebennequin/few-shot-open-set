@@ -3,10 +3,10 @@ import numpy as np
 import torch
 from torch import nn
 import inspect
-from .abstract import ProbaDetector
+from .abstract import FeatureDetector
 
 
-class kNNDetector(ProbaDetector):
+class kNNDetector(FeatureDetector):
     """
     Abstract class for an outlier detector
     """
@@ -16,13 +16,13 @@ class kNNDetector(ProbaDetector):
         self.n_neighbors = n_neighbors
         self.method = method
 
-    def __call__(self, support_probas, query_probas, **kwargs):
+    def __call__(self, support_features, query_features, **kwargs):
         """
         support_probas: [Ns, K]
         query_probas: [Nq, K]
         """
         distance_fn = eval(self.distance)
-        distances = distance_fn(query_probas[:, None, :], support_probas[None, :, :])  # [Nq, Ns]
+        distances = distance_fn(query_features, support_features)  # [Nq, Ns]
         closest_distances = distances.topk(k=self.n_neighbors, largest=False, dim=-1).values  # [Nq, knn]
 
         if self.method == 'mean':
@@ -34,16 +34,5 @@ class kNNDetector(ProbaDetector):
         return outlier_scores
 
 
-def kl(prob_a, prob_b):
-
-    return (prob_a * torch.log(prob_a / prob_b)).sum(-1)
-
-
-def reverse_kl(prob_a, prob_b):
-
-    return (prob_b * torch.log(prob_b / prob_a)).sum(-1)
-
-
-def bc(prob_a, prob_b):
-
-    return (prob_a * prob_b).sqrt().sum(-1)
+def l2(feat_a, feat_b):
+    return torch.cdist(feat_a, feat_b)

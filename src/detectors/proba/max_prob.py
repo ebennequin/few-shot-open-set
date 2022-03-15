@@ -6,7 +6,7 @@ import inspect
 from .abstract import ProbaDetector
 
 
-class EntropyDetector(ProbaDetector):
+class MaxProbDetector(ProbaDetector):
     """
     Abstract class for an outlier detector
     """
@@ -16,5 +16,4 @@ class EntropyDetector(ProbaDetector):
         support_probas: [Ns, K]
         query_probas: [Nq, K]
         """
-        entropy = - (query_probas * torch.log(query_probas + 1e-6)).sum(-1)
-        return entropy
+        return - query_probas.max(-1).values

@@ -1,8 +1,7 @@
 transforms:
 
-  EntropicCentering:
-    current_params: {1: {'lambda_': 1, 'lr': 0.1, 'n_iter': 100, 'init': 'base', 'n_neighbors': 2},
-                    5: {'lambda_': 1, 'lr': 0.1, 'n_iter': 100, 'init': 'base', 'n_neighbors': 10}}
-    tuning:
-      hparams2tune: ['lambda_', 'lr', 'n_iter', 'init', 'n_neighbors']
-      hparam_values: [[2., 3., 4., 5.], [0.1, 1.0], [100], ['base'], [5]]
+  Power:
+    default: {
+              1: {'beta': 0.5},
+              5: {'beta': 0.5}
+             }

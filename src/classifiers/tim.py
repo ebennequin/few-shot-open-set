@@ -3,7 +3,7 @@ from typing import Tuple, List
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-
+from loguru import logger
 from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
@@ -17,13 +17,13 @@ class AbstractTIM(FewShotMethod):
 
     def __init__(
         self,
-        softmax_temperature: float = 1.0,
-        inference_steps: int = 10,
-        inference_lr: float = 1e-3,
+        softmax_temperature: float,
+        inference_steps: int,
+        inference_lr: float,
         loss_weights: List[float] = None,
     ):
         super().__init__()
-        self.loss_weights = [1.0, 1.0, 0.1] if loss_weights is None else loss_weights
+        self.loss_weights = loss_weights
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
@@ -35,6 +35,7 @@ class TIM_GD(AbstractTIM):
         support_features: Tensor,
         query_features: Tensor,
         support_labels: Tensor,
+        **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
         # Metric dic
@@ -48,11 +49,16 @@ class TIM_GD(AbstractTIM):
         self.prototypes.requires_grad_()
         optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
 
+        q_cond_ent_values = []
+        q_ent_values = []
+        ce_values = []
+        acc_values = []
+
         for i in range(self.inference_steps):
-            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(
+            logits_s = self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             )
-            logits_q = self.get_logits_from_euclidean_distances_to_prototypes(
+            logits_q = self.get_logits_from_cosine_distances_to_prototypes(
                 query_features
             )
 
@@ -69,5 +75,17 @@ class TIM_GD(AbstractTIM):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            with torch.no_grad():
+                q_cond_ent_values.append(q_cond_ent.item())
+                q_ent_values.append(q_ent.item())
+                ce_values.append(ce.item())
+                inliers = ~ kwargs['outliers'].bool()
+                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
+
+        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
+        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
+        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
+        kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
 
         return logits_s.softmax(-1).detach(), logits_q.softmax(-1).detach()

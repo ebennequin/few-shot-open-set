@@ -13,10 +13,7 @@ class ProbaDetector:
     def __init__(self):
         pass
 
-    def fit(self, support_probas):
-        raise NotImplementedError
-
-    def decision_function(self, support_probas, query_probas, **kwargs):
+    def __call__(self, support_probas, query_probas, **kwargs):
         raise NotImplementedError
 
     def __str__(self):
@@ -30,7 +27,6 @@ class ProbaDetector:
     def __repr__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
         if len(arg_names):
-            logger.warning(arg_names)
             args = [f"{k}={getattr(self, k)}" for k in arg_names]
             return f"{type(self).__name__}({','.join(args)})"
         else:

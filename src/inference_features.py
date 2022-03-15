@@ -31,6 +31,7 @@ from src.classifiers import __dict__ as CLASSIFIERS
 from src.detectors.feature import __dict__ as FEATURE_DETECTORS
 from src.detectors.proba import __dict__ as PROBA_DETECTORS
 from src.all_in_one import __dict__ as ALL_IN_ONE_METHODS
+from src.all_in_one import AllInOne
 
 from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
@@ -124,7 +125,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(args):
-    set_random_seed(args.random_seed)
+
     save_dir = Path(os.path.join('results', args.exp_name))
     save_dir.mkdir(exist_ok=True, parents=True)
     args.layers = BACKBONES[args.backbone]().all_layers[-args.layers:]
@@ -155,7 +156,10 @@ def main(args):
 
     transforms = []
     for x in transform_names:
-        transforms.append(TRANSFORMS[x]())
+        transforms.append(
+                    get_modules_to_try(args, 'transforms', x,
+                                       TRANSFORMS, False)[0]
+                   )
     transforms = TRANSFORMS['SequentialTransform'](transforms)
 
     if args.feature_detector in ALL_IN_ONE_METHODS:
@@ -183,8 +187,13 @@ def main(args):
 
     for feature_d, proba_d, classifier in itertools.product(
                 feature_detectors, proba_detectors, classifiers):
-        logger.info(transforms)
-        logger.info((feature_d, proba_d, classifier))
+        logger.info(f"Transforms : {transforms}")
+        logger.info(f"Feature detector:  {feature_d}")
+        logger.info(f"Proba detector: {proba_d}")
+        logger.info(f"Classifier {classifier}")
+        args.current_sequence = str((feature_d, proba_d, classifier))
+
+        set_random_seed(args.random_seed)
 
         metrics = detect_outliers(layers=args.layers,
                                   transforms=transforms,
@@ -197,8 +206,8 @@ def main(args):
                                   n_way=args.n_way,
                                   n_query=args.n_query,
                                   on_features=True)
-    # Saving results
-    save_results(args, metrics)
+        # Saving results
+        save_results(args, metrics)
 
 
 def save_results(args, metrics):
@@ -231,6 +240,8 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
     figures: Dict[str, Any] = {}
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
+
+        support_labels, query_labels = support_labels.long(), query_labels.long()
 
         # ====== Extract features ======
         if on_features:
@@ -274,18 +285,22 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
                         intra_task_metrics=intra_task_metrics,
                         figures=figures
                      )
-            if feature_detector.type == 'all_in_one':
-                probas_s, probas_q, outlier_scores = output
+            if isinstance(feature_detector, AllInOne):
+                probas_s, probas_q, scores = output
             else:
-                proba_s, probas_q = classifier(support_features=support_features[layer],
-                                               query_features=query_features[layer],
-                                               support_labels=support_labels)
+                scores = output
+                probas_s, probas_q = classifier(support_features=support_features[layer],
+                                                query_features=query_features[layer],
+                                                support_labels=support_labels,
+                                                intra_task_metrics=intra_task_metrics,
+                                                query_labels=query_labels,
+                                                outliers=outliers)
                 outlier_scores['probas'].append(
                                         proba_detector(support_probas=probas_s,
                                                        query_probas=probas_q)
                                           )
 
-            outlier_scores['features'].append(outlier_scores)
+            outlier_scores['features'].append(scores)
             soft_preds_q.append(probas_q)
         
         # ====== Aggregate scores and probas across layers ======
@@ -297,7 +312,7 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
 
         # ====== Tracking metrics ======
 
-        for score_type, scores in outlier_scores:
+        for score_type, scores in outlier_scores.items():
             fp_rate, tp_rate, thresholds = roc_curve(outliers.numpy(), scores.numpy())
             precision, recall, _ = precision_recall_curve(outliers.numpy(), scores.numpy())
             metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
@@ -330,27 +345,27 @@ def detect_outliers(layers, transforms, classifier, feature_detector, proba_dete
         plt.legend()
         plt.savefig(res_root / f'{title}.png')
         plt.clf()
-    bins = np.linspace(0, 1, 10)
-    inds = np.digitize(metrics['outlier_ratio'], bins) - 1
-    binned_aucs = []
-    bin_importance = []
-    for i in range(len(bins)):
-        if sum(inds == i):
-            relevant_measure = metrics['auc']
-            binned_aucs.append(np.array(relevant_measure)[np.where(inds == i)].mean())
-        else:
-            binned_aucs.append(0.)
-        bin_importance.append((sum(inds == i) + 1e-10) / inds.shape[0])
+    # bins = np.linspace(0, 1, 10)
+    # inds = np.digitize(metrics['outlier_ratio'], bins) - 1
+    # binned_aucs = []
+    # bin_importance = []
+    # for score_type, scores in metrics.items()
+    # for i in range(len(bins)):
+    #     if sum(inds == i):
+    #         binned_aucs.append(np.array()[np.where(inds == i)].mean())
+    #     else:
+    #         binned_aucs.append(0.)
+    #     bin_importance.append((sum(inds == i) + 1e-10) / inds.shape[0])
 
-    bars = plt.bar(bins, binned_aucs, width=0.1, align='edge', label="{} (ROCAUC={:.2f})".format(
-         str(transforms) + str(detector), 100 * final_metrics['mean_auc']))
-    plt.legend()
-    plt.xlabel(r'Outlier/Inlier ratio in query set')
-    plt.ylabel(r'Average AUROC')
-    for i, b in enumerate(bars):
-        b.set_color(plt.cm.Blues(bin_importance[i]))
-    plt.savefig(res_root / f'{str(transforms)}+{str(detector)}_binned_auc.png')
-    plt.clf()
+    # bars = plt.bar(bins, binned_aucs, width=0.1, align='edge', label="{} (ROCAUC={:.2f})".format(
+    #      str(transforms) + str(feature_detector), 100 * final_metrics['mean_auc']))
+    # plt.legend()
+    # plt.xlabel(r'Outlier/Inlier ratio in query set')
+    # plt.ylabel(r'Average AUROC')
+    # for i, b in enumerate(bars):
+    #     b.set_color(plt.cm.Blues(bin_importance[i]))
+    # plt.savefig(res_root / f'{str(transforms)}+{str(feature_detector)}_binned_auc.png')
+    # plt.clf()
 
     # Save figures
     for title, fig in figures.items():

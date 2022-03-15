@@ -47,7 +47,7 @@ class BDCSPN(FewShotMethod):
         ).t().matmul(query_features)
 
     def forward(
-        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
         # Initialize prototypes

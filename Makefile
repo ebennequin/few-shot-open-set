@@ -12,8 +12,9 @@ TGT_DATASETS=$(SRC_DATASET)
 # Modules
 TRANSFORMS=Pool
 FEATURE_DETECTOR=kNNDetector
-PROBA_DETECTOR=kNNDetector
+PROBA_DETECTOR=EntropyDetector
 CLASSIFIER=SimpleShot
+FILTERING=False
 
 
 # Model
@@ -83,6 +84,7 @@ run:
 		        --n_shot $${shot} \
 		        --layers $(LAYERS) \
 		        --feature_detector $(FEATURE_DETECTOR) \
+		        --use_filtering $(FILTERING) \
 		        --proba_detector $(PROBA_DETECTOR) \
 		        --feature_transforms  $(TRANSFORMS) \
 		        --backbone $(BACKBONE) \
@@ -124,10 +126,6 @@ extract_snatcher:
 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
-run_proba_detectors:
-	for detector in EntropyDetector MaxProbDetector; do \
-		make PROBA_DETECTOR=$${detector} run ;\
-	done ;\
 
 run_feature_detectors:
 	for feature_detector in FinetuneDetector; do \
@@ -136,29 +134,38 @@ run_feature_detectors:
 
 # ========== Experiments ===========
 
-baselines:
+run_classifiers:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12 wrn2810; do \
-			for classifier in TIM_GD BDCSPN SimpleShot; do \
-				make TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run_proba_detectors ;\
+		for backbone in resnet12; do \
+			for classifier in BDCSPN SimpleShot TIM_GD; do \
+				make TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
 					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run_proba_detectors ;\
+				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 		done ;\
 	done ;\
 
-no_ood:
-	make EXP=no_ood OOD_QUERY=0 baselines
+ideal_case:
+	make EXP=ideal_case OOD_QUERY=0 run_classifiers
 
-benchmark:
-	for dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12 wrn2810; do \
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_proba_detectors ;\
-# 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} run_snatcher ;\
-		done ;\
+ood_naive_strategy:
+	for detector in EntropyDetector; do \
+		make EXP=naive PROBA_DETECTOR=$${detector} run_classifiers ;\
 	done ;\
+
+filtering_knn:
+	for detector in kNNDetector; do \
+		make EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+	done ;\
+
+filtering_repri:
+	for detector in RepriDetector; do \
+		make EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+	done ;\
+
+
 
 
 cross_domain:

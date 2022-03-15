@@ -21,12 +21,6 @@ class RepriDetector(FeatureDetector):
         self.name = 'AlternateDetector'
         self.optimizer_name = optimizer_name
 
-    def fit(self, support_features, **kwargs):
-        """
-        feat: Tensor shape [N, hidden_dim, *]
-        """
-        support_features = support_features
-
     def compute_auc(self, outlierness, **kwargs):
         fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
         return auc_fn(fp_rate, tp_rate)
@@ -36,6 +30,9 @@ class RepriDetector(FeatureDetector):
         similarities = ((X @ feat_s.t()) * W).sum(-1, keepdim=True) / W.sum(-1, keepdim=True)  # [N, 1]
         outlierness = (-self.lambda_ * similarities).sigmoid()  # [N, 1]
         return torch.cat([outlierness, 1 - outlierness], dim=1)
+
+    def standardize(self, scores):
+        return scores
 
     def __call__(self, support_features, query_features, **kwargs):
 
@@ -119,4 +116,4 @@ class RepriDetector(FeatureDetector):
         kwargs['intra_task_metrics']['main_metrics']['auc'].append(aucs)
         # kwargs['intra_task_metrics']['secondary_metrics']['marg_entropy'].append(marg_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['marg_diff_oracle'].append(diff_with_oracle)
-        return probas_q[:, 0].detach().cpu().numpy().squeeze()
+        return probas_q[:, 0].detach().cpu().squeeze()

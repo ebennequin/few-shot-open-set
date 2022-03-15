@@ -33,6 +33,12 @@ class kNNDetector(FeatureDetector):
 
         return outlier_scores.squeeze()
 
+    def standardize(self, scores):
+        """
+        L2 distance on normalized features can vary between 0 and 4
+        """
+        return scores / 4
+
 
 def l2(feat_a, feat_b):
     return torch.cdist(feat_a, feat_b)

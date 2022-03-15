@@ -28,8 +28,12 @@ class ICI(FewShotMethod):
     def forward(self, support_features, query_features, support_labels, **kwargs):
         support_X, support_y = self.norm(support_features.numpy()), support_labels.numpy()
         way, num_support = support_labels.unique().size(0), len(support_X)
+
         query_X = self.norm(query_features.numpy())
-        unlabel_X = query_X
+        if kwargs['use_transductively'] is not None:
+            unlabel_X = query_X[kwargs['use_transductively']]
+        else:
+            unlabel_X = query_X
         num_unlabel = unlabel_X.shape[0]
 
         embeddings = np.concatenate([support_X, unlabel_X])

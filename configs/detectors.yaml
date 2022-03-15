@@ -8,7 +8,7 @@ feature_detectors:
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
   kNNDetector:
-    default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},
+    default: {1: {'n_neighbors': 3, 'method': 'mean', 'distance': 'l2'},
               5: {'n_neighbors': 3, 'method': 'mean', 'distance': 'l2'}}
     tuning:
       hparams2tune: ['n_neighbors', 'method']
@@ -22,7 +22,7 @@ feature_detectors:
       hparam_values: {1: [[1, 2, 3, 4]],
                       5: [[3, 5, 7, 10, 13]]}
 
-  RePRIDetector:
+  RepriDetector:
     default: {1: {'lambda_': 1., 'lr': 3., 'n_iter': 200, 'init': 'base', 'n_neighbors': 1, 'weight': 3., 'optimizer_name': 'SGD'},
                      5: {'lambda_': 1, 'lr': 3., 'n_iter': 200, 'init': 'base', 'n_neighbors': 3, 'weight': 3., 'optimizer_name': 'SGD'}}
     tuning:

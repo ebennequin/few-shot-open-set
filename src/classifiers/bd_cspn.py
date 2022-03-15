@@ -50,12 +50,17 @@ class BDCSPN(FewShotMethod):
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
+        if kwargs['use_transductively'] is not None:
+            unlabelled_data = query_features[kwargs['use_transductively']]
+        else:
+            unlabelled_data = query_features
+
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]
         self.rectify_prototypes(
             support_features=support_features,
             support_labels=support_labels,
-            query_features=query_features,
+            query_features=unlabelled_data,
         )
         probs_s = self.get_logits_from_cosine_distances_to_prototypes(
             support_features

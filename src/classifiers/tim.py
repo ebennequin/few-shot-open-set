@@ -38,6 +38,11 @@ class TIM_GD(AbstractTIM):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
+        if kwargs['use_transductively'] is not None:
+            unlabelled_data = query_features[kwargs['use_transductively']]
+        else:
+            unlabelled_data = query_features
+
         # Metric dic
         num_classes = support_labels.unique().size(0)
         support_labels_one_hot = F.one_hot(support_labels, num_classes)
@@ -59,7 +64,7 @@ class TIM_GD(AbstractTIM):
                 support_features
             )
             logits_q = self.get_logits_from_cosine_distances_to_prototypes(
-                query_features
+                unlabelled_data
             )
 
             ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
@@ -77,6 +82,7 @@ class TIM_GD(AbstractTIM):
             optimizer.step()
 
             with torch.no_grad():
+                q_probs = self.get_logits_from_cosine_distances_to_prototypes(query_features)
                 q_cond_ent_values.append(q_cond_ent.item())
                 q_ent_values.append(q_ent.item())
                 ce_values.append(ce.item())
@@ -88,4 +94,8 @@ class TIM_GD(AbstractTIM):
         kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
         kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
 
-        return logits_s.softmax(-1).detach(), logits_q.softmax(-1).detach()
+        with torch.no_grad():
+            probas_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(-1)
+            probas_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+
+        return probas_s, probas_q

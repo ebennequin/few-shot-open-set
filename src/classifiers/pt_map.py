@@ -20,6 +20,11 @@ class MAP(FewShotMethod):
                 support_labels: Tensor,
                 **kwargs):
 
+        if kwargs['use_transductively'] is not None:
+            unlabelled_data = query_features[kwargs['use_transductively']]
+        else:
+            unlabelled_data = query_features
+
         support_features, query_features = support_features.cuda(), query_features.cuda()
         support_labels, query_labels = support_labels.cuda(), kwargs['query_labels'].cuda()
         inliers = ~ kwargs['outliers'].bool().cuda()
@@ -31,18 +36,18 @@ class MAP(FewShotMethod):
         acc_values = []
         for epoch in range(self.inference_steps):
 
-            probs_q = self.get_probas(query_features)
+            probs_q = self.get_probas(unlabelled_data)
             all_probs = torch.cat([probs_s, probs_q], dim=0)
 
             # update centroids
             self.update_prototypes(all_features, all_probs)
 
-            acc_values.append((probs_q.argmax(-1) == query_labels)[inliers].float().mean().item())
+            acc_values.append((self.get_probas(query_features).argmax(-1) == query_labels)[inliers].float().mean().item())
 
         kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
 
         # get final accuracy and return it
-        return probs_s.cpu(), probs_q.cpu()
+        return self.get_probas(support_features).cpu(), self.get_probas(query_features).cpu()
 
     def compute_optimal_transport(self, M, r, c, epsilon=1e-6):
 

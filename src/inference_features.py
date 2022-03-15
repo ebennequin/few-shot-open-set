@@ -88,12 +88,7 @@ def parse_args() -> argparse.Namespace:
 
     # Classifier
     parser.add_argument("--classifier", type=str, default="SimpleShot")
-    parser.add_argument("--softmax_temperature", type=float, default=1.0)
-    parser.add_argument("--inference_lr", type=float, default=1e-3,
-                        help="Learning rate used for methods that perform \
-                        gradient-based inference.")
-    parser.add_argument("--inference_steps", type=float, default=10,
-                        help="Steps used for gradient-based inferences.")
+    parser.add_argument("--use_filtering", type=str2bool, default=False)
     parser.add_argument("--classifiers_config_file", type=str, default="configs/classifiers.yaml")
 
     # Logging / Saving results
@@ -290,11 +285,17 @@ def detect_outliers(args, layers, transforms, classifier, feature_detector, prob
                 probas_s, probas_q, scores = output
             else:
                 scores = output
+                if args.use_filtering:
+                    use_transductively = (feature_detector.standardize(scores) < 0.15)
+                else:
+                    use_transductively = None
                 probas_s, probas_q = classifier(support_features=support_features[layer],
                                                 query_features=query_features[layer],
                                                 support_labels=support_labels,
                                                 intra_task_metrics=intra_task_metrics,
                                                 query_labels=query_labels,
+                                                outlier_scores=scores,
+                                                use_transductively=use_transductively,
                                                 outliers=outliers)
                 outlier_scores['probas'].append(
                     proba_detector(support_probas=probas_s,

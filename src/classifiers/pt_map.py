@@ -25,14 +25,14 @@ class MAP(FewShotMethod):
         else:
             unlabelled_data = query_features
 
-        support_features, query_features = support_features.cuda(), query_features.cuda()
+        support_features, unlabelled_data, query_features = support_features.cuda(), unlabelled_data.cuda(), query_features.cuda()
         support_labels, query_labels = support_labels.cuda(), kwargs['query_labels'].cuda()
         inliers = ~ kwargs['outliers'].bool().cuda()
 
         self.prototypes = compute_prototypes(support_features, support_labels)
         num_classes = support_labels.unique().size(0)
         probs_s = F.one_hot(support_labels, num_classes)
-        all_features = torch.cat([support_features, query_features], 0)
+        all_features = torch.cat([support_features, unlabelled_data], 0)
         acc_values = []
         for epoch in range(self.inference_steps):
 

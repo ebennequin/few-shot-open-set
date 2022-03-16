@@ -10,7 +10,8 @@ TGT_DATASETS=$(SRC_DATASET)
 
 
 # Modules
-TRANSFORMS=Pool
+CLS_TRANSFORMS=Pool L2norm
+DET_TRANSFORMS=Pool
 FEATURE_DETECTOR=kNNDetector
 PROBA_DETECTOR=EntropyDetector
 CLASSIFIER=SimpleShot
@@ -86,7 +87,8 @@ run:
 		        --feature_detector $(FEATURE_DETECTOR) \
 		        --use_filtering $(FILTERING) \
 		        --proba_detector $(PROBA_DETECTOR) \
-		        --feature_transforms  $(TRANSFORMS) \
+		        --detector_transforms  $(DET_TRANSFORMS) \
+		        --classifier_transforms  $(CLS_TRANSFORMS) \
 		        --backbone $(BACKBONE) \
 		        --model_source $(MODEL_SRC) \
 		        --n_ood_query $(OOD_QUERY) \
@@ -138,12 +140,12 @@ run_classifiers:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
 			for classifier in BDCSPN SimpleShot TIM_GD; do \
-				make TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
 					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
+				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 		done ;\
 	done ;\
 
@@ -157,7 +159,7 @@ ood_naive_strategy:
 
 filtering_knn:
 	for detector in kNNDetector; do \
-		make EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+		make DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
 	done ;\
 
 filtering_repri:

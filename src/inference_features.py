@@ -39,6 +39,7 @@ from src.utils.plots_and_metrics import update_csv
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
+from skimage.filters import threshold_otsu
 
 
 def str2bool(v):
@@ -82,7 +83,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--detector_config_file", type=str, default="configs/detectors.yaml")
 
     # Transform
-    parser.add_argument("--feature_transforms", nargs='+', type=str, default=['l2_norm'],
+    parser.add_argument("--detector_transforms", nargs='+', type=str, default=['l2_norm'],
+                        help="What type of transformation to apply after spatial pooling.")
+    parser.add_argument("--classifier_transforms", nargs='+', type=str, default=['l2_norm'],
                         help="What type of transformation to apply after spatial pooling.")
     parser.add_argument("--transforms_config_file", type=str, default="configs/transforms.yaml")
 
@@ -146,17 +149,17 @@ def main(args):
 
     # ================ Prepare Transforms + Detector + Classifier ===================
 
-    transform_names = args.feature_transforms
-
     # ==== Prepare transforms ====
 
-    transforms = []
-    for x in transform_names:
-        transforms.append(
-                    get_modules_to_try(args, 'transforms', x,
-                                       TRANSFORMS, False)[0]
-                   )
-    transforms = TRANSFORMS['SequentialTransform'](transforms)
+    classifier_transforms = []
+    for x in args.classifier_transforms:
+        classifier_transforms.append(get_modules_to_try(args, 'transforms', x, TRANSFORMS, False)[0])
+    classifier_transforms = TRANSFORMS['SequentialTransform'](classifier_transforms)
+
+    detector_transforms = []
+    for x in args.detector_transforms:
+        detector_transforms.append(get_modules_to_try(args, 'transforms', x, TRANSFORMS, False)[0])
+    detector_transforms = TRANSFORMS['SequentialTransform'](detector_transforms)
 
     if args.feature_detector in ALL_IN_ONE_METHODS:
 
@@ -183,7 +186,8 @@ def main(args):
 
     for feature_d, proba_d, classifier in itertools.product(
                 feature_detectors, proba_detectors, classifiers):
-        logger.info(f"Transforms : {transforms}")
+        logger.info(f"Classifier transforms : {classifier_transforms}")
+        logger.info(f"Detector transforms : {detector_transforms}")
         logger.info(f"Feature detector:  {feature_d}")
         logger.info(f"Proba detector: {proba_d}")
         logger.info(f"Classifier {classifier}")
@@ -193,7 +197,8 @@ def main(args):
 
         metrics = detect_outliers(args=args,
                                   layers=args.layers,
-                                  transforms=transforms,
+                                  detector_transforms=detector_transforms,
+                                  classifier_transforms=classifier_transforms,
                                   train_mean=train_mean,
                                   train_std=train_std,
                                   classifier=classifier,
@@ -228,8 +233,9 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
     figures[title] = fig
 
 
-def detect_outliers(args, layers, transforms, classifier, feature_detector, proba_detector,
-                    data_loader, train_mean, train_std, on_features: bool, model=None):
+def detect_outliers(args, layers, classifier_transforms, detector_transforms, classifier,
+                    feature_detector, proba_detector, data_loader, train_mean, train_std,
+                    on_features: bool, model=None):
 
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
@@ -251,8 +257,20 @@ def detect_outliers(args, layers, transforms, classifier, feature_detector, prob
             query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
         # ====== Transforming features ======
+        transformed_features = defaultdict(dict)
         for layer in support_features:
-            support_features[layer], query_features[layer] = transforms(
+            transformed_features['cls_sup'][layer], transformed_features['cls_query'][layer] = classifier_transforms(
+                  raw_feat_s=support_features[layer],
+                  raw_feat_q=query_features[layer],
+                  train_mean=train_mean[layer],
+                  train_std=train_std[layer],
+                  support_labels=support_labels,
+                  query_labels=query_labels,
+                  outliers=outliers,
+                  intra_task_metrics=intra_task_metrics,
+                  figures=figures
+            )
+            transformed_features['det_sup'][layer], transformed_features['det_query'][layer] = detector_transforms(
                   raw_feat_s=support_features[layer],
                   raw_feat_q=query_features[layer],
                   train_mean=train_mean[layer],
@@ -271,8 +289,8 @@ def detect_outliers(args, layers, transforms, classifier, feature_detector, prob
 
         for layer in support_features:
             output = feature_detector(
-                support_features=support_features[layer],
-                query_features=query_features[layer],
+                support_features=transformed_features['det_sup'][layer],
+                query_features=transformed_features['det_query'][layer],
                 train_mean=train_mean[layer],
                 train_std=train_std[layer],
                 support_labels=support_labels,
@@ -286,15 +304,15 @@ def detect_outliers(args, layers, transforms, classifier, feature_detector, prob
             else:
                 scores = output
                 if args.use_filtering:
-                    use_transductively = (feature_detector.standardize(scores) < 0.15)
+                    thresh = threshold_otsu(scores.numpy())
+                    use_transductively = (scores < thresh)
                 else:
                     use_transductively = None
-                probas_s, probas_q = classifier(support_features=support_features[layer],
-                                                query_features=query_features[layer],
+                probas_s, probas_q = classifier(support_features=transformed_features['cls_sup'][layer],
+                                                query_features=transformed_features['cls_query'][layer],
                                                 support_labels=support_labels,
                                                 intra_task_metrics=intra_task_metrics,
                                                 query_labels=query_labels,
-                                                outlier_scores=scores,
                                                 use_transductively=use_transductively,
                                                 outliers=outliers)
                 outlier_scores['probas'].append(

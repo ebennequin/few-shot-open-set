@@ -6,7 +6,6 @@ from pathlib import Path
 from loguru import logger
 from src.constants import (
     FEATURES_DIR,
-    TRAINED_MODELS_DIR
 )
 from src.utils.data_fetchers import get_classic_loader
 from src.utils.utils import compute_features, load_model
@@ -43,7 +42,7 @@ def main(args):
         weights = None
         stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}"  # used for saving features downstream
     else:
-        weights = TRAINED_MODELS_DIR / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        weights = Path(args.data_dir) / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         stem = weights.stem
     feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
     args.layers = feature_extractor.all_layers if args.layers == ['all'] else args.layers

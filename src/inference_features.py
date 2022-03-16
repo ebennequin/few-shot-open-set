@@ -99,8 +99,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exp_name", type=str, default='default',
                         help="Name the experiment for easy grouping.")
     parser.add_argument("--general_hparams", type=str, nargs='+',
-                        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'feature_detectors',
-                                 'classifier', 'n_way', 'n_shot'],
+                        default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'feature_detector',
+                                 'proba_detector', 'classifier', 'n_way', 'n_shot'],
                         help="Important params that will appear in .csv result file.",)
     parser.add_argument("--simu_hparams", type=str, nargs='*', default=[],
                         help="Important params that will appear in .csv result file.")
@@ -191,7 +191,10 @@ def main(args):
         logger.info(f"Feature detector:  {feature_d}")
         logger.info(f"Proba detector: {proba_d}")
         logger.info(f"Classifier {classifier}")
-        args.current_sequence = str((feature_d, proba_d, classifier))
+        args.feature_detector = str(feature_d)
+        args.proba_detector = str(proba_d)
+        args.classifier = str(classifier)
+        # args.current_sequence = str((feature_d, proba_d, classifier))
 
         set_random_seed(args.random_seed)
 

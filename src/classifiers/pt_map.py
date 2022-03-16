@@ -67,8 +67,8 @@ class MAP(FewShotMethod):
         # normalize this matrix
         while torch.max(torch.abs(u - P.sum(1))) > epsilon:
             u = P.sum(1)
-            P *= (r / u).view(-1, 1)
-            P *= (c / P.sum(0)).view(1, -1)
+            P *= (r / u + 1e-10).view(-1, 1)
+            P *= (c / P.sum(0) + 1e-10).view(1, -1)
             if iters == maxiters:
                 break
             iters = iters + 1

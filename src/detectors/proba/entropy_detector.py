@@ -17,4 +17,5 @@ class EntropyDetector(ProbaDetector):
         query_probas: [Nq, K]
         """
         entropy = - (query_probas * torch.log(query_probas + 1e-6)).sum(-1)
+        assert not torch.any(torch.isnan(entropy)), query_probas.min()
         return entropy

@@ -28,13 +28,13 @@ TRAINING=standard
 EXP=default
 DEBUG=False
 GPUS=0
-SIMU_PARAMS=current_sequence
+SIMU_PARAMS=
 OVERRIDE=True
 TUNE=""
 
 # Tasks
 RESOLUTION=84
-OOD_QUERY=10
+OOD_QUERY=100
 N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
@@ -139,13 +139,13 @@ run_feature_detectors:
 run_classifiers:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 			for classifier in BDCSPN SimpleShot TIM_GD; do \
 				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
 					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 		done ;\
 	done ;\
 
@@ -158,8 +158,8 @@ ood_naive_strategy:
 	done ;\
 
 filtering_knn:
-	for detector in kNNDetector; do \
-		make DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+	for ood_query in 0 5 10 15 20 25 30; do \
+		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=kNNDetector run_classifiers ;\
 	done ;\
 
 filtering_repri:
@@ -188,20 +188,20 @@ cross_domain:
 
 layers:
 	for layers in 2 3 4; do \
-		make EXP=layers LAYERS=$${layers} SIMU_PARAMS="current_sequence layers" benchmark ;\
+		make EXP=layers LAYERS=$${layers} SIMU_PARAMS="layers" benchmark ;\
 	done ;\
 
 imbalance:
 	for alpha in 0.5 1.0 2.0 3.0 4.0 5.0; do \
 		for backbone in resnet12; do \
-			make BALANCED=False EXP=imbalance SIMU_PARAMS="current_sequence alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_feature_detectors; \
+			make BALANCED=False EXP=imbalance SIMU_PARAMS="alpha" MISC_ARG=alpha MISC_VAL=$${alpha} BACKBONE=$${backbone} run_feature_detectors; \
 		done ;\
 	done ;\
 
 nquery_influence:
 	for n_query in 1 5 10 15 20; do \
 		for backbone in resnet12; do \
-			make EXP=n_query SIMU_PARAMS="current_sequence n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_feature_detectors; \
+			make EXP=n_query SIMU_PARAMS="n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_feature_detectors; \
 		done ;\
 	done ;\
 

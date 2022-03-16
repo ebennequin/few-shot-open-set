@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--filters', type=str, nargs='+', default=[],
                         help="Format: n_query=5 n_shot=1 ...")
     parser.add_argument('--metrics', type=str, nargs='+',
-                        default=['acc', 'roc_auc'])
+                        default=['mean_acc', 'mean_features_rocauc'])
     parser.add_argument('--groupby', type=str, help="Defines the methods compared. Ex: postpool_transforms")
 
     args = parser.parse_args()

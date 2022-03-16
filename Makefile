@@ -34,7 +34,7 @@ TUNE=""
 
 # Tasks
 RESOLUTION=84
-OOD_QUERY=100
+OOD_QUERY=10
 N_TASKS=1000
 SHOTS=1 5
 BALANCED=True
@@ -91,7 +91,6 @@ run:
 		        --classifier_transforms  $(CLS_TRANSFORMS) \
 		        --backbone $(BACKBONE) \
 		        --model_source $(MODEL_SRC) \
-		        --n_ood_query $(OOD_QUERY) \
 		        --balanced $(BALANCED) \
 		        --training $(TRAINING) \
 				--src_dataset $(SRC_DATASET) \
@@ -139,34 +138,37 @@ run_feature_detectors:
 run_classifiers:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12; do \
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
-			for classifier in BDCSPN SimpleShot TIM_GD; do \
+			for classifier in TIM_GD; do \
 				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
-					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
 		done ;\
 	done ;\
+# 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
+# 					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
+# 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \ 
+# 				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 
 ideal_case:
-	make EXP=ideal_case OOD_QUERY=0 run_classifiers
+	make EXP=ideal_case run_classifiers
 
 ood_naive_strategy:
-	for detector in EntropyDetector; do \
-		make EXP=naive PROBA_DETECTOR=$${detector} run_classifiers ;\
+	for ood_query in 5 10 15 20 25 30; do \
+		make EXP=filtering SIMU_PARAMS="n_ood_query use_filtering" MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_classifiers ;\
 	done ;\
 
 filtering_knn:
-	for ood_query in 0 5 10 15 20 25 30; do \
-		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=kNNDetector run_classifiers ;\
+	for ood_query in 0 5 10 15 20 25 30 50; do \
+		make SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+			DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=kNNDetector run_classifiers ;\
 	done ;\
 
 filtering_repri:
-	for detector in RepriDetector; do \
-		make EXP=filtering FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+	for ood_query in 40 50; do \
+		for detector in RepriDetector; do \
+			make EXP=filtering SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+				FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
+		done ;\
 	done ;\
-
 
 
 
@@ -198,47 +200,32 @@ imbalance:
 		done ;\
 	done ;\
 
-nquery_influence:
-	for n_query in 1 5 10 15 20; do \
-		for backbone in resnet12; do \
-			make EXP=n_query SIMU_PARAMS="n_query" MISC_ARG=n_query MISC_VAL=$${n_query} BACKBONE=$${backbone} run_feature_detectors; \
-		done ;\
-	done ;\
 
 # ========== Ablations ===========
 
-plot_benchmark:
-	for backbone in wrn2810 resnet12; do \
+plot_outlier_ratio:
+	for backbone in resnet12; do \
 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-			python -m src.plots.csv_plotter --exp benchmark --groupby transformss --plot_versus n_shot \
-				--filters feature_detector=knn backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+			python -m src.plots.csv_plotter --exp filtering --groupby feature_detector --plot_versus n_ood_query \
+				--filters n_shot=1 backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 		done ;\
 	done ;\
 
-plot_cross_domain:
-	for backbone in wrn2810 resnet12 vitb16; do \
-		for shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp cross_domain --groupby transformss --plot_versus tgt_dataset \
-				--filters n_shot=$${shot} feature_detector=knn backbone=$${backbone} ;\
-		done ;\
-	done ;\
+# plot_cross_domain:
+# 	for backbone in wrn2810 resnet12 vitb16; do \
+# 		for shot in 1 5; do \
+# 			python -m src.plots.csv_plotter --exp cross_domain --groupby transformss --plot_versus tgt_dataset \
+# 				--filters n_shot=$${shot} feature_detector=knn backbone=$${backbone} ;\
+# 		done ;\
+# 	done ;\
 
-plot_imbalance:
-	for backbone in wrn2810 resnet12; do \
-		for  shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp imbalance --groupby transformss --plot_versus alpha \
-				--filters n_shot=$${shot} feature_detector=knn backbone=$${backbone} ;\
-		done ;\
-	done ;\
-
-plot_nquery:
-	for backbone in wrn2810 resnet12; do \
-		for  shot in 1 5; do \
-			python -m src.plots.csv_plotter --exp n_query --groupby transformss --plot_versus n_query \
-				--filters n_shot=$${shot} feature_detector=knn backbone=$${backbone} ;\
-		done ;\
-	done ;\
-
+# plot_imbalance:
+# 	for backbone in wrn2810 resnet12; do \
+# 		for  shot in 1 5; do \
+# 			python -m src.plots.csv_plotter --exp imbalance --groupby transformss --plot_versus alpha \
+# 				--filters n_shot=$${shot} feature_detector=knn backbone=$${backbone} ;\
+# 		done ;\
+# 	done ;\
 
 # ================= Deployment / Imports ==================
 

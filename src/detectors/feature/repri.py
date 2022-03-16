@@ -96,9 +96,9 @@ class RepriDetector(FeatureDetector):
                 prior_prob = torch.Tensor([pi, 1-pi]).cuda()
                 # logger.warning(f"Threshold found {thresh:.2f}. Prior found {pi:.2f}")
 
-            _, probas_s, _, probas_q = self.do_iter(raw_feat_s,
-                                                    raw_feat_q,
-                                                    mu)
+            _, probas_s, logits_q, probas_q = self.do_iter(raw_feat_s,
+                                                           raw_feat_q,
+                                                           mu)
             ce = - torch.log(probas_s[:, 1])
             entropy = -(probas_q * torch.log(probas_q)).sum(-1)
             # kl = kl_div(probas_q.mean(0) - prior_prob)
@@ -123,7 +123,7 @@ class RepriDetector(FeatureDetector):
                 entropies.append(entropy.mean().item())
                 inlier_entropy.append(entropy[~ kwargs['outliers'].bool()].mean().item())
                 ces.append(ce.mean().item())
-                aucs.append(self.compute_auc(probas_q[:, 0], **kwargs))
+                aucs.append(self.compute_auc(logits_q, **kwargs))
         kwargs['intra_task_metrics']['main_losses']['ce'].append(ces)
         kwargs['intra_task_metrics']['main_losses']['kl'].append(kls)
         kwargs['intra_task_metrics']['main_losses']['entropy'].append(entropies)

@@ -59,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
-    parser.add_argument("--data_dir", type=Path)
+    parser.add_argument("--data_dir", type=str)
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_id_query", type=int, default=10)
@@ -129,9 +129,11 @@ def main(args):
     save_dir.mkdir(exist_ok=True, parents=True)
     args.layers = BACKBONES[args.backbone]().all_layers[-args.layers:]
 
-    # logger.info(f"Dropping config file at {save_dir / 'config.json'}")
-    # with open(save_dir / 'config.json', 'w') as f:
-    #     json.dump(vars(args), f)
+    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
+    with open(save_dir / 'config.json', 'w') as f:
+        arg_dict = vars(args)
+        json.dump(arg_dict, f)
+    args.data_dir = Path(args.data_dir)
 
     # ================ Prepare data ===================
 
@@ -168,7 +170,6 @@ def main(args):
         feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
                                                ALL_IN_ONE_METHODS, 'all_in_one' in args.tune)
         proba_detectors = classifier = [None]
-
     else:
         # ==== Prepare few-shot classifier ====
 
@@ -177,12 +178,18 @@ def main(args):
 
         # ==== Prepare feature detector ====
 
-        feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
-                                               FEATURE_DETECTORS, 'feature_detector' in args.tune)
+        if args.feature_detector == 'none':
+            feature_detectors = [None]
+        else:
+            feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
+                                                   FEATURE_DETECTORS, 'feature_detector' in args.tune)
 
         # ==== Prepare proba detector ====
-        proba_detectors = get_modules_to_try(args, 'proba_detectors', args.proba_detector,
-                                             PROBA_DETECTORS, 'proba_detector' in args.tune)
+        if args.proba_detector == 'none':
+            proba_detectors = [None]
+        else:
+            proba_detectors = get_modules_to_try(args, 'proba_detectors', args.proba_detector,
+                                                 PROBA_DETECTORS, 'proba_detector' in args.tune)
 
     for feature_d, proba_d, classifier in itertools.product(
                 feature_detectors, proba_detectors, classifiers):
@@ -291,39 +298,45 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
         soft_preds_q = []
 
         for layer in support_features:
-            output = feature_detector(
-                support_features=transformed_features['det_sup'][layer],
-                query_features=transformed_features['det_query'][layer],
-                train_mean=train_mean[layer],
-                train_std=train_std[layer],
-                support_labels=support_labels,
-                query_labels=query_labels,
-                outliers=outliers,
-                intra_task_metrics=intra_task_metrics,
-                figures=figures
-            )
-            if isinstance(feature_detector, AllInOne):
-                probas_s, probas_q, scores = output
-            else:
-                scores = output
-                if args.use_filtering:
-                    thresh = threshold_otsu(scores.numpy())
-                    use_transductively = (scores < thresh)
+            if feature_detector is not None:
+                output = feature_detector(
+                    support_features=transformed_features['det_sup'][layer],
+                    query_features=transformed_features['det_query'][layer],
+                    train_mean=train_mean[layer],
+                    train_std=train_std[layer],
+                    support_labels=support_labels,
+                    query_labels=query_labels,
+                    outliers=outliers,
+                    intra_task_metrics=intra_task_metrics,
+                    figures=figures
+                )
+                if isinstance(feature_detector, AllInOne):
+                    probas_s, probas_q, scores = output
                 else:
-                    use_transductively = None
-                probas_s, probas_q = classifier(support_features=transformed_features['cls_sup'][layer],
-                                                query_features=transformed_features['cls_query'][layer],
-                                                support_labels=support_labels,
-                                                intra_task_metrics=intra_task_metrics,
-                                                query_labels=query_labels,
-                                                use_transductively=use_transductively,
-                                                outliers=outliers)
+                    scores = output
+                outlier_scores['features'].append(scores)
+
+            if args.use_filtering:
+                assert feature_detector is not None
+                thresh = threshold_otsu(scores.numpy())
+                believed_inliers = (scores < thresh)
+                metrics['thresholding_accuracy'].append((believed_inliers == ~outliers.bool()).float().mean().item())
+            else:
+                believed_inliers = None
+
+            probas_s, probas_q = classifier(support_features=transformed_features['cls_sup'][layer],
+                                            query_features=transformed_features['cls_query'][layer],
+                                            support_labels=support_labels,
+                                            intra_task_metrics=intra_task_metrics,
+                                            query_labels=query_labels,
+                                            use_transductively=believed_inliers,
+                                            outliers=outliers)
+            if proba_detector is not None:
                 outlier_scores['probas'].append(
                     proba_detector(support_probas=probas_s,
                                    query_probas=probas_q)
                 )
 
-            outlier_scores['features'].append(scores)
             soft_preds_q.append(probas_q)
         
         # ====== Aggregate scores and probas across layers ======

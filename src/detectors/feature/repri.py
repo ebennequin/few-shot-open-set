@@ -67,8 +67,8 @@ class RepriDetector(FeatureDetector):
         aucs = []
         marg_entropy = []
         diff_with_oracle = []
-        inlier_entropy = []
-        outlier_entropy = []
+        inlier_inlierness = []
+        outlier_inlierness = []
         entropies = []
         pi_diff_with_oracle = []
         ces = []
@@ -88,13 +88,16 @@ class RepriDetector(FeatureDetector):
         for i in range(self.n_iter):
 
             if i == 0:
-                _, _, logits_q, _ = self.do_iter(raw_feat_s,
-                                                 raw_feat_q,
-                                                 torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True))
-                thresh = threshold_otsu(logits_q.detach().cpu().numpy())
-                pi = (logits_q > thresh).sum() / logits_q.size(0)
-                prior_prob = torch.Tensor([pi, 1-pi]).cuda()
-                # logger.warning(f"Threshold found {thresh:.2f}. Prior found {pi:.2f}")
+                with torch.no_grad():
+                    # mu_init = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
+                    mu_init = mu
+                    _, _, logits_q, _ = self.do_iter(raw_feat_s,
+                                                     raw_feat_q,
+                                                     mu_init)
+                    thresh = threshold_otsu(logits_q.detach().cpu().numpy())
+                    pi = (logits_q > thresh).sum() / logits_q.size(0)
+                    prior_prob = torch.Tensor([pi, 1-pi]).cuda()
+                    # logger.warning(f"Threshold found {thresh:.2f}. Prior found {pi:.2f}")
 
             _, probas_s, logits_q, probas_q = self.do_iter(raw_feat_s,
                                                            raw_feat_q,
@@ -102,7 +105,7 @@ class RepriDetector(FeatureDetector):
             ce = - torch.log(probas_s[:, 1])
             entropy = -(probas_q * torch.log(probas_q)).sum(-1)
             # kl = kl_div(probas_q.mean(0) - prior_prob)
-            kl = (probas_q.mean(0)[0] - prior_prob[0]).abs()
+            kl = (probas_q.mean(0)[0] - prior_prob[0])
 
             loss = ce.mean() + entropy.mean() + self.weight * kl
             # loss = kl
@@ -119,16 +122,16 @@ class RepriDetector(FeatureDetector):
                 marg_entropy.append(- (probas_q.mean(0) * torch.log(probas_q.mean(0))).sum().item())
                 diff_with_oracle.append(abs(probas_q.mean(0)[0].item() - (kwargs['outliers'].sum() / kwargs['outliers'].size(0)).item()))
                 pi_diff_with_oracle.append(abs(pi.item() - (kwargs['outliers'].sum() / kwargs['outliers'].size(0)).item()))
-                outlier_entropy.append(entropy[kwargs['outliers'].bool()].mean().item())
+                outlier_inlierness.append(probas_q[kwargs['outliers'].bool()][:, 1].mean().item())
                 entropies.append(entropy.mean().item())
-                inlier_entropy.append(entropy[~ kwargs['outliers'].bool()].mean().item())
+                inlier_inlierness.append(probas_q[~ kwargs['outliers'].bool()][:, 1].mean().item())
                 ces.append(ce.mean().item())
                 aucs.append(self.compute_auc(logits_q, **kwargs))
         kwargs['intra_task_metrics']['main_losses']['ce'].append(ces)
         kwargs['intra_task_metrics']['main_losses']['kl'].append(kls)
         kwargs['intra_task_metrics']['main_losses']['entropy'].append(entropies)
-        kwargs['intra_task_metrics']['secondary_loss']['inlier_entropy'].append(inlier_entropy)
-        kwargs['intra_task_metrics']['secondary_loss']['outlier_entropy'].append(outlier_entropy)
+        kwargs['intra_task_metrics']['secondary_loss']['inlier_inlierness'].append(inlier_inlierness)
+        kwargs['intra_task_metrics']['secondary_loss']['outlier_inlierness'].append(outlier_inlierness)
         kwargs['intra_task_metrics']['main_metrics']['auc'].append(aucs)
         # kwargs['intra_task_metrics']['secondary_metrics']['marg_entropy'].append(marg_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['marg_diff_oracle'].append(diff_with_oracle)

@@ -12,7 +12,7 @@ from tqdm import tqdm
 from pathlib import Path
 from src.models import __dict__ as BACKBONES
 import os
-from types import SimpleNamespace
+from argparse import Namespace
 from src.utils.data_fetchers import get_classic_loader
 from collections import OrderedDict, defaultdict
 import argparse
@@ -51,11 +51,12 @@ def tensor_product(left_tensor: torch.Tensor, right_tensor: torch.Tensor):
 
 def merge_from_dict(args, dict_: Dict):
     for key, value in dict_.items():
-        if isinstance(value, dict) and not any([isinstance(key, int) for key in value.keys()]):
-            setattr(args, key, SimpleNamespace())
-            merge_from_dict(getattr(args, key), value)
-        else:
-            setattr(args, key, value)
+        setattr(args, key, value)
+        # if isinstance(value, dict) and not any([isinstance(key, int) for key in value.keys()]):
+            # setattr(args, key, Namespace())
+            # merge_from_dict(getattr(args, key), value)
+        # else:
+        #     setattr(args, key, value)
 
 
 def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda") -> Tuple[ndarray, ndarray]:
@@ -193,16 +194,17 @@ def get_modules_to_try(args, module_group: str, module_name: str,
 
     modules_to_try: List[Any] = []
     # logger.warning(module_pool)
+    module_dict = eval(f'args.{module_group}')
 
     if tune:
         logger.warning(f"Tuning over {module_group} activated")
-        if module_name in vars(eval(f'args.{module_group}')): 
-            shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.default') else 1
-            module_args = eval(f'args.{module_group}.{module_name}.default')[shot]  # take default args
-            if 'tuning' in vars(eval(f'args.{module_group}.{module_name}')):
-                params2tune = eval(f'args.{module_group}.{module_name}.tuning.hparams2tune')
-                shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.tuning.hparam_values') else 1
-                values2tune = eval(f'args.{module_group}.{module_name}.tuning.hparam_values')[shot]
+        if module_name in eval(f'args.{module_group}'):
+            shot = args.n_shot if args.n_shot in module_dict[module_name]['default'] else 1
+            module_args = module_dict[module_name]['default'][shot]  # take default args
+            if 'tuning' in module_dict[module_name]:
+                params2tune = module_dict[module_name]['tuning']['hparams2tune']
+                shot = args.n_shot if args.n_shot in module_dict[module_name]['tuning']['hparams_values'] else 1
+                values2tune = module_dict[module_name]['tuning']['hparams_values'][shot]
                 values_combinations = itertools.product(*values2tune)
                 for some_combin in values_combinations:
                     # Override default args
@@ -218,9 +220,9 @@ def get_modules_to_try(args, module_group: str, module_name: str,
             modules_to_try.append(module_pool[module_name]())
     else:
         module_args = {}
-        if module_name in vars(eval(f'args.{module_group}')):
-            shot = args.n_shot if args.n_shot in eval(f'args.{module_group}.{module_name}.default') else 1
-            module_args = eval(f'args.{module_group}.{module_name}.default')[shot]  # take default args
+        if module_name in module_dict:
+            shot = args.n_shot if args.n_shot in module_dict[module_name]['default'] else 1
+            module_args = module_dict[module_name]['default'][shot]  # take default args
         if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
             module_args['args'] = args
         modules_to_try = [module_pool[module_name](**module_args)]

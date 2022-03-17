@@ -136,36 +136,36 @@ run_feature_detectors:
 # ========== Experiments ===========
 
 run_classifiers:
-	for dataset in mini_imagenet tiered_imagenet; do \
+	for dataset in mini_imagenet; do \
 		for backbone in resnet12; do \
-			for classifier in TIM_GD; do \
+			for classifier in TIM_GD ; do \
 				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
 		done ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+			CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 	done ;\
 # 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} \
 # 					CLASSIFIER=SemiFEAT TRAINING=feat run_proba_detectors ;\
-# 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \ 
-# 				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 
 ideal_case:
 	make EXP=ideal_case run_classifiers
 
-ood_naive_strategy:
-	for ood_query in 5 10 15 20 25 30; do \
-		make EXP=filtering SIMU_PARAMS="n_ood_query use_filtering" MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_classifiers ;\
+no_filtering:
+	for ood_query in 1 5 10 15 20 25 30 40 50 75 100; do \
+		make EXP=filtering SIMU_PARAMS=n_ood_query FEATURE_DETECTOR=none MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_classifiers ;\
 	done ;\
 
 filtering_knn:
-	for ood_query in 0 5 10 15 20 25 30 50; do \
-		make SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
-			DET_TRANSFORMS="Pool L2norm" EXP=filtering FILTERING=True FEATURE_DETECTOR=kNNDetector run_classifiers ;\
+	for ood_query in 1 5 10 15 20 25 30 40 50 75 100; do \
+		make EXP=filtering_test SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_classifiers ;\
 	done ;\
 
 filtering_repri:
-	for ood_query in 40 50; do \
+	for ood_query in 1 5 10 15 20 25 30 40 50 75 100; do \
 		for detector in RepriDetector; do \
-			make EXP=filtering SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+			make EXP=filtering_test SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
 				FILTERING=True FEATURE_DETECTOR=$${detector} run_classifiers ;\
 		done ;\
 	done ;\
@@ -203,11 +203,13 @@ imbalance:
 
 # ========== Ablations ===========
 
-plot_outlier_ratio:
+plot_filtering:
 	for backbone in resnet12; do \
-		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-			python -m src.plots.csv_plotter --exp filtering --groupby feature_detector --plot_versus n_ood_query \
-				--filters n_shot=1 backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+		for shot in 1 5; do \
+			for tgt_dataset in mini_imagenet tiered_imagenet; do \
+				python -m src.plots.csv_plotter --exp filtering --groupby feature_detector --plot_versus n_ood_query \
+					--filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+			done ;\
 		done ;\
 	done ;\
 

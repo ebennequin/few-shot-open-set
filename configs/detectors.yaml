@@ -23,8 +23,8 @@ feature_detectors:
                       5: [[3, 5, 7, 10, 13]]}
 
   RepriDetector:
-    default: {1: {'lambda_': 1., 'lr': 3., 'n_iter': 100, 'init': 'base', 'n_neighbors': 1, 'weight': 3., 'optimizer_name': 'SGD'},
-              5: {'lambda_': 1., 'lr': 3., 'n_iter': 100, 'init': 'base', 'n_neighbors': 3, 'weight': 3., 'optimizer_name': 'SGD'}}
+    default: {1: {'lambda_': 1., 'lr': 50., 'n_iter': 10, 'init': 'base', 'n_neighbors': 1, 'weight': 3., 'optimizer_name': 'SGD'},
+              5: {'lambda_': 1., 'lr': 50., 'n_iter': 10, 'init': 'base', 'n_neighbors': 3, 'weight': 3., 'optimizer_name': 'SGD'}}
     tuning:
       hparams2tune: ['n_neighbors', 'lambda_', 'n_iter', 'lr', 'weight']
       hparam_values: {1: [[1, 3], [1, 5, 10], [20, 50], [1.0, 3.0, 5.0], [1.0, 3.0, 5.0]],

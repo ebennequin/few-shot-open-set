@@ -26,6 +26,7 @@ import itertools
 from typing import Tuple, List, Dict, Any
 import seaborn as sns
 from pathlib import Path
+from src.utils.utils import load_model
 
 from src.classifiers import __dict__ as CLASSIFIERS
 from src.detectors.feature import __dict__ as FEATURE_DETECTORS
@@ -70,6 +71,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--balanced_tasks", type=str2bool, default="True")
     parser.add_argument("--alpha", type=float, default=1.0)
+    parser.add_argument("--on_features", type=str2bool, default=True)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -135,20 +137,6 @@ def main(args):
         json.dump(arg_dict, f)
     args.data_dir = Path(args.data_dir)
 
-    # ================ Prepare data ===================
-
-    feature_dic = defaultdict(dict)
-    train_mean = {}
-    train_std = {}
-    for i, layer in enumerate(args.layers):
-        features, _, train_mean[i], train_std[i] = get_test_features(
-            args.data_dir, args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
-        )
-        for class_ in features:
-            feature_dic[class_.item()][layer] = features[class_]
-    data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
-                                  args.n_id_query, args.n_ood_query, args.n_tasks, args.n_workers, feature_dic)
-
     # ================ Prepare Transforms + Detector + Classifier ===================
 
     # ==== Prepare transforms ====
@@ -170,6 +158,7 @@ def main(args):
         feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
                                                ALL_IN_ONE_METHODS, 'all_in_one' in args.tune)
         proba_detectors = classifier = [None]
+
     else:
         # ==== Prepare few-shot classifier ====
 
@@ -183,13 +172,37 @@ def main(args):
         else:
             feature_detectors = get_modules_to_try(args, 'feature_detectors', args.feature_detector,
                                                    FEATURE_DETECTORS, 'feature_detector' in args.tune)
-
         # ==== Prepare proba detector ====
         if args.proba_detector == 'none':
             proba_detectors = [None]
         else:
             proba_detectors = get_modules_to_try(args, 'proba_detectors', args.proba_detector,
                                                  PROBA_DETECTORS, 'proba_detector' in args.tune)
+
+    # ================ Prepare data ===================
+
+    if feature_detectors[0].works_on_features:
+        feature_dic = defaultdict(dict)
+        train_mean = {}
+        train_std = {}
+        for i, layer in enumerate(args.layers):
+            features, _, train_mean[i], train_std[i] = get_test_features(
+                args.data_dir, args.backbone, args.src_dataset, args.tgt_dataset, args.training, args.model_source, layer
+            )
+            for class_ in features:
+                feature_dic[class_.item()][layer] = features[class_]
+    else:
+        logger.info("Using model instead of saved features.")
+        if args.model_source == 'url':
+            weights = None
+        else:
+            weights = Path(args.data_dir) / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
+        feature_dic = None
+
+    data_loader = get_task_loader(args, "test", args.tgt_dataset, args.n_way, args.n_shot,
+                                  args.n_id_query, args.n_ood_query, args.n_tasks, args.n_workers,
+                                  feature_dic)
 
     for feature_d, proba_d, classifier in itertools.product(
                 feature_detectors, proba_detectors, classifiers):
@@ -207,6 +220,7 @@ def main(args):
 
         metrics = detect_outliers(args=args,
                                   layers=args.layers,
+                                  feature_extractor=feature_extractor,
                                   detector_transforms=detector_transforms,
                                   classifier_transforms=classifier_transforms,
                                   train_mean=train_mean,
@@ -214,8 +228,8 @@ def main(args):
                                   classifier=classifier,
                                   feature_detector=feature_d,
                                   proba_detector=proba_d,
-                                  data_loader=data_loader,
-                                  on_features=True)
+                                  data_loader=data_loader
+                                  )
         # Saving results
         save_results(args, metrics)
 
@@ -245,7 +259,7 @@ def tsne_plot(figures, feat_s, feat_q, support_labels, query_labels, title):
 
 def detect_outliers(args, layers, classifier_transforms, detector_transforms, classifier,
                     feature_detector, proba_detector, data_loader, train_mean, train_std,
-                    on_features: bool, model=None):
+                    feature_extractor=None):
 
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
@@ -254,43 +268,41 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
 
         support_labels, query_labels = support_labels.long(), query_labels.long()
 
-        # ====== Extract features ======
-        if on_features:
+        # ====== Extract features and transform them ======
+        if feature_extractor is None:
             support_features = support
             query_features = query
-        else:
-            all_images = torch.cat([support, query], 0)
-            with torch.no_grad():
-                all_images = all_images.cuda()
-                all_features = model(all_images, layers)  # []
-            support_features = {k: v[:support.size(0)].cpu() for k, v in all_features.items()}
-            query_features = {k: v[support.size(0):].cpu() for k, v in all_features.items()}
 
-        # ====== Transforming features ======
-        transformed_features = defaultdict(dict)
-        for layer in support_features:
-            transformed_features['cls_sup'][layer], transformed_features['cls_query'][layer] = classifier_transforms(
-                  raw_feat_s=support_features[layer],
-                  raw_feat_q=query_features[layer],
-                  train_mean=train_mean[layer],
-                  train_std=train_std[layer],
-                  support_labels=support_labels,
-                  query_labels=query_labels,
-                  outliers=outliers,
-                  intra_task_metrics=intra_task_metrics,
-                  figures=figures
-            )
-            transformed_features['det_sup'][layer], transformed_features['det_query'][layer] = detector_transforms(
-                  raw_feat_s=support_features[layer],
-                  raw_feat_q=query_features[layer],
-                  train_mean=train_mean[layer],
-                  train_std=train_std[layer],
-                  support_labels=support_labels,
-                  query_labels=query_labels,
-                  outliers=outliers,
-                  intra_task_metrics=intra_task_metrics,
-                  figures=figures
-            )
+            # === Transforming features ===
+            transformed_features = defaultdict(dict)
+            for layer in support_features:
+                transformed_features['cls_sup'][layer], transformed_features['cls_query'][layer] = classifier_transforms(
+                      raw_feat_s=support_features[layer],
+                      raw_feat_q=query_features[layer],
+                      train_mean=train_mean[layer],
+                      train_std=train_std[layer],
+                      support_labels=support_labels,
+                      query_labels=query_labels,
+                      outliers=outliers,
+                      intra_task_metrics=intra_task_metrics,
+                      figures=figures
+                )
+                transformed_features['det_sup'][layer], transformed_features['det_query'][layer] = detector_transforms(
+                      raw_feat_s=support_features[layer],
+                      raw_feat_q=query_features[layer],
+                      train_mean=train_mean[layer],
+                      train_std=train_std[layer],
+                      support_labels=support_labels,
+                      query_labels=query_labels,
+                      outliers=outliers,
+                      intra_task_metrics=intra_task_metrics,
+                      figures=figures
+                )
+        else:  # We leave each method the freedom to do what it wants with raw images and model
+            transformed_features['det_sup']['input'] = support
+            transformed_features['det_query']['input'] = query
+            assert isinstance(feature_detector, AllInOne), "Currently on AllInOne \
+                detectors also handle feature extraction"
 
         # ====== Classification + OOD detection ======
 

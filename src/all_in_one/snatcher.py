@@ -13,6 +13,7 @@ class SnatcherF(AllInOne):
 
         self.temperature = 64.
         self.device = args.device
+        self.works_on_features = True
 
         # Load attention module
         if args.backbone == 'resnet12':

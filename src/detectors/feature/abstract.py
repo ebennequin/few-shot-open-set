@@ -10,7 +10,7 @@ class FeatureDetector:
     Abstract class for an outlier detector
     """
     def __init__(self):
-        pass
+        self.works_on_features = True
 
     def __call__(self, support_features, query_features, **kwargs):
         raise NotImplementedError

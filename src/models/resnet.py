@@ -632,6 +632,8 @@ class ResNet(nn.Module):
         self.num_classes = num_classes
         self.last_layer_name = "4_3"
         self.all_layers = [f"{i}_{j}" for i in range(1, 5) for j in range(4)]
+        channels = [64, 128, 256, 512]
+        self.layer_dims = [channels[i] * block.expansion for i in range(1, 5) for j in range(4)]
         self.drop_rate = drop_rate
         super(ResNet, self).__init__()
 
@@ -676,7 +678,6 @@ class ResNet(nn.Module):
                 self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         # Feature Blocks
-        channels = [64, 128, 256, 512]
         stage_modules, stage_feature_info = make_blocks(
             block, channels, layers, inplanes, cardinality=cardinality, base_width=base_width,
             output_stride=output_stride, reduce_first=block_reduce_first, avg_down=avg_down,

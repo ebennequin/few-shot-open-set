@@ -633,7 +633,7 @@ class ResNet(nn.Module):
         self.last_layer_name = "4_3"
         self.all_layers = [f"{i}_{j}" for i in range(1, 5) for j in range(4)]
         channels = [64, 128, 256, 512]
-        self.layer_dims = [channels[i] * block.expansion for i in range(1, 5) for j in range(4)]
+        self.layer_dims = [channels[i] * block.expansion for i in range(4) for j in range(4)]
         self.drop_rate = drop_rate
         super(ResNet, self).__init__()
 

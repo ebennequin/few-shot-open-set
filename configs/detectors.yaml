@@ -7,6 +7,12 @@ feature_detectors:
       hparams2tune: ['temperature']
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
+  MTC:
+    default: {1: {'n_iter': 20, 'pretrain_iter': 20,
+                  'lr': 0.0001, 'confidence_threshold': 0.9,
+                  'lambda_': 0.1},
+              }
+
   kNNDetector:
     default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},
               5: {'n_neighbors': 3, 'method': 'mean', 'distance': 'l2'}}

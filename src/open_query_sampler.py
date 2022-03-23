@@ -234,10 +234,10 @@ class OpenQuerySampler(TaskSampler):
         outliers = torch.cat([torch.zeros(len(id_query)), torch.ones(len(ood_query))])
 
         # Preparing features
-        support_images = torch.stack([x[0] for x in support_data], 0)  # [Ns, d_layer]
-        query_images = torch.stack([x[0] for x in id_query], 0)  # [Ns, d_layer]
+        support_images = [x[0] for x in support_data]  # [Ns, d_layer]
+        query_images = [x[0] for x in id_query]  # [Ns, d_layer]
         if len(ood_query):
-            query_images = torch.cat([query_images, torch.stack([x[0] for x in ood_query], 0)])
+            query_images += [x[0] for x in ood_query]
 
         return (
             support_images,

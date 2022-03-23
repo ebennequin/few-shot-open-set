@@ -133,6 +133,11 @@ run_feature_detectors:
 		make FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 
+run_ssl_detectors:
+	for feature_detector in MTC; do \
+		make FEATURE_DETECTOR=$${feature_detector} run ;\
+	done ;\
+
 # ========== Experiments ===========
 
 run_classifiers:

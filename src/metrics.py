@@ -3,7 +3,8 @@ from numpy import percentile
 import numbers
 
 from sklearn.metrics import precision_score
-
+from sklearn.utils import check_array
+from sklearn.utils import check_consistent_length
 from sklearn.utils import column_or_1d
 
 

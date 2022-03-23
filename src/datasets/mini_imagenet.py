@@ -89,6 +89,7 @@ from .utils import get_transforms
 #         image = self.transform(Image.open(data).convert('RGB'))
 #         return image, label
 
+
 class MiniImageNet(VisionDataset):
     def __init__(
         self,

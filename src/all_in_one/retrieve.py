@@ -73,7 +73,9 @@ class Retrieve(AllInOne):
         cfg.dss_args.eta = cfg.optimizer.lr
         cfg.dss_args.device = self.device
 
-        ult_loader = RETRIEVEDataLoader(ult_seq_loader, lt_seq_loader, cfg.dss_args,
+        ult_loader = RETRIEVEDataLoader(ult_seq_loader,
+                                        lt_seq_loader,
+                                        cfg.dss_args,
                                         batch_size=cfg.dataloader.ul_batch_size,
                                         pin_memory=cfg.dataloader.pin_memory,
                                         num_workers=0)

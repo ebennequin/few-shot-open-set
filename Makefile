@@ -134,7 +134,7 @@ run_feature_detectors:
 	done ;\
 
 run_ssl_detectors:
-	for feature_detector in MTC; do \
+	for feature_detector in OpenMatch; do \
 		make FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 

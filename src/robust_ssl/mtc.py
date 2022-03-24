@@ -5,6 +5,7 @@ from skimage.filters import threshold_otsu
 from .abstract import SSLMethod
 from loguru import logger
 
+
 class MTC(SSLMethod):
 
     def __init__(self, args, pretrain_iter, **kwargs):
@@ -23,7 +24,7 @@ class MTC(SSLMethod):
 
         return self.weights
 
-    def update_detector(self, query_features):
+    def update_detector(self, query_features, **kwargs):
 
         outlier_logits = self.outlier_head(query_features).squeeze()
         outlier_probs = torch.sigmoid(outlier_logits)
@@ -47,14 +48,15 @@ class MTC(SSLMethod):
         # ====== Initialize modules =====
 
         feature_extractor = kwargs['feature_extractor']
+        feature_extractor.eval()
+        feature_extractor.requires_grad_(False)
         num_classes = support_labels.unique().size(0)
         self.classification_head = nn.Linear(feature_extractor.layer_dims[-1], num_classes).cuda()
 
         self.outlier_head = nn.Linear(feature_extractor.layer_dims[-1], 1).cuda()
         self.weights = torch.ones(len(query_images)).cuda()
         self.prediction_history = torch.zeros(len(query_images), 10).cuda()
-        self.optimizer = torch.optim.Adam(list(feature_extractor.parameters()) + \
-                                          list(self.classification_head.parameters()) + \
+        self.optimizer = torch.optim.Adam(list(self.classification_head.parameters()) + \
                                           list(self.outlier_head.parameters()),
                                           lr=self.lr)
 

@@ -70,7 +70,6 @@ class SSLMethod:
         return support_trainloader, support_valloader, query_trainloader, query_valloader
 
     def extract_weak(self, feature_extractor, img_list):
-        # logger.warning((feature_extractor, img_list))
         return feature_extractor(torch.stack([self.weak_transform(img).cuda() for img in img_list], 0), [self.layer])[self.layer].squeeze()
 
     def extract_strong(self, feature_extractor, img_list):
@@ -84,12 +83,13 @@ class SSLMethod:
         query_images [Ns, d]
         """
         feature_extractor = kwargs['feature_extractor']
+        feature_extractor = feature_extractor.eval()
+        feature_extractor.requires_grad_(False)
         support_labels = support_labels.cuda()
         if not hasattr(self, 'optimizer'):  # Sometimes, methods would define it already
             num_classes = support_labels.unique().size(0)
             self.classification_head = nn.Linear(feature_extractor.layer_dims[-1], num_classes)
-            self.optimizer = torch.optim.Adam(list(feature_extractor.parameters()) + \
-                                              list(self.classification_head.parameters()),
+            self.optimizer = torch.optim.Adam(list(self.classification_head.parameters()),
                                               lr=self.lr)
 
         # ====== Prepare data =========
@@ -101,28 +101,18 @@ class SSLMethod:
 
         for iter_ in range(self.n_iter):
 
-            # try:
-            #     support_images, tgt = next(support_iterloader)
-            # except:
-            #     support_iterloader = iter(support_trainloader)
-            #     support_images, tgt = next(support_iterloader)
-            # try:
-            #     query_images, tgt = next(query_iterloader)
-            # except:
-            #     query_iterloader = iter(query_trainloader)
-            #     query_images = next(query_iterloader)
-
             # Get potential inliners
             weak_feat_q = self.extract_weak(feature_extractor, query_images)
 
-            candidate_inliers = torch.where(self.select_inliers(features_q=weak_feat_q))[0]
+            candidate_inliers = torch.where(self.select_inliers(weak_feat_q=weak_feat_q))[0]
 
             # Filter out OOD sampes
 
             strong_feat_q = self.extract_strong(feature_extractor, query_images)
 
             # Compute logits and loss
-            logits_weak_s = self.classification_head(self.extract_weak(feature_extractor, support_images))
+            weak_feat_s = self.extract_weak(feature_extractor, support_images)
+            logits_weak_s = self.classification_head(weak_feat_s)
             logits_weak_q = self.classification_head(weak_feat_q)
             logits_strong_q = self.classification_head(strong_feat_q)
 
@@ -130,7 +120,8 @@ class SSLMethod:
 
             ls, lu, full_loss = self.ssl_loss(logits_weak_s, support_labels,
                                               logits_weak_q[candidate_inliers], logits_strong_q[candidate_inliers])
-            detector_loss = self.update_detector(weak_feat_q)
+            detector_loss = self.update_detector(weak_feat_s=weak_feat_s, weak_feat_q=weak_feat_q,
+                                                 strong_feat_q=strong_feat_q, support_labels=support_labels)
             if detector_loss is not None:
                 full_loss += detector_loss
 
@@ -171,7 +162,7 @@ class SSLMethod:
             soft_preds_s = self.classification_head(self.extract_val(feature_extractor, support_images))
             val_feat_q = self.extract_val(feature_extractor, query_images)
             soft_preds_q = self.classification_head(val_feat_q)
-            outlier_scores = self.get_outlier_scores()
+            outlier_scores = self.get_outlier_scores(weak_feat_q=val_feat_q)
 
         return soft_preds_s, soft_preds_q, outlier_scores
 

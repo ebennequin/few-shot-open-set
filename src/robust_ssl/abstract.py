@@ -23,20 +23,21 @@ plt.style.use('ggplot')
 
 
 class SSLMethod:
-    def __init__(self, args, confidence_threshold, normalize,
-                 lambda_, lr, n_iter, temperature):
+    def __init__(self, args, confidence_threshold,
+                 lambda_cc, lambda_em, lr, n_iter, depth_to_finetune,
+                 temperature):
         self.device = 'cuda'
-        self.lambda_ = lambda_
+        self.lambda_cc = lambda_cc
+        self.lambda_em = lambda_em
         self.temperature = temperature
+        self.depth_to_finetune = depth_to_finetune
         self.args = args
         self.lr = lr
         self.n_iter = n_iter
-        self.normalize = normalize
         self.confidence_threshold = confidence_threshold
         image_size = BACKBONE_CONFIGS[args.backbone]['input_size'][-1]
         mean = BACKBONE_CONFIGS[args.backbone]['mean']
         std = BACKBONE_CONFIGS[args.backbone]['std']
-        self.layer = args.layers[0]
         NORMALIZE = transforms.Normalize(mean, std)
         self.weak_transform = transforms.Compose([
                 transforms.Resize(int(image_size * 256 / 224)),
@@ -73,10 +74,12 @@ class SSLMethod:
         pseudo_labels = probs_weak_q.argmax(-1)
 
         # ==== FixMatch regularization ====
-
         Lu = loss(logits_cls_sq[mask], pseudo_labels[mask])
 
-        return Ls, Lu, Ls + self.lambda_ * Lu, mask
+        # ==== Standard entropy_regularization
+        Lem = - (probs_weak_q * torch.log(probs_weak_q)).sum(-1).mean(0)
+
+        return Ls, Lu, Lem, Ls + self.lambda_cc * Lu + self.lambda_em * Lem, mask
 
     def classification_head(self, samples):
         return (
@@ -85,104 +88,123 @@ class SSLMethod:
             @ F.normalize(self.prototypes, dim=1).T
         )
 
-    def compute_auc(self, weak_feat_q, **kwargs):
-        outlier_scores = self.get_outlier_scores(weak_feat_q, **kwargs).detach()
+    def compute_auc(self, end_feat_wq, **kwargs):
+        outlier_scores = self.get_outlier_scores(end_feat_wq, **kwargs).detach()
         fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlier_scores.cpu().numpy())
         return auc_fn(fp_rate, tp_rate)
 
     def extract_weak(self, feature_extractor, img_list):
-        if self.normalize:
-            return F.normalize(feature_extractor(torch.stack([self.weak_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze(), dim=1)
-        else:
-            return feature_extractor(torch.stack([self.weak_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze()
+        x = torch.stack([self.weak_transform(img).to(self.device) for img in img_list], 0)
+        return feature_extractor([x])[-1].squeeze()
 
     def extract_strong(self, feature_extractor, img_list):
-        if self.normalize:
-            return F.normalize(feature_extractor(torch.stack([self.strong_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze(), dim=1)
-        else:
-            return feature_extractor(torch.stack([self.strong_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze()
+        x = torch.stack([self.strong_transform(img).to(self.device) for img in img_list], 0)
+        return feature_extractor([x])[-1].squeeze()
 
     def extract_val(self, feature_extractor, img_list):
-        if self.normalize:
-            return F.normalize(feature_extractor(torch.stack([self.val_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze(), dim=1)
-        else:
-            return feature_extractor(torch.stack([self.val_transform(img).to(self.device) for img in img_list], 0), [self.layer])[self.layer].squeeze()
+        x = torch.stack([self.val_transform(img).to(self.device) for img in img_list], 0)
+        return feature_extractor([x])[-1].squeeze()
 
     def clear(self):
-        delattr(self, 'classification_head')
         delattr(self, 'optimizer')
 
-    def init_classifier(self, feature_extractor, weak_feat_s, support_labels):
+    def init_classifier(self, end_feat_ws, support_labels):
+        self.prototypes = compute_prototypes(end_feat_ws, support_labels)
+        self.prototypes.requires_grad_(True)
+        # classifier = nn.Linear(end_feat_ws.size(-1), num_classes, bias=False)
+        # with torch.no_grad():
+        #     classifier.weight = nn.Parameter(weights)
 
-        num_classes = support_labels.unique().size(0)
-        weights = compute_prototypes(weak_feat_s, support_labels)
-        classifier = nn.Linear(feature_extractor.layer_dims[-1], num_classes, bias=False)
-        with torch.no_grad():
-            classifier.weight = nn.Parameter(weights)
-        return classifier.to(self.device)
+    def prepare_model(self, feature_extractor):
+
+        feature_extractor.eval()
+        cutoff = len(feature_extractor.blocks) - self.depth_to_finetune
+        if cutoff == 0:
+            frozen_part = TrivialModule()
+            to_finetune = nn.Sequential(*feature_extractor.blocks[:cutoff])
+        elif cutoff == len(feature_extractor.blocks):
+            frozen_part = nn.Sequential(*feature_extractor.blocks[:cutoff])
+            to_finetune = TrivialModule()
+        else:
+            frozen_part = nn.Sequential(*feature_extractor.blocks[:cutoff])
+            to_finetune = nn.Sequential(*feature_extractor.blocks[cutoff:])
+
+        to_finetune.requires_grad_(True)
+        frozen_part.requires_grad_(False)
+
+        return frozen_part, to_finetune
+
+    def process_end(self, feats):
+        pooled_feats = feats.mean((-2, -1))
+        return pooled_feats
 
     def __call__(self, support_images, support_labels, query_images, **kwargs):
         """
         query_images [Ns, d]
         """
         feature_extractor = kwargs['feature_extractor']
-        feature_extractor.eval()
-        feature_extractor.requires_grad_(False)
+        frozen_part, to_finetune = self.prepare_model(feature_extractor)
+
         support_labels = support_labels.to(self.device)
         query_labels = kwargs['query_labels'].to(self.device)
         true_outliers = kwargs['outliers'].to(self.device)
 
-        weak_feat_s = self.extract_weak(feature_extractor, support_images)
-        weak_feat_q = self.extract_weak(feature_extractor, query_images)
+        start2end = lambda x, y: self.process_end(to_finetune([x(frozen_part, y)])[-1])
+        mid2end = lambda x: self.process_end(to_finetune([x])[-1])
 
-        if not hasattr(self, 'optimizer'):  # Sometimes, methods would define it already
-            self.classification_head = self.init_classifier(feature_extractor, weak_feat_s, support_labels)
-            self.optimizer = torch.optim.SGD(self.classification_head.parameters(),
-                                             lr=self.lr)
+        with torch.no_grad():
+            end_feat_ws = start2end(self.extract_weak, support_images)
+            end_feat_wq = start2end(self.extract_weak, query_images)
+
+            if not hasattr(self, 'optimizer'):  # Sometimes, methods would define it already
+                self.init_classifier(end_feat_ws, support_labels)
+                self.optimizer = torch.optim.SGD([self.prototypes] + \
+                                                 list(to_finetune.parameters()) ,
+                                                 lr=self.lr)
         l_sup = []
         l_cons = []
+        l_ems = []
         acc = []
         conf_acc = []
+        accuracy_ood = []
 
         # ===== Visualize episode ====
         if self.args.visu_episode:
             self.visualize_episode(support_images, query_images, support_labels, query_labels)
 
-        # ===== Train classification part =====
-        accuracy_ood = []
+        interm_feat_ws = self.extract_weak(frozen_part, support_images)
+        interm_feat_wq = self.extract_weak(frozen_part, query_images)
 
-        pseudo_inliers = self.select_inliers(weak_feat_q=weak_feat_q, **kwargs)
+        # Get potential inliners and filter out
+        pseudo_inliers = self.select_inliers(end_feat_wq=end_feat_wq, **kwargs)
         pseudo_inliers_indexes = torch.where(pseudo_inliers)[0]
-
-        # Filter out OOD sampes
-        strong_feat_q = self.extract_strong(feature_extractor, [query_images[i] for i in pseudo_inliers_indexes])
+        interm_feat_sq = self.extract_strong(frozen_part, [query_images[i] for i in pseudo_inliers_indexes])
 
         for iter_ in range(self.n_iter):
 
-            # Get potential inliners
+            end_feat_ws = mid2end(interm_feat_ws)
+            end_feat_wq = mid2end(interm_feat_wq)
+            end_feat_sq = mid2end(interm_feat_sq)
 
             # Compute logits and loss
-            all_logits = self.classification_head(torch.cat([weak_feat_s, weak_feat_q, strong_feat_q]))
-            logits_cls_ws = all_logits[:weak_feat_s.size(0)]
-            logits_cls_wq = all_logits[weak_feat_s.size(0):weak_feat_s.size(0)+weak_feat_q.size(0)]
-            logits_cls_sq = all_logits[-strong_feat_q.size(0):]
+            all_logits = self.classification_head(torch.cat([end_feat_ws, end_feat_wq, end_feat_sq]))
+            logits_cls_ws = all_logits[:end_feat_ws.size(0)]
+            logits_cls_wq = all_logits[end_feat_ws.size(0):end_feat_ws.size(0)+end_feat_wq.size(0)]
+            logits_cls_sq = all_logits[-interm_feat_sq.size(0):]
 
             # Update classification feature_extractor
 
-            ls, lu, full_loss, conf_mask = self.ssl_loss(logits_cls_ws, support_labels,
-                                                         logits_cls_wq[pseudo_inliers], logits_cls_sq)
+            ls, lu, lem, full_loss, conf_mask = self.ssl_loss(logits_cls_ws, support_labels,
+                                                              logits_cls_wq[pseudo_inliers], logits_cls_sq)
             detector_loss, *_ = self.update_detector(support_images=support_images, query_images=query_images,
-                                                     feature_extractor=feature_extractor, weak_feat_s=weak_feat_s,
-                                                     weak_feat_q=weak_feat_q, strong_feat_q=strong_feat_q,
+                                                     feature_extractor=feature_extractor, end_feat_ws=end_feat_ws,
+                                                     end_feat_wq=end_feat_wq, end_feat_sq=end_feat_sq,
                                                      logits_cls_ws=logits_cls_ws, logits_cls_wq=logits_cls_wq,
                                                      logits_cls_sq=logits_cls_sq, support_labels=support_labels)
             if detector_loss is not None:
                 full_loss += detector_loss
 
-            if iter_ > 50:
-                loss = full_loss
-            else:
-                loss = ls
+            loss = full_loss
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -193,17 +215,20 @@ class SSLMethod:
                 acc.append((logits_cls_wq.argmax(-1) == query_labels)[inliers].float().mean().item())
                 l_sup.append(ls.item())
                 l_cons.append(lu.item())
+                l_ems.append(lem.item())
                 accuracy_ood.append(((~pseudo_inliers).float() == true_outliers).float().mean().item())
                 conf_acc.append((logits_cls_wq.argmax(-1) == query_labels)[pseudo_inliers][conf_mask].float().mean().item())
 
         soft_preds_s, soft_preds_q, outlier_scores = self.validate(support_images=support_images,
                                                                    query_images=query_images,
-                                                                   model=feature_extractor,
+                                                                   frozen_part=frozen_part,
+                                                                   to_finetune=to_finetune,
                                                                    **kwargs,
                                                                    )
         kwargs['intra_task_metrics']['secondary_metrics']['ood_accuracy'].append(accuracy_ood)
         kwargs['intra_task_metrics']['main_losses']['l_sup'].append(l_sup)
         kwargs['intra_task_metrics']['main_losses']['l_cons'].append(l_cons)
+        kwargs['intra_task_metrics']['main_losses']['l_em'].append(l_ems)
         kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc)
         kwargs['intra_task_metrics']['main_metrics']['conf_acc'].append(conf_acc)
 
@@ -218,18 +243,22 @@ class SSLMethod:
         """
         raise NotImplementedError
 
-    def validate(self, support_images, query_images, model, **kwargs):
+    def validate(self, support_images, query_images, frozen_part, to_finetune, **kwargs):
 
         # switch to evaluate mode
-        model.eval()
+        frozen_part.eval()
+        to_finetune.eval()
+
+        start2end = lambda x, y: self.process_end(to_finetune([x(frozen_part, y)])[-1])
 
         with torch.no_grad():
 
             # compute output
-            logits_cls_vs = self.classification_head(self.extract_val(model, support_images))
-            val_feat_q = self.extract_val(model, query_images)
+            val_feat_s = start2end(self.extract_val, support_images)
+            logits_cls_vs = self.classification_head(val_feat_s)
+            val_feat_q = start2end(self.extract_val, query_images)
             logits_cls_vq = self.classification_head(val_feat_q)
-            outlier_scores = self.get_outlier_scores(weak_feat_q=val_feat_q, logits_cls_wq=logits_cls_vq, **kwargs)
+            outlier_scores = self.get_outlier_scores(end_feat_wq=val_feat_q, logits_cls_wq=logits_cls_vq, **kwargs)
 
         return logits_cls_vs.softmax(-1), logits_cls_vq.softmax(-1), outlier_scores
 
@@ -395,6 +424,14 @@ def frame_image(img: np.ndarray, color: list, frame_width: int = 3) -> np.ndarra
     framed_img[b:-b, b:-b] = img
 
     return framed_img
+
+
+class TrivialModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
 
 
 def make_plot(ax,

@@ -111,7 +111,8 @@ class BasicBlock(nn.Module):
         self.block_size = block_size
         self.DropBlock = DropBlock(block_size=self.block_size)
 
-    def forward(self, x):
+    def forward(self, layer_feats):
+        x = layer_feats[-1]
         self.num_batches_tracked += 1
 
         residual = x
@@ -171,6 +172,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size)
         # if avg_pool:
         #     self.avgpool = nn.AvgPool2d(1, stride=1)
+        self.blocks = [getattr(self, f"layer{i}") for i in range(1, 5)]
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.keep_prob = keep_prob
         self.keep_avg_pool = avg_pool
@@ -184,6 +186,7 @@ class ResNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+
 
     def _make_layer(self, block, planes, stride=1, drop_rate=0.0, drop_block=False, block_size=1):
         downsample = None
@@ -205,9 +208,9 @@ class ResNet(nn.Module):
         layers: List[str]
         """
         all_feats = {}
+        layer_feats = [x]
         for block in range(1, 5):
-            layer_feats = eval(f'self.layer{block}')(x)
-            x = layer_feats[-1]
+            layer_feats = eval(f'self.layer{block}')(layer_feats)
             pooled_maps = [f.mean((-2, -1), keepdim=True) for f in layer_feats]
             for block_layer, pooled_map in enumerate(pooled_maps):
                 layer_name = f'{block}_{block_layer}'
@@ -219,5 +222,5 @@ class ResNet(nn.Module):
 def resnet12(**kwargs):
     """Constructs a ResNet-12 model.
     """
-    model = ResNet(BasicBlock, )
+    model = ResNet(BasicBlock)
     return model

@@ -19,7 +19,9 @@ import argparse
 import torch.distributed as dist
 from loguru import logger
 import itertools
-    
+
+
+
 
 def set_random_seed(seed: int):
     """
@@ -203,8 +205,8 @@ def get_modules_to_try(args, module_group: str, module_name: str,
             module_args = module_dict[module_name]['default'][shot]  # take default args
             if 'tuning' in module_dict[module_name]:
                 params2tune = module_dict[module_name]['tuning']['hparams2tune']
-                shot = args.n_shot if args.n_shot in module_dict[module_name]['tuning']['hparams_values'] else 1
-                values2tune = module_dict[module_name]['tuning']['hparams_values'][shot]
+                shot = args.n_shot if args.n_shot in module_dict[module_name]['tuning']['hparam_values'] else 1
+                values2tune = module_dict[module_name]['tuning']['hparam_values'][shot]
                 values_combinations = itertools.product(*values2tune)
                 for some_combin in values_combinations:
                     # Override default args

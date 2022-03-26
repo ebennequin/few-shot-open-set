@@ -1,10 +1,10 @@
 # Server options
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-USER=malik
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
 
 # Simu options
-DATADIR=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set/data
+DATADIR=data
 SRC_DATASET=mini_imagenet
 TGT_DATASETS=$(SRC_DATASET)
 
@@ -31,6 +31,7 @@ GPUS=0
 SIMU_PARAMS=
 OVERRIDE=True
 TUNE=""
+VISU=False
 
 # Tasks
 RESOLUTION=84
@@ -89,6 +90,7 @@ run:
 		        --proba_detector $(PROBA_DETECTOR) \
 		        --detector_transforms  $(DET_TRANSFORMS) \
 		        --classifier_transforms  $(CLS_TRANSFORMS) \
+		        --visu_episode $(VISU) \
 		        --backbone $(BACKBONE) \
 		        --model_source $(MODEL_SRC) \
 		        --balanced $(BALANCED) \
@@ -134,7 +136,7 @@ run_feature_detectors:
 	done ;\
 
 run_ssl_detectors:
-	for feature_detector in OpenMatch; do \
+	for feature_detector in FixMatch; do \
 		make FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 
@@ -245,21 +247,27 @@ deploy:
 import:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/results ./ ;\
 
-
-data/mini_imagenet.tar.gz:
-	tar -czvf  data/mini_imagenet.tar.gz -C data/ mini_imagenet
-
-data/tiered_imagenet.tar.gz:
-	tar -czvf  data/tiered_imagenet.tar.gz -C data/ tiered_imagenet
-
-data/cub.tar.gz:
-	tar -czvf  data/cub.tar.gz -C data/ cub
+tar_data:
+	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
+		tar -czvf  data/$${dataset}.tar.gz -C data/ $${dataset} ;\
+	done ;\
 
 
 deploy_data:
-	for dataset in $(DATASETS); do \
+	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
 		rsync -avm data/$${dataset}.tar.gz $(SERVER_IP):${SERVER_PATH}/data/ ;\
-	done \
+	done ;\
+
+deploy_models:
+	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
+		rsync -avm data/models $(SERVER_IP):${SERVER_PATH}/ ;\
+	done ;\
+
+deploy_features:
+	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
+		rsync -avm data/features $(SERVER_IP):${SERVER_PATH}/ ;\
+	done ;\
+
 
 kill_all: ## Kill all my python and tee processes on the server
 	ps -u $(USER) | grep "python" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill

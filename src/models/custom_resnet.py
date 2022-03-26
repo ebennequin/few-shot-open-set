@@ -140,7 +140,6 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         out = self.maxpool(out)
 
-
         feats.append(out)
         if self.drop_rate > 0:
             if self.drop_block == True:

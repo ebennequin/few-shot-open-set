@@ -63,7 +63,7 @@ class wide_basic(nn.Module):
 
 
 class Wide_ResNet(nn.Module):
-    def __init__(self, depth, widen_factor, dropout_rate, num_classes=64):
+    def __init__(self, depth, widen_factor, dropout_rate, num_classes=64, **kwargs):
         super(Wide_ResNet, self).__init__()
         self.in_planes = 16
         self.all_layers = [f"{i}_{j}" for i in range(1, 4) for j in range(3)] + ["last"]

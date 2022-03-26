@@ -8,14 +8,27 @@ feature_detectors:
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
   MTC:
-    default: {1: {'n_iter': 20, 'pretrain_iter': 20,
-                  'lr': 0.0001, 'confidence_threshold': 0.9,
+    default: {1: {'n_iter': 50, 'pretrain_iter': 50,
+                  'lr': 0.001, 'confidence_threshold': 0.8,
                   'lambda_': 1.0},
               }
-
+  T2T:
+    default: {1: {'normalize': False, 'n_iter': 100,
+                  'lr': 0.03, 'confidence_threshold': 0.8,
+                  'lambda_': 1.0},
+              }
+  FixMatch:
+    default: {1: {'normalize': True, 'n_iter': 100,
+                  'lr': 1.0, 'confidence_threshold': 0.8,
+                  'lambda_': 1.0, 'temperature': 10},
+                }
+    tuning:
+      hparams2tune: ['normalize', 'lambda_', 'confidence_threshold']
+      hparam_values: {1: [[True, False], [0.1, 0.5, 1.0], [0.6, 0.7, 0.8]],
+                      }
   OpenMatch:
-    default: {1: {'n_iter': 20, 'pretrain_iter': 20,
-                  'lr': 0.0001, 'confidence_threshold': 0.9,
+    default: {1: {'n_iter': 50, 'pretrain_iter': 50,
+                  'lr': 0.001, 'confidence_threshold': 0.8,
                   'lambda_': 1.0, 'lambda_oem': 0.1, 'lambda_socr': 0.5},
               }
 

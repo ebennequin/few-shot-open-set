@@ -62,6 +62,8 @@ class OpenMatch(SSLMethod):
         """
         query_images [Ns, d]
         """
+        intra_task_metrics = kwargs['intra_task_metrics']
+
         # ====== Initialize modules =====
         support_labels = support_labels.cuda()
 
@@ -77,6 +79,10 @@ class OpenMatch(SSLMethod):
                                           lr=self.lr)
 
         # ===== Pre-train =====
+        l_sups = []
+        detector_losses = []
+        accs = []
+        aucs = []
 
         for i in range(self.pretrain_iter):
             weak_feat_s = self.extract_weak(feature_extractor, support_images)
@@ -84,6 +90,7 @@ class OpenMatch(SSLMethod):
             strong_feat_q = self.extract_strong(feature_extractor, query_images)
 
             logits_cls_ws = self.classification_head(weak_feat_s).squeeze()
+            logits_cls_wq = self.classification_head(weak_feat_q).squeeze()
 
             # Loss for classifier
 
@@ -99,7 +106,16 @@ class OpenMatch(SSLMethod):
             loss.backward()
             self.optimizer.step()
 
+            l_sups.append(l_sup.item())
+            accs.append((logits_cls_wq.argmax(-1) == kwargs['query_labels'].cuda()).float().mean().item())
+            detector_losses.append(detector_loss.item())
+            aucs.append(self.compute_auc(weak_feat_q, **kwargs))
+
         # ===== Perform standard SSL inference =====
+        kwargs['intra_task_metrics']['main_losses']['sup'].append(l_sups)
+        kwargs['intra_task_metrics']['main_losses']['detector'].append(detector_losses)
+        kwargs['intra_task_metrics']['metrics']['acc'].append(accs)
+        kwargs['intra_task_metrics']['metrics']['auc'].append(aucs)
 
         return super().__call__(support_images, support_labels, query_images, **kwargs)
 

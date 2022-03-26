@@ -42,7 +42,7 @@ from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from skimage.filters import threshold_otsu
-
+from copy import deepcopy
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -101,6 +101,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--exp_name", type=str, default='default',
                         help="Name the experiment for easy grouping.")
+    parser.add_argument("--visu_episode", type=str2bool, default='default')
     parser.add_argument("--general_hparams", type=str, nargs='+',
                         default=['backbone', 'src_dataset', 'tgt_dataset', 'balanced_tasks', 'feature_detector',
                                  'proba_detector', 'classifier', 'n_way', 'n_shot'],
@@ -272,6 +273,10 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
     metrics = defaultdict(list)
     intra_task_metrics = defaultdict(lambda: defaultdict(list))
     figures: Dict[str, Any] = {}
+
+    if feature_extractor is not None:
+        initial_state_dict = deepcopy(feature_extractor.state_dict())
+
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(tqdm(data_loader)):
 
         support_labels, query_labels = support_labels.long(), query_labels.long()
@@ -306,11 +311,10 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
                       intra_task_metrics=intra_task_metrics,
                       figures=figures
                 )
-        # else:  # We leave each method the freedom to do what it wants with raw images and model
-        #     transformed_features['det_sup']['input'] = support
-        #     transformed_features['det_query']['input'] = query
-        #     # assert isinstance(feature_detector, AllInOne), "Currently on AllInOne \
-        #     #     detectors also handle feature extraction"
+        else:
+            feature_extractor.load_state_dict(initial_state_dict)
+            # assert isinstance(feature_detector, AllInOne), "Currently on AllInOne \
+            #     detectors also handle feature extraction"
 
         # ====== Classification + OOD detection ======
 
@@ -318,7 +322,7 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
         soft_preds_q = []
 
         # For methods that work on features directly
-        if feature_detector is None:
+        if feature_extractor is None:
             for layer in support_features:
                 output = feature_detector(
                     support_features=transformed_features['det_sup'][layer],
@@ -371,6 +375,7 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
             probas_s, probas_q, scores = output
             soft_preds_q.append(probas_q)
             outlier_scores['features'].append(scores)
+            feature_detector.clear()
         
         # ====== Aggregate scores and probas across layers ======
 

@@ -253,37 +253,3 @@ def get_dirichlet_proportion(alpha, n_tasks, n_ways, total_samples):
     prob_dist = np.random.dirichlet(alpha, n_tasks)
     total_samples = (total_samples * prob_dist).round().astype(np.int32)
     return total_samples
-
-
-# def convert_prob_to_samples(prob, shots):
-#     prob = prob * shots
-#     for i in range(len(prob)):
-#         if sum(np.round(prob[i])) > shots:
-#             while sum(np.round(prob[i])) != shots:
-#                 idx = 0
-#                 for j in range(len(prob[i])):
-#                     frac, whole = math.modf(prob[i, j])
-#                     if j == 0:
-#                         frac_clos = abs(frac - 0.5)
-#                     else:
-#                         if abs(frac - 0.5) < frac_clos:
-#                             idx = j
-#                             frac_clos = abs(frac - 0.5)
-#                 prob[i, idx] = np.floor(prob[i, idx])
-#             prob[i] = np.round(prob[i])
-#         elif sum(np.round(prob[i])) < shots:
-#             while sum(np.round(prob[i])) != shots:
-#                 idx = 0
-#                 for j in range(len(prob[i])):
-#                     frac, whole = math.modf(prob[i, j])
-#                     if j == 0:
-#                         frac_clos = abs(frac - 0.5)
-#                     else:
-#                         if abs(frac - 0.5) < frac_clos:
-#                             idx = j
-#                             frac_clos = abs(frac - 0.5)
-#                 prob[i, idx] = np.ceil(prob[i, idx])
-#             prob[i] = np.round(prob[i])
-#         else:
-#             prob[i] = np.round(prob[i])
-#     return prob.astype(int)

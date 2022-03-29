@@ -1,12 +1,7 @@
 import _pickle as cpickle
-
-import numpy as np
 from pathlib import Path
-
+from src.models import __dict__ as BACKBONES
 from loguru import logger
-from src.constants import (
-    FEATURES_DIR,
-)
 from src.utils.data_fetchers import get_classic_loader
 from src.utils.utils import compute_features, load_model
 import argparse
@@ -21,7 +16,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data_dir", type=str, default="data")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
-    parser.add_argument("--layers", type=str, nargs='+')
+    parser.add_argument("--layers", type=int)
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--device", type=str, default="cuda")
@@ -45,8 +40,8 @@ def main(args):
         weights = Path(args.data_dir) / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
         stem = weights.stem
     feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
-    args.layers = feature_extractor.all_layers if args.layers == ['all'] else args.layers
-    logger.warning(args.layers)
+    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers:]
+    logger.info(f"Layers to extract: {args.layers}")
 
     logger.info("Computing features...")
     features, labels = compute_features(feature_extractor,
@@ -58,7 +53,7 @@ def main(args):
     # if output_file is None:
     for layer in features:
         pickle_name = Path(stem + f'_{layer}').with_suffix(f".pickle").name
-        output_file = FEATURES_DIR / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
+        output_file = Path('data') / 'features' / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         if args.split == 'test' or args.split == 'val':

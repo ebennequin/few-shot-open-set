@@ -21,8 +21,6 @@ from loguru import logger
 import itertools
 
 
-
-
 def set_random_seed(seed: int):
     """
     Set random, numpy and torch random seed, for reproducibility of the training

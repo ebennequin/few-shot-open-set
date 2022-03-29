@@ -12,7 +12,7 @@ from torch.utils.data.distributed import DistributedSampler
 from loguru import logger
 from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet, \
                          FeatTieredImageNet, ImageNet, Aircraft
-from src.open_query_sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
+from src.sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
 def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):

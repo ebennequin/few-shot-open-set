@@ -68,7 +68,7 @@ extract:
 run:
 	for dataset in $(TGT_DATASETS); do \
 		for shot in $(SHOTS); do \
-		    python3 -m src.inference_features \
+		    python3 -m src.inference \
 		        --exp_name '$(EXP)/$(SRC_DATASET)-->$${dataset}/$(BACKBONE)/$(MODEL_SRC)/$${shot}' \
 		        --data_dir $(DATADIR) \
 		        --classifier $(CLASSIFIER) \
@@ -101,14 +101,14 @@ extract_standard:
 	# Extract for RN and WRN
 	for tgt_dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12 wrn2810; do \
-			make BACKBONE=$${backbone} LAYERS='all' MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
 	# Extract for cross-domain
 	for tgt_dataset in cub aircraft; do \
 		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-			make BACKBONE=$${backbone} LAYERS='all' SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 

@@ -9,14 +9,14 @@ class FeatureDetector:
     """
     Abstract class for an outlier detector
     """
-    def __init__(self):
-        self.works_on_features = True
 
     def __call__(self, support_features, query_features, **kwargs):
         raise NotImplementedError
 
     def __str__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
+        if 'args' in arg_names: arg_names.remove('args')
+        if 'kwargs' in arg_names: arg_names.remove('kwargs')
         if len(arg_names):
             args = [f"{k}={getattr(self, k)}" for k in arg_names]
             return f"{type(self).__name__}({','.join(args)})"
@@ -25,6 +25,8 @@ class FeatureDetector:
 
     def __repr__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
+        if 'args' in arg_names: arg_names.remove('args')
+        if 'kwargs' in arg_names: arg_names.remove('kwargs')
         if len(arg_names):
             args = [f"{k}={getattr(self, k)}" for k in arg_names]
             return f"{type(self).__name__}({','.join(args)})"

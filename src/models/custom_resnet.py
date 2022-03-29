@@ -211,7 +211,7 @@ class ResNet(nn.Module):
         layer_feats = [x]
         for block in range(1, 5):
             layer_feats = eval(f'self.layer{block}')(layer_feats)
-            pooled_maps = [f.mean((-2, -1), keepdim=True) for f in layer_feats]
+            pooled_maps = [f.mean((-2, -1)) for f in layer_feats]
             for block_layer, pooled_map in enumerate(pooled_maps):
                 layer_name = f'{block}_{block_layer}'
                 if layer_name in layers:

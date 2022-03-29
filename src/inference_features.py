@@ -29,7 +29,7 @@ from pathlib import Path
 from src.utils.utils import load_model
 
 from src.classifiers import __dict__ as CLASSIFIERS
-from src.detectors.feature import __dict__ as FEATURE_DETECTORS
+from src.detectors.feature import __all__ as FEATURE_DETECTORS
 from src.detectors.proba import __dict__ as PROBA_DETECTORS
 from src.all_in_one import __dict__ as ALL_IN_ONE_METHODS
 from src.robust_ssl import __dict__ as SSL_METHODS
@@ -43,6 +43,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from skimage.filters import threshold_otsu
 from copy import deepcopy
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -72,7 +73,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--balanced_tasks", type=str2bool, default="True")
     parser.add_argument("--alpha", type=float, default=1.0)
-    parser.add_argument("--on_features", type=str2bool, default=True)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
@@ -198,7 +198,7 @@ def main(args):
         feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
         feature_dic = train_mean = train_std = None
     else:
-
+        feature_extractor = None
         feature_dic = defaultdict(dict)
         train_mean = {}
         train_std = {}

@@ -1,8 +1,5 @@
 from typing import Dict, List, Optional
-import numpy as np
 import torch
-from torch import nn
-import inspect
 from .abstract import FeatureDetector
 
 
@@ -38,7 +35,3 @@ class kNNDetector(FeatureDetector):
         L2 distance on normalized features can vary between 0 and 4
         """
         return scores / 4
-
-
-def l2(feat_a, feat_b):
-    return torch.cdist(feat_a, feat_b)

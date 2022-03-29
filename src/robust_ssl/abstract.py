@@ -76,10 +76,8 @@ class SSLMethod:
         # ==== FixMatch regularization ====
         Lu = loss(logits_cls_sq[mask], pseudo_labels[mask])
 
-        # ==== Standard entropy_regularization
-        # Lem = - (probs_weak_q * torch.log(probs_weak_q)).sum(-1).mean(0)
-        # marginal = probs_weak_q.mean(0)
-        # Lem += (marginal * torch.log(marginal)).sum(-1)
+        # ==== Entropy Regularization (or pseudo label)
+        # Lem = - (probs_weak_q * torch.log(probs_weak_q)).sum(-1).mean(0) 
         Lem = loss(logits_cls_wq[mask], pseudo_labels[mask])
 
         return Ls, Lu, Lem, Ls + self.lambda_cc * Lu + self.lambda_em * Lem, mask

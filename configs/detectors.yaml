@@ -8,18 +8,18 @@ feature_detectors:
       hparam_values: {1: [[64.]], 5: [[64.]]}
 
   FixMatch:
-    default: {1: {'n_iter': 100, 'lr': 0.1, 'confidence_threshold': 0.8,
-                  'lambda_cc': 0., 'lambda_em': 0.1, 'temperature': 5,
-                  'depth_to_finetune': 1},
+    default: {1: {'n_iter': 500, 'lr': 0.01, 'confidence_threshold': 0.9,
+                  'lambda_cc': 1.0, 'lambda_em': 1.0, 'temperature': 10,
+                  'depth_to_finetune': 0},
                 }
     tuning:
       hparams2tune: ['depth_to_finetune', 'lambda_cc', 'lambda_em']
       hparam_values: {1: [[0, 1], [0., 0.1, 0.5, 1.0], [0., 0.1, 0.5, 1.0]],
                       }
-    # tuning:
-    #   hparams2tune: ['normalize', 'lambda_', 'confidence_threshold']
-    #   hparam_values: {1: [[True, False], [0.1, 0.5, 1.0], [0.6, 0.7, 0.8]],
-    #                   }
+    tuning:
+      hparams2tune: ['normalize', 'lambda_', 'confidence_threshold']
+      hparam_values: {1: [[True, False], [0.1, 0.5, 1.0], [0.6, 0.7, 0.8]],
+                      }
 
   kNNDetector:
     default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},

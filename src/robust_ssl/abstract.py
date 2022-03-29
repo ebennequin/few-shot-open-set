@@ -77,7 +77,10 @@ class SSLMethod:
         Lu = loss(logits_cls_sq[mask], pseudo_labels[mask])
 
         # ==== Standard entropy_regularization
-        Lem = - (probs_weak_q * torch.log(probs_weak_q)).sum(-1).mean(0)
+        # Lem = - (probs_weak_q * torch.log(probs_weak_q)).sum(-1).mean(0)
+        # marginal = probs_weak_q.mean(0)
+        # Lem += (marginal * torch.log(marginal)).sum(-1)
+        Lem = loss(logits_cls_wq[mask], pseudo_labels[mask])
 
         return Ls, Lu, Lem, Ls + self.lambda_cc * Lu + self.lambda_em * Lem, mask
 
@@ -158,9 +161,9 @@ class SSLMethod:
 
             if not hasattr(self, 'optimizer'):  # Sometimes, methods would define it already
                 self.init_classifier(end_feat_ws, support_labels)
-                self.optimizer = torch.optim.SGD([self.prototypes] + \
-                                                 list(to_finetune.parameters()) ,
-                                                 lr=self.lr)
+                self.optimizer = torch.optim.Adam([self.prototypes] + \
+                                                  list(to_finetune.parameters()) ,
+                                                  lr=self.lr)
         l_sup = []
         l_cons = []
         l_ems = []
@@ -175,22 +178,21 @@ class SSLMethod:
         interm_feat_ws = self.extract_weak(frozen_part, support_images)
         interm_feat_wq = self.extract_weak(frozen_part, query_images)
 
-        # Get potential inliners and filter out
-        pseudo_inliers = self.select_inliers(end_feat_wq=end_feat_wq, **kwargs)
-        pseudo_inliers_indexes = torch.where(pseudo_inliers)[0]
-        interm_feat_sq = self.extract_strong(frozen_part, [query_images[i] for i in pseudo_inliers_indexes])
-
         for iter_ in range(self.n_iter):
 
             end_feat_ws = mid2end(interm_feat_ws)
             end_feat_wq = mid2end(interm_feat_wq)
-            end_feat_sq = mid2end(interm_feat_sq)
+
+            # Get potential inliners and filter out
+            pseudo_inliers = self.select_inliers(end_feat_wq=end_feat_wq, **kwargs)
+            pseudo_inliers_indexes = torch.where(pseudo_inliers)[0]
+            end_feat_sq = start2end(self.extract_strong, [query_images[i] for i in pseudo_inliers_indexes])
 
             # Compute logits and loss
             all_logits = self.classification_head(torch.cat([end_feat_ws, end_feat_wq, end_feat_sq]))
             logits_cls_ws = all_logits[:end_feat_ws.size(0)]
             logits_cls_wq = all_logits[end_feat_ws.size(0):end_feat_ws.size(0)+end_feat_wq.size(0)]
-            logits_cls_sq = all_logits[-interm_feat_sq.size(0):]
+            logits_cls_sq = all_logits[-end_feat_sq.size(0):]
 
             # Update classification feature_extractor
 

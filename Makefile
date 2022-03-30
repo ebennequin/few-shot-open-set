@@ -1,12 +1,17 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
+
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 # SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+# DATADIR=data
 # USER=malik
 
 
@@ -153,8 +158,8 @@ run_w_knn_filtering:
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 1 5 10 15 20 25 30 40 50 75 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query FEATURE_DETECTOR=none MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
+	for ood_query in 0 1 5 10 15 20 25 30 40 50 75 100; do \
+		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
 	done ;\
 
 # ========== Evaluating SSL methods ===========
@@ -189,7 +194,7 @@ plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet tiered_imagenet; do \
-				python -m src.plots.csv_plotter --exp transductive_methods --groupby feature_detector \
+				python -m src.plots.csv_plotter --exp transductive_methods --groupby classifier \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\
@@ -232,6 +237,13 @@ kill_all: ## Kill all my python and tee processes on the server
 	ps -u $(USER) | grep "python" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
 	ps -u $(USER) | grep "tee" | sed 's/^ *//g' | cut -d " " -f 1 | xargs kill
 
+
+# ============= Downlooad/Prepare data ============
+
+aircraft:
+	wget http://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/archives/fgvc-aircraft-2013b.tar.gz
+	tar -xvf  fgvc-aircraft-2013b.tar.gz -C data ;\
+	rm fgvc-aircraft-2013b.tar.gz ;\
 
 # ============= Archive results =============
 

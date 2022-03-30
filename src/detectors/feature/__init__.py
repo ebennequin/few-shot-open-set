@@ -1,3 +1,4 @@
+from .abstract import FeatureDetector
 from .aggregator import NaiveAggregator
 from .repri import RepriDetector
 from .finetune import FinetuneDetector

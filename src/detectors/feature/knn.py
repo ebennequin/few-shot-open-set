@@ -35,3 +35,7 @@ class kNNDetector(FeatureDetector):
         L2 distance on normalized features can vary between 0 and 4
         """
         return scores / 4
+
+
+def l2(a, b):
+    return torch.cdist(a, b)

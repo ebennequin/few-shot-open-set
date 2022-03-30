@@ -123,7 +123,6 @@ extract_snatcher:
 
 # ========== Evaluating OOD detectors in isolation ===========
 
-
 run_transductive_detectors:
 	for feature_detector in FinetuneDetector; do \
 		make FEATURE_DETECTOR=$${feature_detector} run ;\
@@ -139,16 +138,16 @@ run_pyod_detectors:
 run_transductive_methods:
 	for dataset in mini_imagenet; do \
 		for backbone in resnet12; do \
-			for classifier in TIM_GD ; do \
+			for classifier in TIM_GD BDCSPN; do \
 				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
 			done ;\
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 		done ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-			CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
 	done ;\
 
 run_w_knn_filtering:
-	for ood_query in 1 5 10 15 20 25 30 40 50 75 100; do \
+	for ood_query in 0 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_transductive_methods ;\
 	done ;\

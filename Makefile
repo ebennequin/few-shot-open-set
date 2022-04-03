@@ -1,13 +1,14 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
+
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
@@ -158,7 +159,7 @@ run_w_knn_filtering:
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 0 1 5 10 15 20 25 30 40 50 75 100; do \
+	for ood_query in 0 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
 	done ;\
 

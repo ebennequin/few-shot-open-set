@@ -5,7 +5,7 @@
 # DATADIR=data
 
 SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
 DATADIR=../Open-Set/open-query-set/data/
 USER=malik
 
@@ -33,8 +33,8 @@ FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outl
 # Model
 LAYERS=1 # Numbers of layers (starting from the end) to use. If 2 layers, OOD detection will be made on 2 last layers, and then aggregated
 BACKBONE=resnet12
-MODEL_SRC=feat # Origin of the model. For all timm models, use MODEL_SRC=url
-TRAINING=standard # To differentiate between episodic and standard models
+MODEL_SRC=feat# Origin of the model. For all timm models, use MODEL_SRC=url
+TRAINING=standard# To differentiate between episodic and standard models
 
 # Misc
 EXP=default # name of the folder in which results will be stored.
@@ -74,7 +74,7 @@ run:
 	for dataset in $(TGT_DATASETS); do \
 		for shot in $(SHOTS); do \
 		    python3 -m src.inference \
-		        --exp_name '$(EXP)/$(SRC_DATASET)-->$${dataset}/$(BACKBONE)/$(MODEL_SRC)/$${shot}' \
+		        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${dataset}/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
 		        --data_dir $(DATADIR) \
 		        --classifier $(CLASSIFIER) \
 		        --n_tasks $(N_TASKS) \
@@ -162,6 +162,10 @@ run_wo_filtering:
 		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
 	done ;\
 
+run_thresholding:
+	for thresh in 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9; do \
+		make EXP=thresholding SIMU_PARAMS=threshold FILTERING=True MISC_ARG=threshold MISC_VAL=$${thresh} run_transductive_methods ;\
+	done ;\
 # ========== Evaluating SSL methods ===========
 
 run_ssl_detectors:
@@ -193,7 +197,7 @@ cross_domain:
 plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
-			for tgt_dataset in mini_imagenet tiered_imagenet; do \
+			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp transductive_methods --groupby classifier \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
@@ -208,8 +212,11 @@ deploy:
 	rsync -avm --exclude '*.pyc' scripts $(SERVER_IP):${SERVER_PATH}/ ;\
 	rsync -avm --exclude '*.pyc' configs $(SERVER_IP):${SERVER_PATH}/ ;\
 
-import:
+import/results:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/results ./ ;\
+
+import/archive:
+	rsync -avm $(SERVER_IP):${SERVER_PATH}/archive ./ ;\
 
 tar_data:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \

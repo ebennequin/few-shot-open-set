@@ -101,6 +101,7 @@ def parse_args() -> argparse.Namespace:
     # Classifier
     parser.add_argument("--classifier", type=str, default="SimpleShot")
     parser.add_argument("--use_filtering", type=str2bool, default=False)
+    parser.add_argument("--threshold", type=str, default='otsu')
     parser.add_argument("--classifiers_config_file", type=str, default="configs/classifiers.yaml")
 
     # Logging / Saving results
@@ -339,7 +340,10 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
 
                 if args.use_filtering:  # Then we filter out before giving
                     assert feature_detector is not None
-                    thresh = threshold_otsu(scores.numpy())
+                    if args.threshold == 'otsu':
+                        thresh = threshold_otsu(scores.numpy())
+                    else:
+                        thresh = float(args.threshold)
                     believed_inliers = (scores < thresh)
                     metrics['thresholding_accuracy'].append((believed_inliers == ~outliers.bool()).float().mean().item())
                 else:

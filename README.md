@@ -13,7 +13,12 @@ Download pre-trained ResNet-12 from [here](https://drive.google.com/drive/folder
 
 ## Data
 
-For mini-ImageNet, we still the same old version that you sent me. For TieredImageNet, to be continued...
+### Mini-ImageNet
+
+We still the same old version that you sent me. For TieredImageNet, to be continued...
+
+### Aircraft
+
 
 ## Extract features
 
@@ -45,6 +50,7 @@ Note that `<shot>` key allows you to potentially define different sets of hyper-
 ### Running a PyOD detector
 
 Inspect the `run_pyod_detectors` recipe. To run with default parameters, run `make run_pyod_detectors`. To run a grid-search over parameters defined in `configs/detectors.yaml`, run `make TUNE=feature_detector run_pyod_detectors`
+
 
 ### Inspect results
 

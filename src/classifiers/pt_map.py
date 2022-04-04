@@ -32,19 +32,20 @@ class MAP(FewShotMethod):
         self.prototypes = compute_prototypes(support_features, support_labels)
         num_classes = support_labels.unique().size(0)
         probs_s = F.one_hot(support_labels, num_classes)
-        all_features = torch.cat([support_features, unlabelled_data], 0)
-        acc_values = []
-        for epoch in range(self.inference_steps):
+        if len(unlabelled_data):
+            all_features = torch.cat([support_features, unlabelled_data], 0)
+            acc_values = []
+            for epoch in range(self.inference_steps):
 
-            probs_q = self.get_probas(unlabelled_data)
-            all_probs = torch.cat([probs_s, probs_q], dim=0)
+                probs_q = self.get_probas(unlabelled_data)
+                all_probs = torch.cat([probs_s, probs_q], dim=0)
 
-            # update centroids
-            self.update_prototypes(all_features, all_probs)
+                # update centroids
+                self.update_prototypes(all_features, all_probs)
 
-            acc_values.append((self.get_probas(query_features).argmax(-1) == query_labels)[inliers].float().mean().item())
+                acc_values.append((self.get_probas(query_features).argmax(-1) == query_labels)[inliers].float().mean().item())
 
-        kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
+            kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
 
         # get final accuracy and return it
         return self.get_probas(support_features).cpu(), self.get_probas(query_features).cpu()

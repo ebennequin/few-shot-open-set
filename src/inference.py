@@ -336,6 +336,7 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
                     probas_s, probas_q, scores = output
                 else:
                     scores = output
+                scores = feature_detector.standardize(scores)
                 outlier_scores['features'].append(scores)
 
                 if args.use_filtering:  # Then we filter out before giving
@@ -346,6 +347,7 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
                         thresh = float(args.threshold)
                     believed_inliers = (scores < thresh)
                     metrics['thresholding_accuracy'].append((believed_inliers == ~outliers.bool()).float().mean().item())
+                    metrics['believed_inliers'].append(believed_inliers.sum().item())
                 else:
                     believed_inliers = None
 

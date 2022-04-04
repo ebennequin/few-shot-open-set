@@ -38,7 +38,7 @@ MODEL_SRC=feat# Origin of the model. For all timm models, use MODEL_SRC=url
 TRAINING=standard# To differentiate between episodic and standard models
 
 # Misc
-EXP=default # name of the folder in which results will be stored.
+EXP=default# name of the folder in which results will be stored.
 DEBUG=False
 GPUS=0
 SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
@@ -135,8 +135,8 @@ run_transductive_detectors:
 	done ;\
 
 run_pyod_detectors:
-	for feature_detector in ABOD; do \
-		make FEATURE_DETECTOR=$${feature_detector} run ;\
+	for feature_detector in kNNDetector; do \
+		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 
 # ========== Evaluating transductive methods ===========
@@ -144,11 +144,11 @@ run_pyod_detectors:
 run_transductive_methods:
 	for dataset in mini_imagenet; do \
 		for backbone in resnet12; do \
-			for classifier in TIM_GD BDCSPN; do \
-				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
-			done ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
 				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
+			for classifier in TIM_GD; do \
+				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+			done ;\
 		done ;\
 	done ;\
 
@@ -164,8 +164,9 @@ run_wo_filtering:
 	done ;\
 
 run_thresholding:
-	for thresh in 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9; do \
-		make EXP=thresholding SIMU_PARAMS=threshold FILTERING=True MISC_ARG=threshold MISC_VAL=$${thresh} run_transductive_methods ;\
+	for thresh in 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95; do \
+		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=thresholding \
+			 SIMU_PARAMS=threshold FILTERING=True MISC_ARG=threshold MISC_VAL=$${thresh} run_transductive_methods ;\
 	done ;\
 # ========== Evaluating SSL methods ===========
 
@@ -201,6 +202,17 @@ plot_acc_vs_n_ood:
 			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp transductive_methods --groupby classifier \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+			done ;\
+		done ;\
+	done ;\
+
+
+plot_acc_vs_threshold:
+	for backbone in resnet12; do \
+		for shot in 1 5; do \
+			for tgt_dataset in mini_imagenet; do \
+				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
+					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\
 	done ;\

@@ -1,10 +1,20 @@
 classifiers:
+  RePRI:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 200,
+          'inference_lr': 0.01,
+          'loss_weights': [1.0, 10.0 , 0.5]
+           },
+             }
+
   TIM_GD:
     default: {
         1: {
           'softmax_temperature': 10.0,
           'inference_steps': 200,
-          'inference_lr': 0.001,
+          'inference_lr': 0.1,
           'loss_weights': [1.0, 1.0, 0.5]
            },
              }

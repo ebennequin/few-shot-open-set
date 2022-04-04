@@ -20,6 +20,7 @@ from loguru import logger
 import os
 import json
 import inspect
+from sklearn import svm
 import yaml
 import numpy as np
 import itertools
@@ -343,9 +344,14 @@ def detect_outliers(args, layers, classifier_transforms, detector_transforms, cl
                     assert feature_detector is not None
                     if args.threshold == 'otsu':
                         thresh = threshold_otsu(scores.numpy())
+                        believed_inliers = (scores < thresh)
+                    elif args.threshold == 'svm':
+                        clf = svm.SVC()
+                        X = scores.view(-1, 1).numpy()
+                        clf.fit(X, outliers.numpy())
+                        believed_inliers = torch.from_numpy(1. - clf.predict(X)).bool()
                     else:
-                        thresh = float(args.threshold)
-                    believed_inliers = (scores < thresh)
+                        believed_inliers = (scores < float(args.threshold))
                     metrics['thresholding_accuracy'].append((believed_inliers == ~outliers.bool()).float().mean().item())
                     metrics['believed_inliers'].append(believed_inliers.sum().item())
                 else:

@@ -3,18 +3,11 @@ from typing import Tuple, List
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from loguru import logger
 from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
 
 
-class AbstractTIM(FewShotMethod):
-    """
-    Implementation of TIM method (NeurIPS 2020) https://arxiv.org/abs/2008.11297
-    This is an abstract class.
-    TIM is a transductive method.
-    """
-
+class RePRI(FewShotMethod):
     def __init__(
         self,
         softmax_temperature: float,
@@ -28,8 +21,6 @@ class AbstractTIM(FewShotMethod):
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
 
-
-class TIM_GD(AbstractTIM):
     def forward(
         self,
         support_features: Tensor,
@@ -52,7 +43,7 @@ class TIM_GD(AbstractTIM):
 
         # Run adaptation
         self.prototypes.requires_grad_()
-        optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
+        optimizer = torch.optim.SGD([self.prototypes], lr=self.inference_lr)
 
         q_cond_ent_values = []
         q_ent_values = []
@@ -73,11 +64,11 @@ class TIM_GD(AbstractTIM):
             q_probs = logits_q.softmax(1)
             q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1)
             marginal_y = q_probs.mean(0)
-            q_ent = -(marginal_y * torch.log(marginal_y)).sum(0)
+            if i == 0:
+                pi = marginal_y.detach().clone()
+            div = (pi - marginal_y).abs().sum(0)
 
-            loss = self.loss_weights[0] * ce - (
-                self.loss_weights[1] * q_ent - self.loss_weights[2] * q_cond_ent.mean(0)
-            )
+            loss = self.loss_weights[0] * ce + self.loss_weights[1] * div + self.loss_weights[2] * q_cond_ent.mean(0)
 
             optimizer.zero_grad()
             loss.backward()
@@ -86,7 +77,7 @@ class TIM_GD(AbstractTIM):
             with torch.no_grad():
                 q_probs = self.get_logits_from_cosine_distances_to_prototypes(query_features)
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
-                q_ent_values.append(q_ent.item())
+                q_ent_values.append(div.item())
                 ce_values.append(ce.item())
                 inliers = ~ kwargs['outliers'].bool()
                 acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())

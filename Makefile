@@ -1,19 +1,19 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
 # SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
 # DATADIR=../Open-Set/open-query-set/data/
 # USER=malik
 
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-# DATADIR=data
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+DATADIR=data
+USER=malik
 
 
 
@@ -45,6 +45,7 @@ SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
 OVERRIDE=True # used to override existing entries in out.csv
 TUNE=""
 VISU=False
+THRESHOLD=otsu
 
 # Tasks
 OOD_QUERY=10
@@ -91,6 +92,7 @@ run:
 		        --model_source $(MODEL_SRC) \
 		        --balanced $(BALANCED) \
 		        --training $(TRAINING) \
+		        --threshold $(THRESHOLD) \
 				--src_dataset $(SRC_DATASET) \
 				--tgt_dataset $${dataset} \
 		        --simu_hparams $(SIMU_PARAMS) \
@@ -153,21 +155,28 @@ run_transductive_methods:
 	done ;\
 
 run_w_knn_filtering:
-	for ood_query in 0 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+		make SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_transductive_methods ;\
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 0 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
 	done ;\
 
-run_thresholding:
-	for thresh in 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95; do \
+run_fixed_thresholding:
+	for thresh in 0.1 0.12 0.15 0.17 0.2 0.22 0.25 0.27 0.3 0.32 0.35 0.37 0.4; do \
 		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=thresholding \
-			 SIMU_PARAMS=threshold FILTERING=True MISC_ARG=threshold MISC_VAL=$${thresh} run_transductive_methods ;\
+			 SIMU_PARAMS=threshold FILTERING=True THRESHOLD=$${thresh} run_transductive_methods ;\
 	done ;\
+
+run_svm_thresholding:
+	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
+
+run_diagnosis:
+	make EXP=diagnosis CLASSIFIER=RePRI run ;\
+
 # ========== Evaluating SSL methods ===========
 
 run_ssl_detectors:
@@ -212,6 +221,7 @@ plot_acc_vs_threshold:
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
+				     --metrics mean_acc mean_features_rocauc mean_believed_inliers mean_thresholding_accuracy \
 					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\

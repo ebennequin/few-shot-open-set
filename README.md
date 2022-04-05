@@ -18,6 +18,10 @@ Download pre-trained ResNet-12 from [here](https://drive.google.com/drive/folder
 We still the same old version that you sent me. For TieredImageNet, to be continued...
 
 ### Aircraft
+ `make aircraft`
+
+### CUB
+Download from [here](https://drive.google.com/file/d/1hbzc_P1FuxMkcabkgn9ZKinBwW683j45/view).
 
 
 ## Extract features

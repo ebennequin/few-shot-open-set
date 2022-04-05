@@ -156,13 +156,13 @@ run_transductive_methods:
 
 run_w_knn_filtering:
 	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
-		make SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
+		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_transductive_methods ;\
 	done ;\
 
 run_wo_filtering:
 	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
+		make EXP=transductive_methods SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run_transductive_methods ;\
 	done ;\
 
 run_fixed_thresholding:
@@ -175,7 +175,7 @@ run_svm_thresholding:
 	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
 
 run_diagnosis:
-	make EXP=diagnosis CLASSIFIER=RePRI run ;\
+	make CLS_TRANSFORMS="Pool" EXP=diagnosis CLASSIFIER=RePRI run ;\
 
 # ========== Evaluating SSL methods ===========
 
@@ -209,7 +209,8 @@ plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
-				python -m src.plots.csv_plotter --exp transductive_methods --groupby classifier \
+				python -m src.plots.csv_plotter --exp svm_thresholding --groupby classifier \
+					 --metrics mean_acc mean_features_rocauc mean_believed_inliers mean_thresholding_accuracy \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\

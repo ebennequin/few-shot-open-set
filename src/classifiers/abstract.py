@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple, List, Dict
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc as auc_fn
 
 
 class FewShotMethod(nn.Module):
@@ -18,6 +20,10 @@ class FewShotMethod(nn.Module):
         super().__init__()
         self.softmax_temperature = softmax_temperature
         self.prototypes: Tensor
+
+    def compute_auc(self, outlierness, **kwargs):
+        fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+        return auc_fn(fp_rate, tp_rate)
 
     def forward(
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor

@@ -6,6 +6,7 @@ from torch import Tensor
 from loguru import logger
 from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
+from skimage.filters import threshold_otsu
 
 
 class AbstractTIM(FewShotMethod):
@@ -55,6 +56,8 @@ class TIM_GD(AbstractTIM):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
 
         q_cond_ent_values = []
+        acc_otsu = []
+        aucs = []
         q_ent_values = []
         ce_values = []
         inlier_entropy = []
@@ -77,7 +80,7 @@ class TIM_GD(AbstractTIM):
 
             loss = self.loss_weights[0] * ce - (
                 self.loss_weights[1] * q_ent - self.loss_weights[2] * q_cond_ent.mean(0)
-            )
+            ) + 0.01 * self.prototypes.abs().sum()
 
             optimizer.zero_grad()
             loss.backward()
@@ -92,11 +95,17 @@ class TIM_GD(AbstractTIM):
                 acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
+                aucs.append(self.compute_auc(q_cond_ent, **kwargs))
+                thresh = threshold_otsu(q_cond_ent.cpu().numpy())
+                believed_inliers = (q_cond_ent < thresh)
+                acc_otsu.append((believed_inliers == inliers).float().mean().item())
 
         kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
         kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
         kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
+        kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
+        kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
+        kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
         kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
 

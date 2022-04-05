@@ -62,13 +62,12 @@ class RePRI(FewShotMethod):
         if self.init == 'base':
             mu = kwargs['train_mean'].squeeze().cuda()
         elif self.init == 'rand':
-            mu = torch.randn(self.ensemble_size, 1, raw_feat_s.size(-1)).cuda()
+            mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True) + 0.1 * torch.randn(self.ensemble_size, 1, raw_feat_s.size(-1)).cuda()
         elif self.init == 'mean':
             mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         mu.requires_grad_()
 
         centered_feats_s = raw_feat_s - mu
-        self.prototypes = compute_prototypes(centered_feats_s, support_labels)
 
         # Run adaptation
         # self.prototypes.requires_grad_()

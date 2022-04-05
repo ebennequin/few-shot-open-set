@@ -157,25 +157,25 @@ run_transductive_methods:
 run_w_knn_filtering:
 	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
-			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_transductive_methods ;\
+			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
 	done ;\
 
 run_wo_filtering:
 	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run_transductive_methods ;\
+		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
 	done ;\
 
 run_fixed_thresholding:
 	for thresh in 0.1 0.12 0.15 0.17 0.2 0.22 0.25 0.27 0.3 0.32 0.35 0.37 0.4; do \
-		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=thresholding \
-			 SIMU_PARAMS=threshold FILTERING=True THRESHOLD=$${thresh} run_transductive_methods ;\
+		make DET_TRANSFORMS="Pool BaseCentering L2norm" \
+			 SIMU_PARAMS=threshold FILTERING=True THRESHOLD=$${thresh} run ;\
 	done ;\
 
 run_svm_thresholding:
 	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
 
-run_diagnosis:
-	make CLS_TRANSFORMS="Pool" EXP=diagnosis CLASSIFIER=RePRI run ;\
+run_ood_tim:
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" EXP=diagnosis CLASSIFIER=OOD_TIM run_wo_filtering ;\
 
 # ========== Evaluating SSL methods ===========
 

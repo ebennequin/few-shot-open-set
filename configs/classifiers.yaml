@@ -4,12 +4,30 @@ classifiers:
         1: {
           'softmax_temperature': 10.0,
           'inference_steps': 150,
-          'inference_lr': 1.0,
+          'inference_lr': 10.0,
           'init': rand,
           'ensemble_size': 10,
           'loss_weights': [1.0, 1.0 , 1.0]
            },
              }
+
+  OOD_TIM:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 150,
+          'inference_lr': 0.001,
+          'loss_weights': [1.0, 1.0 , 0.5],
+          'params2adapt': 'mu',
+          'lambda_': 1.0,
+          'init': 'base',
+           },
+             }
+    tuning:
+      hparams2tune: ['temperature']
+      hparam_values: {1: [[64.]], 5: [[64.]]}
+
+
 
   TIM_GD:
     default: {

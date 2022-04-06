@@ -20,10 +20,14 @@ class OOD_TIM(FewShotMethod):
         lambda_: float,
         init: str,
         params2adapt: str,
-        loss_weights: List[float] = None,
+        lambda_ce: float,
+        lambda_marg: float,
+        lambda_em: float,
     ):
         super().__init__()
-        self.loss_weights = loss_weights
+        self.lambda_ce = lambda_ce
+        self.lambda_em = lambda_em
+        self.lambda_marg = lambda_marg
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
@@ -101,16 +105,23 @@ class OOD_TIM(FewShotMethod):
             q_probs = logits_q.softmax(1)
             q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1) - math.log(num_classes) / 2
             marginal_y = q_probs.mean(0)
-            q_ent = -(marginal_y * torch.log(marginal_y)).sum(0)
 
-            outlier_scores = q_cond_ent
-            # outlier_scores = (2 * self.lambda_ * q_cond_ent).sigmoid().detach()
+            if i == 0:
+                pi = marginal_y.clone().detach()
+            div = (marginal_y * torch.log(marginal_y)).sum(0)
+            # div = (marginal_y * torch.log(marginal_y / pi)).sum(0)
+
             # logger.warning(outlier_scores.mean())
-            loss = self.loss_weights[0] * ce - (
-                self.loss_weights[1] * q_ent - \
-                # self.loss_weights[2] * (((1 - outlier_scores) / (1 - outlier_scores).sum()) * q_cond_ent).sum(0)
-                self.loss_weights[2] * q_cond_ent.mean(0)
-            )
+            loss = self.lambda_ce * ce + self.lambda_marg * div
+
+            if i < 50:
+                em = q_cond_ent.mean(0)
+                outlier_scores = q_cond_ent
+            else:
+                outlier_scores = (2 * self.lambda_ * q_cond_ent).sigmoid().detach()
+                em = (((1 - outlier_scores) / (1 - outlier_scores).sum() - (outlier_scores) / (outlier_scores).sum()) * q_cond_ent).sum(0)
+
+            loss += self.lambda_em * em
 
             optimizer.zero_grad()
             loss.backward()
@@ -119,7 +130,7 @@ class OOD_TIM(FewShotMethod):
             with torch.no_grad():
                 q_probs = self.get_logits_from_cosine_distances_to_prototypes(unlabelled_data)
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
-                q_ent_values.append(q_ent.item())
+                q_ent_values.append(div.item())
                 ce_values.append(ce.item())
                 inliers = ~ kwargs['outliers'].bool()
                 acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())

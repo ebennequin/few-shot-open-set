@@ -94,6 +94,7 @@ run:
 		        --training $(TRAINING) \
 		        --threshold $(THRESHOLD) \
 				--src_dataset $(SRC_DATASET) \
+				--n_ood_query $(OOD_QUERY) \
 				--tgt_dataset $${dataset} \
 		        --simu_hparams $(SIMU_PARAMS) \
 		        --$(MISC_ARG) $(MISC_VAL) \
@@ -175,7 +176,7 @@ run_svm_thresholding:
 	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
 
 run_ood_tim:
-	make CLS_TRANSFORMS="Pool BaseCentering L2norm" EXP=diagnosis CLASSIFIER=OOD_TIM run_wo_filtering ;\
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" EXP=ood_tim CLASSIFIER=OOD_TIM run_wo_filtering ;\
 
 # ========== Evaluating SSL methods ===========
 
@@ -209,8 +210,8 @@ plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
-				python -m src.plots.csv_plotter --exp svm_thresholding --groupby classifier \
-					 --metrics mean_acc mean_features_rocauc mean_believed_inliers mean_thresholding_accuracy \
+				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
+					 --metrics mean_acc mean_features_rocauc \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\

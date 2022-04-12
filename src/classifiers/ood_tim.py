@@ -104,24 +104,26 @@ class OOD_TIM(FewShotMethod):
             ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             q_probs = logits_q.softmax(1)
             q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1) - math.log(num_classes) / 2
-            marginal_y = q_probs.mean(0)
 
-            if i == 0:
-                pi = marginal_y.clone().detach()
-            div = (marginal_y * torch.log(marginal_y)).sum(0)
+            # if i == 0:
+            #     pi = marginal_y.clone().detach()
             # div = (marginal_y * torch.log(marginal_y / pi)).sum(0)
 
             # logger.warning(outlier_scores.mean())
-            loss = self.lambda_ce * ce + self.lambda_marg * div
+            loss = self.lambda_ce * ce
 
             if i < 50:
                 em = q_cond_ent.mean(0)
-                outlier_scores = q_cond_ent
+                outlier_scores = q_cond_ent.detach()
+                marginal_y = q_probs.mean(0)
+                div = (marginal_y * torch.log(marginal_y)).sum(0)
             else:
                 outlier_scores = (2 * self.lambda_ * q_cond_ent).sigmoid().detach()
+                marginal_y = ((1 - outlier_scores).unsqueeze(-1) * q_probs).sum(0) / (1 - outlier_scores).sum(0)
+                div = (marginal_y * torch.log(marginal_y)).sum(0)
                 em = (((1 - outlier_scores) / (1 - outlier_scores).sum() - (outlier_scores) / (outlier_scores).sum()) * q_cond_ent).sum(0)
 
-            loss += self.lambda_em * em
+            loss += self.lambda_em * em + self.lambda_marg * div
 
             optimizer.zero_grad()
             loss.backward()

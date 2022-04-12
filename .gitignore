@@ -146,6 +146,9 @@ data/tiered_imagenet/tb_logs
 data/cifar/data
 data/features
 
+tiered_imagenet.tar
+tiered_imagenet.zip
+
 # streamlit
 streamlit_cache
 

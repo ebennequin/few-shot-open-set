@@ -24,16 +24,16 @@ class Aircraft(VisionDataset):
     ):
         self.transform = get_transforms(args)
         self.target_transform = target_transform
-        with open(root / 'families.txt', 'r') as f:
+        with open(root / "families.txt", "r") as f:
             families = f.readlines()
         families = list(map(lambda x: x.strip(), families))
         families.sort()
 
-        with open(root / 'images_family_trainval.txt', 'r') as f:
+        with open(root / "images_family_trainval.txt", "r") as f:
             image_labels = f.readlines()
-        image_labels = list(map(lambda x: x.strip().split(' ', 1), image_labels))
+        image_labels = list(map(lambda x: x.strip().split(" ", 1), image_labels))
         image_list = list(map(lambda x: x[0], image_labels))
-        image_path = list(map(lambda x: Path(root) / 'images' / f"{x}.jpg", image_list))
+        image_path = list(map(lambda x: Path(root) / "images" / f"{x}.jpg", image_list))
         labels = list(map(lambda x: families.index(x[1]), image_labels))
 
         self.images = image_path

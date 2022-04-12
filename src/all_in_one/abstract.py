@@ -13,7 +13,9 @@ class AllInOne:
 
     def __init__(self):
         super().__init__()
-        self.works_on_features = False  # by default most all-in-one methods need raw features and model
+        self.works_on_features = (
+            False  # by default most all-in-one methods need raw features and model
+        )
 
     def forward(
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor

@@ -7,7 +7,6 @@ from loguru import logger
 
 
 class RETRIEVE(SSLMethod):
-
     def __init__(self, args, pretrain_iter, **kwargs):
         print(kwargs)
         super().__init__(args, **kwargs)
@@ -28,7 +27,9 @@ class RETRIEVE(SSLMethod):
 
         outlier_logits = self.outlier_head(query_features).squeeze()
         outlier_probs = torch.sigmoid(outlier_logits)
-        loss = F.binary_cross_entropy_with_logits(outlier_logits, self.weights)  # This will provide a signal
+        loss = F.binary_cross_entropy_with_logits(
+            outlier_logits, self.weights
+        )  # This will provide a signal
 
         self.count += 1
 
@@ -108,13 +109,37 @@ class RETRIEVEStrategy:
         - If False, we select subset that maximizes the performance on the unlabeled set.
     """
 
-    def __init__(self, trainloader, valloader, model, tea_model, loss,
-                 eta, device, num_classes, linear_layer, selection_type, greedy,
-                 logger, r=15, valid=True):
+    def __init__(
+        self,
+        trainloader,
+        valloader,
+        model,
+        tea_model,
+        loss,
+        eta,
+        device,
+        num_classes,
+        linear_layer,
+        selection_type,
+        greedy,
+        logger,
+        r=15,
+        valid=True,
+    ):
         """
         Constructor method
         """
-        super().__init__(trainloader, valloader, model, tea_model, num_classes, linear_layer, loss, device, logger)
+        super().__init__(
+            trainloader,
+            valloader,
+            model,
+            tea_model,
+            num_classes,
+            linear_layer,
+            loss,
+            device,
+            logger,
+        )
         self.eta = eta  # step size for the one step gradient update
         self.init_out = list()
         self.init_l1 = list()
@@ -134,12 +159,12 @@ class RETRIEVEStrategy:
             Gradient initialization (default: False)
         """
         self.model.zero_grad()
-        if self.selection_type == 'PerClass':
+        if self.selection_type == "PerClass":
             valloader = self.pcvalloader
         else:
             valloader = self.valloader
 
-        if self.selection_type == 'PerClass':
+        if self.selection_type == "PerClass":
             trainloader = self.pctrainloader
         else:
             trainloader = self.trainloader
@@ -149,47 +174,55 @@ class RETRIEVEStrategy:
         if self.valid:
             if first_init:
                 for batch_idx, (inputs, targets) in enumerate(valloader):
-                    inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
-                    if loss_name == 'MeanSquared':
-                        tmp_targets = torch.zeros(len(inputs), self.num_classes, device=self.device)
+                    inputs, targets = inputs.to(self.device), targets.to(
+                        self.device, non_blocking=True
+                    )
+                    if loss_name == "MeanSquared":
+                        tmp_targets = torch.zeros(
+                            len(inputs), self.num_classes, device=self.device
+                        )
                         tmp_targets[torch.arange(len(inputs)), targets] = 1
                         targets = tmp_targets
                     if batch_idx == 0:
                         out, l1 = self.model(inputs, last=True, freeze=True)
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             temp_out = F.softmax(out, dim=1)
-                            loss = F.mse_loss(temp_out, targets, reduction='none').sum()
+                            loss = F.mse_loss(temp_out, targets, reduction="none").sum()
                         else:
-                            loss = F.cross_entropy(out, targets, reduction='none').sum()
+                            loss = F.cross_entropy(out, targets, reduction="none").sum()
                         l0_grads = torch.autograd.grad(loss, out)[0]
                         if self.linear_layer:
                             l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
                             l1_grads = l0_expand * l1.repeat(1, self.num_classes)
                         self.init_out = out
                         self.init_l1 = l1
-                        if self.selection_type == 'PerBatch':
+                        if self.selection_type == "PerBatch":
                             l0_grads = l0_grads.mean(dim=0).view(1, -1)
                             if self.linear_layer:
                                 l1_grads = l1_grads.mean(dim=0).view(1, -1)
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             self.y_val = targets
                         else:
                             self.y_val = targets.view(-1, 1)
                     else:
                         out, l1 = self.model(inputs, last=True, freeze=True)
 
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             temp_out = F.softmax(out, dim=1)
-                            loss = F.mse_loss(temp_out, targets, reduction='none').sum()
+                            loss = F.mse_loss(temp_out, targets, reduction="none").sum()
                         else:
-                            loss = F.cross_entropy(out, targets, reduction='none').sum()
+                            loss = F.cross_entropy(out, targets, reduction="none").sum()
 
                         batch_l0_grads = torch.autograd.grad(loss, out)[0]
                         if self.linear_layer:
-                            batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
-                            batch_l1_grads = batch_l0_expand * l1.repeat(1, self.num_classes)
+                            batch_l0_expand = torch.repeat_interleave(
+                                batch_l0_grads, embDim, dim=1
+                            )
+                            batch_l1_grads = batch_l0_expand * l1.repeat(
+                                1, self.num_classes
+                            )
 
-                        if self.selection_type == 'PerBatch':
+                        if self.selection_type == "PerBatch":
                             batch_l0_grads = batch_l0_grads.mean(dim=0).view(1, -1)
                             if self.linear_layer:
                                 batch_l1_grads = batch_l1_grads.mean(dim=0).view(1, -1)
@@ -199,27 +232,48 @@ class RETRIEVEStrategy:
                             l1_grads = torch.cat((l1_grads, batch_l1_grads), dim=0)
                         self.init_out = torch.cat((self.init_out, out), dim=0)
                         self.init_l1 = torch.cat((self.init_l1, l1), dim=0)
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             self.y_val = torch.cat((self.y_val, targets), dim=0)
                         else:
-                            self.y_val = torch.cat((self.y_val, targets.view(-1, 1)), dim=0)
+                            self.y_val = torch.cat(
+                                (self.y_val, targets.view(-1, 1)), dim=0
+                            )
             elif grads_currX is not None:
                 out_vec = self.init_out - (
-                        self.eta * grads_currX[0][0:self.num_classes].view(1, -1).expand(self.init_out.shape[0], -1))
+                    self.eta
+                    * grads_currX[0][0 : self.num_classes]
+                    .view(1, -1)
+                    .expand(self.init_out.shape[0], -1)
+                )
                 if self.linear_layer:
-                    out_vec = out_vec - (self.eta * torch.matmul(self.init_l1, grads_currX[0][self.num_classes:].view(
-                        self.num_classes, -1).transpose(0, 1)))
-                if loss_name == 'MeanSquared':
+                    out_vec = out_vec - (
+                        self.eta
+                        * torch.matmul(
+                            self.init_l1,
+                            grads_currX[0][self.num_classes :]
+                            .view(self.num_classes, -1)
+                            .transpose(0, 1),
+                        )
+                    )
+                if loss_name == "MeanSquared":
                     temp_out_vec = F.softmax(out_vec, dim=1)
-                    loss = self.loss(temp_out_vec, self.y_val, torch.ones(len(temp_out_vec), device=self.device)).sum()
+                    loss = self.loss(
+                        temp_out_vec,
+                        self.y_val,
+                        torch.ones(len(temp_out_vec), device=self.device),
+                    ).sum()
                 else:
-                    loss = self.loss(out_vec, self.y_val, torch.ones(len(out_vec), device=self.device)).sum()
+                    loss = self.loss(
+                        out_vec,
+                        self.y_val,
+                        torch.ones(len(out_vec), device=self.device),
+                    ).sum()
                 l0_grads = torch.autograd.grad(loss, out_vec)[0]
                 if self.linear_layer:
                     l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
                     l1_grads = l0_expand * self.init_l1.repeat(1, self.num_classes)
-                if self.selection_type == 'PerBatch':
-                    b = int(l0_grads.shape[0]/self.valloader.batch_size)
+                if self.selection_type == "PerBatch":
+                    b = int(l0_grads.shape[0] / self.valloader.batch_size)
                     l0_grads = torch.chunk(l0_grads, b, dim=0)
                     new_t = []
                     for i in range(len(l0_grads)):
@@ -233,45 +287,71 @@ class RETRIEVEStrategy:
                         l1_grads = torch.cat(new_t, dim=0)
             torch.cuda.empty_cache()
             if self.linear_layer:
-                self.grads_val_curr = torch.mean(torch.cat((l0_grads, l1_grads), dim=1), dim=0).view(-1, 1)
+                self.grads_val_curr = torch.mean(
+                    torch.cat((l0_grads, l1_grads), dim=1), dim=0
+                ).view(-1, 1)
             else:
                 self.grads_val_curr = torch.mean(l0_grads, dim=0).view(-1, 1)
         else:
             if first_init:
                 self.y_val = torch.cat(self.weak_targets, dim=0)
-                for batch_idx, (ul_weak_aug, ul_strong_aug, _) in enumerate(trainloader):
-                    ul_weak_aug, ul_strong_aug = ul_weak_aug.to(self.device), ul_strong_aug.to(self.device)
+                for batch_idx, (ul_weak_aug, ul_strong_aug, _) in enumerate(
+                    trainloader
+                ):
+                    ul_weak_aug, ul_strong_aug = ul_weak_aug.to(
+                        self.device
+                    ), ul_strong_aug.to(self.device)
                     if batch_idx == 0:
                         out, l1 = self.model(ul_strong_aug, last=True, freeze=True)
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             temp_out = F.softmax(out, dim=1)
-                            loss = self.loss(temp_out, self.weak_targets[batch_idx], self.weak_masks[batch_idx]).sum()
+                            loss = self.loss(
+                                temp_out,
+                                self.weak_targets[batch_idx],
+                                self.weak_masks[batch_idx],
+                            ).sum()
                         else:
-                            loss = self.loss(out, self.weak_targets[batch_idx], self.weak_masks[batch_idx]).sum()
+                            loss = self.loss(
+                                out,
+                                self.weak_targets[batch_idx],
+                                self.weak_masks[batch_idx],
+                            ).sum()
                         l0_grads = torch.autograd.grad(loss, out)[0]
                         if self.linear_layer:
                             l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
                             l1_grads = l0_expand * l1.repeat(1, self.num_classes)
                         self.init_out = out
                         self.init_l1 = l1
-                        if self.selection_type == 'PerBatch':
+                        if self.selection_type == "PerBatch":
                             l0_grads = l0_grads.mean(dim=0).view(1, -1)
                             if self.linear_layer:
                                 l1_grads = l1_grads.mean(dim=0).view(1, -1)
 
                     else:
                         out, l1 = self.model(ul_strong_aug, last=True, freeze=True)
-                        if loss_name == 'MeanSquared':
+                        if loss_name == "MeanSquared":
                             temp_out = F.softmax(out, dim=1)
-                            loss = self.loss(temp_out, self.weak_targets[batch_idx], self.weak_masks[batch_idx]).sum()
+                            loss = self.loss(
+                                temp_out,
+                                self.weak_targets[batch_idx],
+                                self.weak_masks[batch_idx],
+                            ).sum()
                         else:
-                            loss = self.loss(out, self.weak_targets[batch_idx], self.weak_masks[batch_idx]).sum()
+                            loss = self.loss(
+                                out,
+                                self.weak_targets[batch_idx],
+                                self.weak_masks[batch_idx],
+                            ).sum()
                         batch_l0_grads = torch.autograd.grad(loss, out)[0]
                         if self.linear_layer:
-                            batch_l0_expand = torch.repeat_interleave(batch_l0_grads, embDim, dim=1)
-                            batch_l1_grads = batch_l0_expand * l1.repeat(1, self.num_classes)
+                            batch_l0_expand = torch.repeat_interleave(
+                                batch_l0_grads, embDim, dim=1
+                            )
+                            batch_l1_grads = batch_l0_expand * l1.repeat(
+                                1, self.num_classes
+                            )
 
-                        if self.selection_type == 'PerBatch':
+                        if self.selection_type == "PerBatch":
                             batch_l0_grads = batch_l0_grads.mean(dim=0).view(1, -1)
                             if self.linear_layer:
                                 batch_l1_grads = batch_l1_grads.mean(dim=0).view(1, -1)
@@ -283,25 +363,43 @@ class RETRIEVEStrategy:
                         self.init_l1 = torch.cat((self.init_l1, l1), dim=0)
             elif grads_currX is not None:
                 out_vec = self.init_out - (
-                            self.eta * grads_currX[0][0:self.num_classes].view(1, -1).expand(self.init_out.shape[0],-1))
+                    self.eta
+                    * grads_currX[0][0 : self.num_classes]
+                    .view(1, -1)
+                    .expand(self.init_out.shape[0], -1)
+                )
 
                 if self.linear_layer:
-                    out_vec = out_vec - (self.eta * torch.matmul(self.init_l1, grads_currX[0][self.num_classes:].view(
-                        self.num_classes, -1).transpose(0, 1)))
+                    out_vec = out_vec - (
+                        self.eta
+                        * torch.matmul(
+                            self.init_l1,
+                            grads_currX[0][self.num_classes :]
+                            .view(self.num_classes, -1)
+                            .transpose(0, 1),
+                        )
+                    )
 
-                if loss_name == 'MeanSquared':
+                if loss_name == "MeanSquared":
                     temp_out_vec = F.softmax(out_vec, dim=1)
-                    loss = self.loss(temp_out_vec, torch.cat(self.weak_targets, dim=0), torch.cat(self.weak_masks, dim=0)).sum()
+                    loss = self.loss(
+                        temp_out_vec,
+                        torch.cat(self.weak_targets, dim=0),
+                        torch.cat(self.weak_masks, dim=0),
+                    ).sum()
                 else:
-                    loss = self.loss(out_vec, torch.cat(self.weak_targets, dim=0),
-                                     torch.cat(self.weak_masks, dim=0)).sum()
+                    loss = self.loss(
+                        out_vec,
+                        torch.cat(self.weak_targets, dim=0),
+                        torch.cat(self.weak_masks, dim=0),
+                    ).sum()
                 l0_grads = torch.autograd.grad(loss, out_vec)[0]
                 if self.linear_layer:
                     l0_expand = torch.repeat_interleave(l0_grads, embDim, dim=1)
                     l1_grads = l0_expand * self.init_l1.repeat(1, self.num_classes)
 
-                if self.selection_type == 'PerBatch':
-                    b = int(l0_grads.shape[0]/self.valloader.batch_size)
+                if self.selection_type == "PerBatch":
+                    b = int(l0_grads.shape[0] / self.valloader.batch_size)
                     l0_grads = torch.chunk(l0_grads, b, dim=0)
                     new_t = []
                     for i in range(len(l0_grads)):
@@ -315,7 +413,9 @@ class RETRIEVEStrategy:
                         l1_grads = torch.cat(new_t, dim=0)
             torch.cuda.empty_cache()
             if self.linear_layer:
-                self.grads_val_curr = torch.mean(torch.cat((l0_grads, l1_grads), dim=1), dim=0).view(-1, 1)
+                self.grads_val_curr = torch.mean(
+                    torch.cat((l0_grads, l1_grads), dim=1), dim=0
+                ).view(-1, 1)
             else:
                 self.grads_val_curr = torch.mean(l0_grads, dim=0).view(-1, 1)
 
@@ -364,31 +464,37 @@ class RETRIEVEStrategy:
         remainSet = list(range(N))
         t_ng_start = time.time()  # naive greedy start time
         numSelected = 0
-        if self.greedy == 'RGreedy':
+        if self.greedy == "RGreedy":
             # subset_size = int((len(self.grads_per_elem) / r))
             selection_size = int(budget / self.r)
-            while (numSelected < budget):
+            while numSelected < budget:
                 # Try Using a List comprehension here!
                 rem_grads = self.grads_per_elem[remainSet]
                 gains = self.eval_taylor_modular(rem_grads)
                 # Update the greedy set and remaining set
                 sorted_gains, indices = torch.sort(gains.view(-1), descending=True)
-                selected_indices = [remainSet[index.item()] for index in indices[0:selection_size]]
+                selected_indices = [
+                    remainSet[index.item()] for index in indices[0:selection_size]
+                ]
                 greedySet.extend(selected_indices)
                 [remainSet.remove(idx) for idx in selected_indices]
                 if numSelected == 0:
-                    grads_curr = self.grads_per_elem[selected_indices].sum(dim=0).view(1, -1)
+                    grads_curr = (
+                        self.grads_per_elem[selected_indices].sum(dim=0).view(1, -1)
+                    )
                 else:  # If 1st selection, then just set it to bestId grads
                     self._update_gradients_subset(grads_curr, selected_indices)
                 # Update the grads_val_current using current greedySet grads
                 self._update_grads_val(grads_curr)
                 numSelected += selection_size
-            self.logger.debug("RETRIEVE's R-greedy selection time: %f", time.time() - t_ng_start)
+            self.logger.debug(
+                "RETRIEVE's R-greedy selection time: %f", time.time() - t_ng_start
+            )
 
         # Stochastic Greedy Selection Algorithm
-        elif self.greedy == 'Stochastic':
+        elif self.greedy == "Stochastic":
             subset_size = int((len(self.grads_per_elem) / budget) * math.log(100))
-            while (numSelected < budget):
+            while numSelected < budget:
                 # Try Using a List comprehension here!
                 subset_selected = random.sample(remainSet, k=subset_size)
                 rem_grads = self.grads_per_elem[subset_selected]
@@ -403,13 +509,18 @@ class RETRIEVEStrategy:
                 if numSelected > 1:
                     self._update_gradients_subset(grads_curr, bestId)
                 else:  # If 1st selection, then just set it to bestId grads
-                    grads_curr = self.grads_per_elem[bestId].view(1, -1)  # Making it a list so that is mutable!
+                    grads_curr = self.grads_per_elem[bestId].view(
+                        1, -1
+                    )  # Making it a list so that is mutable!
                 # Update the grads_val_current using current greedySet grads
                 self._update_grads_val(grads_curr)
-            self.logger.debug("RETRIEVE's Stochastic Greedy selection time: %f", time.time() - t_ng_start)
+            self.logger.debug(
+                "RETRIEVE's Stochastic Greedy selection time: %f",
+                time.time() - t_ng_start,
+            )
 
-        elif self.greedy == 'Naive':
-            while (numSelected < budget):
+        elif self.greedy == "Naive":
+            while numSelected < budget:
                 # Try Using a List comprehension here!
                 rem_grads = self.grads_per_elem[remainSet]
                 gains = self.eval_taylor_modular(rem_grads)
@@ -427,7 +538,9 @@ class RETRIEVEStrategy:
                     self._update_gradients_subset(grads_curr, bestId)
                 # Update the grads_val_current using current greedySet grads
                 self._update_grads_val(grads_curr)
-            self.logger.debug("RETRIEVE's Naive Greedy selection time: %f", time.time() - t_ng_start)
+            self.logger.debug(
+                "RETRIEVE's Naive Greedy selection time: %f", time.time() - t_ng_start
+            )
         return list(greedySet), [1] * budget
 
     def select(self, budget, model_params, tea_model_params):
@@ -448,32 +561,42 @@ class RETRIEVEStrategy:
         budget: Tensor
             Tensor containing gradients of datapoints present in greedySet
         """
-        glister_start_time = time.time() # naive greedy start time
+        glister_start_time = time.time()  # naive greedy start time
         self.update_model(model_params, tea_model_params)
-        if self.selection_type == 'PerClass':
+        if self.selection_type == "PerClass":
             self.get_labels(valid=True)
             idxs = []
             gammas = []
             for i in range(self.num_classes):
                 trn_subset_idx = torch.where(self.trn_lbls == i)[0].tolist()
                 trn_data_sub = Subset(self.trainloader.dataset, trn_subset_idx)
-                self.pctrainloader = DataLoader(trn_data_sub, batch_size=self.trainloader.batch_size,
-                                                shuffle=False, pin_memory=True)
+                self.pctrainloader = DataLoader(
+                    trn_data_sub,
+                    batch_size=self.trainloader.batch_size,
+                    shuffle=False,
+                    pin_memory=True,
+                )
 
                 val_subset_idx = torch.where(self.val_lbls == i)[0].tolist()
                 val_data_sub = Subset(self.valloader.dataset, val_subset_idx)
-                self.pcvalloader = DataLoader(val_data_sub, batch_size=self.trainloader.batch_size,
-                                            shuffle=False, pin_memory=True)
+                self.pcvalloader = DataLoader(
+                    val_data_sub,
+                    batch_size=self.trainloader.batch_size,
+                    shuffle=False,
+                    pin_memory=True,
+                )
                 if self.valid:
                     self.compute_gradients(store_t=False, perClass=True)
                 else:
                     self.compute_gradients(store_t=True, perClass=True)
 
                 self._update_grads_val(first_init=True)
-                idxs_temp, gammas_temp = self.greedy_algo(math.ceil(budget * len(trn_subset_idx) / self.N_trn))
+                idxs_temp, gammas_temp = self.greedy_algo(
+                    math.ceil(budget * len(trn_subset_idx) / self.N_trn)
+                )
                 idxs.extend(list(np.array(trn_subset_idx)[idxs_temp]))
                 gammas.extend(gammas_temp)
-        elif self.selection_type == 'PerBatch':
+        elif self.selection_type == "PerBatch":
             idxs = []
             gammas = []
             if self.valid:
@@ -481,7 +604,9 @@ class RETRIEVEStrategy:
             else:
                 self.compute_gradients(store_t=True, perBatch=True)
             self._update_grads_val(first_init=True)
-            idxs_temp, gammas_temp = self.greedy_algo(math.ceil(budget/self.trainloader.batch_size))
+            idxs_temp, gammas_temp = self.greedy_algo(
+                math.ceil(budget / self.trainloader.batch_size)
+            )
             batch_wise_indices = list(self.trainloader.batch_sampler)
             for i in range(len(idxs_temp)):
                 tmp = batch_wise_indices[idxs_temp[i]]
@@ -496,5 +621,8 @@ class RETRIEVEStrategy:
             idxs, gammas = self.greedy_algo(budget)
 
         glister_end_time = time.time()
-        self.logger.debug("RETRIEVE algorithm Subset Selection time is: %f", glister_end_time - glister_start_time)
+        self.logger.debug(
+            "RETRIEVE algorithm Subset Selection time is: %f",
+            glister_end_time - glister_start_time,
+        )
         return idxs, torch.FloatTensor(gammas)

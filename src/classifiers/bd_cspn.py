@@ -47,11 +47,15 @@ class BDCSPN(FewShotMethod):
         ).t().matmul(query_features)
 
     def forward(
-        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
+        self,
+        support_features: Tensor,
+        query_features: Tensor,
+        support_labels: Tensor,
+        **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 

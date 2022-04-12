@@ -18,7 +18,6 @@ from sklearn.neighbors import NearestNeighbors
 
 
 class FeatureTransform:
-
     def __init__(self):
         pass
 
@@ -41,7 +40,9 @@ class FeatureTransform:
             return type(self).__name__
 
     def compute_auc(self, outlierness, **kwargs):
-        fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+        fp_rate, tp_rate, thresholds = roc_curve(
+            kwargs["outliers"].numpy(), outlierness.cpu().numpy()
+        )
         return auc_fn(fp_rate, tp_rate)
 
     def __repr__(self):
@@ -54,7 +55,6 @@ class FeatureTransform:
 
 
 class SequentialTransform(FeatureTransform):
-
     def __init__(self, transform_list: List[FeatureTransform]):
         self.transform_list = transform_list
 
@@ -71,30 +71,31 @@ class SequentialTransform(FeatureTransform):
 
 
 class Power(FeatureTransform):
-
     def __init__(self, beta: float):
         self.beta = beta
-        self.name = 'PowerTransform'
+        self.name = "PowerTransform"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         # assert torch.all(raw_feat_s > 0) and torch.all(raw_feat_q > 0), (raw_feat_s.min(), raw_feat_q.min())
-        return torch.pow(raw_feat_s.relu() + 1e-6, self.beta), torch.pow(raw_feat_q.relu() + 1e-6, self.beta)
+        return torch.pow(raw_feat_s.relu() + 1e-6, self.beta), torch.pow(
+            raw_feat_q.relu() + 1e-6, self.beta
+        )
 
 
 class QRreduction(FeatureTransform):
 
-    name = 'QRreduction'
+    name = "QRreduction"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         all_features = torch.cat([raw_feat_s, raw_feat_q], 0)
         all_features = torch.qr(all_features.t()).R
         all_features = all_features.t()
-        return all_features[:raw_feat_s.size(0)], all_features[raw_feat_s.size(0):]
+        return all_features[: raw_feat_s.size(0)], all_features[raw_feat_s.size(0) :]
 
 
 class Trivial(FeatureTransform):
 
-    name = 'Trivial'
+    name = "Trivial"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         return raw_feat_s, raw_feat_q
@@ -102,13 +103,13 @@ class Trivial(FeatureTransform):
 
 class BaseCentering(FeatureTransform):
 
-    name = 'Base Centering'
+    name = "Base Centering"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
         """
-        train_mean: Tensor = kwargs['train_mean']
+        train_mean: Tensor = kwargs["train_mean"]
         # train_mean = train_mean.unsqueeze(0)
         if len(train_mean.size()) > len(raw_feat_s.size()):
             mean = train_mean.squeeze(-1).squeeze(-1)
@@ -120,7 +121,6 @@ class BaseCentering(FeatureTransform):
 
 
 class L2norm(FeatureTransform):
-
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
@@ -130,7 +130,6 @@ class L2norm(FeatureTransform):
 
 
 class Pool(FeatureTransform):
-
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]
@@ -142,14 +141,20 @@ class Pool(FeatureTransform):
 
 
 class DebiasedCentering(FeatureTransform):
-
     def __init__(self, ratio: float):
         self.ratio = ratio
 
     def compute_mean(self, feat_s, feat_q, **kwargs):
         prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
-        nodes_degrees = torch.cdist(F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)).sum(-1, keepdim=True)  # [N]
-        farthest_points = nodes_degrees.topk(dim=0, k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // self.ratio))).indices.squeeze()
+        nodes_degrees = torch.cdist(
+            F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)
+        ).sum(
+            -1, keepdim=True
+        )  # [N]
+        farthest_points = nodes_degrees.topk(
+            dim=0,
+            k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // self.ratio)),
+        ).indices.squeeze()
         mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
         return mean
 
@@ -164,7 +169,6 @@ class DebiasedCentering(FeatureTransform):
 
 
 class MeanCentering(FeatureTransform):
-
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """
         feat: Tensor shape [N, hidden_dim, *]

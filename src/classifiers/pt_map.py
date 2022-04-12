@@ -14,20 +14,29 @@ class MAP(FewShotMethod):
         self.inference_steps = inference_steps
         self.lam = lam
 
-    def forward(self,
-                support_features: Tensor,
-                query_features: Tensor,
-                support_labels: Tensor,
-                **kwargs):
+    def forward(
+        self,
+        support_features: Tensor,
+        query_features: Tensor,
+        support_labels: Tensor,
+        **kwargs
+    ):
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
-        support_features, unlabelled_data, query_features = support_features.cuda(), unlabelled_data.cuda(), query_features.cuda()
-        support_labels, query_labels = support_labels.cuda(), kwargs['query_labels'].cuda()
-        inliers = ~ kwargs['outliers'].bool().cuda()
+        support_features, unlabelled_data, query_features = (
+            support_features.cuda(),
+            unlabelled_data.cuda(),
+            query_features.cuda(),
+        )
+        support_labels, query_labels = (
+            support_labels.cuda(),
+            kwargs["query_labels"].cuda(),
+        )
+        inliers = ~kwargs["outliers"].bool().cuda()
 
         self.prototypes = compute_prototypes(support_features, support_labels)
         num_classes = support_labels.unique().size(0)
@@ -42,12 +51,20 @@ class MAP(FewShotMethod):
             # update centroids
             self.update_prototypes(all_features, all_probs)
 
-            acc_values.append((self.get_probas(query_features).argmax(-1) == query_labels)[inliers].float().mean().item())
+            acc_values.append(
+                (self.get_probas(query_features).argmax(-1) == query_labels)[inliers]
+                .float()
+                .mean()
+                .item()
+            )
 
-        kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
+        kwargs["intra_task_metrics"]["classifier_metrics"]["acc"].append(acc_values)
 
         # get final accuracy and return it
-        return self.get_probas(support_features).cpu(), self.get_probas(query_features).cpu()
+        return (
+            self.get_probas(support_features).cpu(),
+            self.get_probas(query_features).cpu(),
+        )
 
     def compute_optimal_transport(self, M, r, c, epsilon=1e-6):
 
@@ -58,7 +75,7 @@ class MAP(FewShotMethod):
         r = r.cuda()
         c = c.cuda()
         n, m = M.shape
-        P = torch.exp(- self.lam * M)
+        P = torch.exp(-self.lam * M)
         P /= P.sum(dim=(0, 1), keepdim=True)
 
         u = torch.zeros(n).cuda()

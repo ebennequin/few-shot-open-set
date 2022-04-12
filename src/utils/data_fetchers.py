@@ -10,8 +10,16 @@ from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from loguru import logger
-from src.datasets import FewShotCIFAR100, MiniImageNet, CUB, FeaturesDataset, TieredImageNet, \
-                         FeatTieredImageNet, ImageNet, Aircraft
+from src.datasets import (
+    FewShotCIFAR100,
+    MiniImageNet,
+    CUB,
+    FeaturesDataset,
+    TieredImageNet,
+    FeatTieredImageNet,
+    ImageNet,
+    Aircraft,
+)
 from src.sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
@@ -38,7 +46,7 @@ def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
 
 def get_cifar_set(args, split, training):
     return FewShotCIFAR100(
-        root=Path(args.data_dir) / 'cifar',
+        root=Path(args.data_dir) / "cifar",
         args=args,
         split=split,
         training=training,
@@ -47,7 +55,7 @@ def get_cifar_set(args, split, training):
 
 def get_mini_imagenet_set(args, split, training):
     return MiniImageNet(
-        root=Path(args.data_dir) / 'mini_imagenet',
+        root=Path(args.data_dir) / "mini_imagenet",
         args=args,
         split=split,
         training=training,
@@ -56,7 +64,7 @@ def get_mini_imagenet_set(args, split, training):
 
 def get_aircraft_set(args, split, training):
     return Aircraft(
-        root=Path(args.data_dir) / 'fgvc-aircraft-2013b' / 'data',
+        root=Path(args.data_dir) / "fgvc-aircraft-2013b" / "data",
         args=args,
         split=split,
         training=training,
@@ -65,7 +73,7 @@ def get_aircraft_set(args, split, training):
 
 def get_imagenet_set(args, split, training):
     return ImageNet(
-        root=Path(args.data_dir) / 'ilsvrc_2012',
+        root=Path(args.data_dir) / "ilsvrc_2012",
         args=args,
         split=split,
         training=training,
@@ -73,17 +81,17 @@ def get_imagenet_set(args, split, training):
 
 
 def get_tiered_imagenet_set(args, split, training):
-    if args.model_source == 'feat':
+    if args.model_source == "feat":
         logger.warning("Return FEAT version of Tiered-ImageNet ! ")
         return FeatTieredImageNet(
-                root=Path(args.data_dir) / 'tiered_imagenet',
-                args=args,
-                split=split,
-                training=training,
-                )
+            root=Path(args.data_dir) / "tiered_imagenet",
+            args=args,
+            split=split,
+            training=training,
+        )
     else:
         return TieredImageNet(
-            root=Path(args.data_dir) / 'tiered_imagenet',
+            root=Path(args.data_dir) / "tiered_imagenet",
             args=args,
             split=split,
             training=training,
@@ -92,7 +100,7 @@ def get_tiered_imagenet_set(args, split, training):
 
 def get_cub_set(args, split, training):
     return CUB(
-        root=Path(args.data_dir) / 'cub',
+        root=Path(args.data_dir) / "cub",
         args=args,
         split=split,
         training=training,
@@ -117,19 +125,44 @@ def get_dataset(dataset_name, args, split, training):
     return dataset
 
 
-def get_classic_loader(args, dataset_name, training=False, shuffle=False, split="train", batch_size=1024, world_size=1, n_workers=6):
+def get_classic_loader(
+    args,
+    dataset_name,
+    training=False,
+    shuffle=False,
+    split="train",
+    batch_size=1024,
+    world_size=1,
+    n_workers=6,
+):
 
     dataset = get_dataset(dataset_name, args, split, training)
     sampler = DistributedSampler(dataset, shuffle=True) if (world_size > 1) else None
     batch_size = int(args.batch_size / world_size) if (world_size > 1) else batch_size
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=n_workers,
-                             sampler=sampler, pin_memory=True, shuffle=shuffle and (sampler is None))
+    data_loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=n_workers,
+        sampler=sampler,
+        pin_memory=True,
+        shuffle=shuffle and (sampler is None),
+    )
     return dataset, sampler, data_loader
 
 
-def get_task_loader(args, split: str, dataset_name: str, n_way: int,
-                    n_shot: int, n_id_query: int, n_ood_query: int, n_tasks: int, n_workers: int,
-                    features_dict=None, training: bool = False):
+def get_task_loader(
+    args,
+    split: str,
+    dataset_name: str,
+    n_way: int,
+    n_shot: int,
+    n_id_query: int,
+    n_ood_query: int,
+    n_tasks: int,
+    n_workers: int,
+    features_dict=None,
+    training: bool = False,
+):
 
     if features_dict is not None:
         dataset = FeaturesDataset(features_dict)
@@ -153,15 +186,19 @@ def get_task_loader(args, split: str, dataset_name: str, n_way: int,
             n_ood_query=n_ood_query,
             n_tasks=n_tasks,
             balanced=args.balanced_tasks,
-            alpha=args.alpha
+            alpha=args.alpha,
         )
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 
-def get_train_features(backbone, dataset, training_method, layer, path: Optional[Path] = None):
+def get_train_features(
+    backbone, dataset, training_method, layer, path: Optional[Path] = None
+):
 
     pickle_basename = f"{backbone}_{dataset}_{training_method}_{layer}.pickle"
-    avg_train_features_path = Path("data/features") / dataset / "train" / pickle_basename
+    avg_train_features_path = (
+        Path("data/features") / dataset / "train" / pickle_basename
+    )
 
     # We also load features from the train set to center query features on the average train set
     # feature vector
@@ -173,13 +210,37 @@ def get_train_features(backbone, dataset, training_method, layer, path: Optional
     return average_train_features, std_train_features
 
 
-def get_test_features(data_dir, backbone, src_dataset, tgt_dataset, training_method, model_source,
-                      layer, path: Optional[Path] = None) -> Tuple[Dict, Dict, ndarray]:
+def get_test_features(
+    data_dir,
+    backbone,
+    src_dataset,
+    tgt_dataset,
+    training_method,
+    model_source,
+    layer,
+    path: Optional[Path] = None,
+) -> Tuple[Dict, Dict, ndarray]:
     if not isinstance(data_dir, Path):
         data_dir = Path(data_dir)
     pickle_basename = f"{backbone}_{src_dataset}_{model_source}_{layer}.pickle"
-    features_path = data_dir / "features" / src_dataset / tgt_dataset / "test" / training_method / pickle_basename
-    avg_train_features_path = data_dir / "features" / src_dataset / tgt_dataset / "train" / training_method / pickle_basename
+    features_path = (
+        data_dir
+        / "features"
+        / src_dataset
+        / tgt_dataset
+        / "test"
+        / training_method
+        / pickle_basename
+    )
+    avg_train_features_path = (
+        data_dir
+        / "features"
+        / src_dataset
+        / tgt_dataset
+        / "train"
+        / training_method
+        / pickle_basename
+    )
     logger.info(f"Loading features from {features_path}")
 
     with open(features_path, "rb") as stream:

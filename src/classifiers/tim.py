@@ -38,8 +38,8 @@ class TIM_GD(AbstractTIM):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
@@ -82,20 +82,35 @@ class TIM_GD(AbstractTIM):
             optimizer.step()
 
             with torch.no_grad():
-                q_probs = self.get_logits_from_cosine_distances_to_prototypes(query_features)
+                q_probs = self.get_logits_from_cosine_distances_to_prototypes(
+                    query_features
+                )
                 q_cond_ent_values.append(q_cond_ent.item())
                 q_ent_values.append(q_ent.item())
                 ce_values.append(ce.item())
-                inliers = ~ kwargs['outliers'].bool()
-                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
+                inliers = ~kwargs["outliers"].bool()
+                acc_values.append(
+                    (q_probs.argmax(-1) == kwargs["query_labels"])[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
 
-        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['classifier_metrics']['acc'].append(acc_values)
+        kwargs["intra_task_metrics"]["classifier_losses"]["cond_ent"].append(
+            q_cond_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["marg_ent"].append(
+            q_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
+        kwargs["intra_task_metrics"]["classifier_metrics"]["acc"].append(acc_values)
 
         with torch.no_grad():
-            probas_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(-1)
-            probas_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+            probas_s = self.get_logits_from_cosine_distances_to_prototypes(
+                support_features
+            ).softmax(-1)
+            probas_q = self.get_logits_from_cosine_distances_to_prototypes(
+                query_features
+            ).softmax(-1)
 
         return probas_s, probas_q

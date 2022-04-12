@@ -6,7 +6,6 @@ from loguru import logger
 
 
 class OpenMatch(SSLMethod):
-
     def __init__(self, args, pretrain_iter, lambda_oem, lambda_socr, **kwargs):
         print(kwargs)
         super().__init__(args, **kwargs)
@@ -31,7 +30,9 @@ class OpenMatch(SSLMethod):
         outlier_scores = out_open[tmp_range, 0, cls_preds]
         return outlier_scores
 
-    def update_detector(self, weak_feat_s, weak_feat_q, strong_feat_q, support_labels, **kwargs):
+    def update_detector(
+        self, weak_feat_s, weak_feat_q, strong_feat_q, support_labels, **kwargs
+    ):
 
         logits_ood_ws = self.outlier_head(weak_feat_s)
         logits_ood_wq = self.outlier_head(weak_feat_q)
@@ -41,8 +42,8 @@ class OpenMatch(SSLMethod):
 
         # Open-set entropy minimization
 
-        l_oem = ova_ent(logits_ood_wq) / 2.
-        l_oem += ova_ent(logits_ood_sq) / 2.
+        l_oem = ova_ent(logits_ood_wq) / 2.0
+        l_oem += ova_ent(logits_ood_sq) / 2.0
 
         # Soft consistenty regularization
 
@@ -51,8 +52,9 @@ class OpenMatch(SSLMethod):
         logits_open_u1 = F.softmax(logits_open_u1, 1)
         logits_open_u2 = F.softmax(logits_open_u2, 1)
         # logger.warning((logits_open_u1.size(), logits_open_u2.size()))
-        l_socr = torch.mean(torch.sum(torch.sum(torch.abs(
-            logits_open_u1 - logits_open_u2)**2, 1), 1))
+        l_socr = torch.mean(
+            torch.sum(torch.sum(torch.abs(logits_open_u1 - logits_open_u2) ** 2, 1), 1)
+        )
 
         detector_loss = l_ova + self.lambda_oem * l_oem + self.lambda_socr * l_socr
 
@@ -62,21 +64,27 @@ class OpenMatch(SSLMethod):
         """
         query_images [Ns, d]
         """
-        intra_task_metrics = kwargs['intra_task_metrics']
+        intra_task_metrics = kwargs["intra_task_metrics"]
 
         # ====== Initialize modules =====
         support_labels = support_labels.cuda()
 
-        feature_extractor = kwargs['feature_extractor']
+        feature_extractor = kwargs["feature_extractor"]
         feature_extractor.eval()
         feature_extractor.requires_grad_(False)
         num_classes = support_labels.unique().size(0)
 
-        self.classification_head = nn.Linear(feature_extractor.layer_dims[-1], num_classes).cuda()
-        self.outlier_head = nn.Linear(feature_extractor.layer_dims[-1], 2 * num_classes, bias=False).cuda()
-        self.optimizer = torch.optim.Adam(list(self.classification_head.parameters()) + \
-                                          list(self.outlier_head.parameters()),
-                                          lr=self.lr)
+        self.classification_head = nn.Linear(
+            feature_extractor.layer_dims[-1], num_classes
+        ).cuda()
+        self.outlier_head = nn.Linear(
+            feature_extractor.layer_dims[-1], 2 * num_classes, bias=False
+        ).cuda()
+        self.optimizer = torch.optim.Adam(
+            list(self.classification_head.parameters())
+            + list(self.outlier_head.parameters()),
+            lr=self.lr,
+        )
 
         # ===== Pre-train =====
         l_sups = []
@@ -98,7 +106,9 @@ class OpenMatch(SSLMethod):
 
             # Open-set entropy minimization
 
-            detector_loss = self.update_detector(weak_feat_s, weak_feat_q, strong_feat_q, support_labels)
+            detector_loss = self.update_detector(
+                weak_feat_s, weak_feat_q, strong_feat_q, support_labels
+            )
             loss = l_sup + detector_loss
 
             # compute gradient and do SGD step
@@ -107,15 +117,20 @@ class OpenMatch(SSLMethod):
             self.optimizer.step()
 
             l_sups.append(l_sup.item())
-            accs.append((logits_cls_wq.argmax(-1) == kwargs['query_labels'].cuda()).float().mean().item())
+            accs.append(
+                (logits_cls_wq.argmax(-1) == kwargs["query_labels"].cuda())
+                .float()
+                .mean()
+                .item()
+            )
             detector_losses.append(detector_loss.item())
             aucs.append(self.compute_auc(weak_feat_q, **kwargs))
 
         # ===== Perform standard SSL inference =====
-        kwargs['intra_task_metrics']['main_losses']['sup'].append(l_sups)
-        kwargs['intra_task_metrics']['main_losses']['detector'].append(detector_losses)
-        kwargs['intra_task_metrics']['metrics']['acc'].append(accs)
-        kwargs['intra_task_metrics']['metrics']['auc'].append(aucs)
+        kwargs["intra_task_metrics"]["main_losses"]["sup"].append(l_sups)
+        kwargs["intra_task_metrics"]["main_losses"]["detector"].append(detector_losses)
+        kwargs["intra_task_metrics"]["metrics"]["acc"].append(accs)
+        kwargs["intra_task_metrics"]["metrics"]["auc"].append(aucs)
 
         return super().__call__(support_images, support_labels, query_images, **kwargs)
 
@@ -129,15 +144,18 @@ def ova_loss(logits_open, label):
     """
     logits_open = logits_open.view(logits_open.size(0), 2, -1)  # [N, 2, K]
     logits_open = F.softmax(logits_open, 1)  # [N, 2, k]
-    label_s_sp = torch.zeros((logits_open.size(0),
-                              logits_open.size(2))).long().to(label.device)  # [N, K]
+    label_s_sp = (
+        torch.zeros((logits_open.size(0), logits_open.size(2))).long().to(label.device)
+    )  # [N, K]
     label_range = torch.arange(0, logits_open.size(0)).long()
     label_s_sp[label_range, label] = 1
     label_sp_neg = 1 - label_s_sp
-    open_loss = torch.mean(torch.sum(-torch.log(logits_open[:, 1, :]
-                                                + 1e-8) * label_s_sp, 1))
-    open_loss_neg = torch.mean(torch.max(-torch.log(logits_open[:, 0, :]
-                                                    + 1e-8) * label_sp_neg, 1)[0])
+    open_loss = torch.mean(
+        torch.sum(-torch.log(logits_open[:, 1, :] + 1e-8) * label_s_sp, 1)
+    )
+    open_loss_neg = torch.mean(
+        torch.max(-torch.log(logits_open[:, 0, :] + 1e-8) * label_sp_neg, 1)[0]
+    )
     Lo = open_loss_neg + open_loss
     return Lo
 
@@ -145,6 +163,7 @@ def ova_loss(logits_open, label):
 def ova_ent(logits_open):
     logits_open = logits_open.view(logits_open.size(0), 2, -1)
     logits_open = F.softmax(logits_open, 1)
-    Le = torch.mean(torch.mean(torch.sum(-logits_open *
-                               torch.log(logits_open + 1e-8), 1), 1))
+    Le = torch.mean(
+        torch.mean(torch.sum(-logits_open * torch.log(logits_open + 1e-8), 1), 1)
+    )
     return Le

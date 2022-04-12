@@ -7,7 +7,6 @@ from loguru import logger
 
 
 class MTC(SSLMethod):
-
     def __init__(self, args, pretrain_iter, **kwargs):
         print(kwargs)
         super().__init__(args, **kwargs)
@@ -28,7 +27,9 @@ class MTC(SSLMethod):
 
         outlier_logits = self.outlier_head(query_features).squeeze()
         outlier_probs = torch.sigmoid(outlier_logits)
-        loss = F.binary_cross_entropy_with_logits(outlier_logits, self.weights)  # This will provide a signal
+        loss = F.binary_cross_entropy_with_logits(
+            outlier_logits, self.weights
+        )  # This will provide a signal
 
         self.count += 1
 
@@ -47,21 +48,27 @@ class MTC(SSLMethod):
         """
         # ====== Initialize modules =====
 
-        feature_extractor = kwargs['feature_extractor']
+        feature_extractor = kwargs["feature_extractor"]
         feature_extractor.eval()
         feature_extractor.requires_grad_(False)
         num_classes = support_labels.unique().size(0)
-        self.classification_head = nn.Linear(feature_extractor.layer_dims[-1], num_classes).cuda()
+        self.classification_head = nn.Linear(
+            feature_extractor.layer_dims[-1], num_classes
+        ).cuda()
 
         self.outlier_head = nn.Linear(feature_extractor.layer_dims[-1], 1).cuda()
         self.weights = torch.ones(len(query_images)).cuda()
         self.prediction_history = torch.zeros(len(query_images), 10).cuda()
-        self.optimizer = torch.optim.Adam(list(self.classification_head.parameters()) + \
-                                          list(self.outlier_head.parameters()),
-                                          lr=self.lr)
+        self.optimizer = torch.optim.Adam(
+            list(self.classification_head.parameters())
+            + list(self.outlier_head.parameters()),
+            lr=self.lr,
+        )
 
         # ===== Pre-train feature detector =====
-        outlier_labels = torch.cat([torch.zeros(len(support_images)).cuda(), self.weights])
+        outlier_labels = torch.cat(
+            [torch.zeros(len(support_images)).cuda(), self.weights]
+        )
         for i in range(self.pretrain_iter):
             weak_feat_s = self.extract_weak(feature_extractor, support_images)
             weak_feat_q = self.extract_weak(feature_extractor, query_images)
@@ -344,7 +351,7 @@ class MTC(SSLMethod):
 #             for inputs in val_loader_s:
 
 #                 inputs = inputs.cuda()
-                
+
 #                 # compute output
 #                 features = feature_extractor(inputs, ['last'])['last']
 #                 soft_preds_s.append(classification_head(features))
@@ -352,7 +359,7 @@ class MTC(SSLMethod):
 #             for inputs in val_loader_q:
 
 #                 inputs = inputs.cuda()
-                
+
 #                 # compute output
 #                 features = feature_extractor(inputs, ['last'])['last']
 #                 outlier_scores.append(outlier_head(features))

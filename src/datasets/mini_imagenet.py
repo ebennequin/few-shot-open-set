@@ -100,22 +100,20 @@ class MiniImageNet(VisionDataset):
         training: bool = False,
     ):
 
-        image_path = root / 'images'
+        image_path = root / "images"
         transform = get_transforms(args)
         super(MiniImageNet, self).__init__(
             str(image_path), transform=transform, target_transform=target_transform
         )
 
         # Get images and labels
-        data_df = pd.read_csv(root / 'specs' / f"{split}_images.csv").assign(
+        data_df = pd.read_csv(root / "specs" / f"{split}_images.csv").assign(
             image_paths=lambda df: df.apply(
                 lambda row: image_path / row["class_name"] / row["image_name"], axis=1
             )
         )
 
-        self.images = [
-                image_path for image_path in tqdm(data_df.image_paths)
-            ]
+        self.images = [image_path for image_path in tqdm(data_df.image_paths)]
 
         self.class_list = data_df.class_name.unique()
         self.id_to_class = dict(enumerate(self.class_list))

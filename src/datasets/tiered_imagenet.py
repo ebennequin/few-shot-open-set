@@ -23,14 +23,14 @@ class FeatTieredImageNet(VisionDataset):
         training: bool = False,
     ):
         transform = get_transforms(args)
-       
+
         super(FeatTieredImageNet, self).__init__(
             str(root), transform=transform, target_transform=target_transform
         )
 
         # Get images and labels
-        self.labels = self.load_data_from_pkl(root / f'{split}_labels.pkl')['labels']
-        self.images = np.load(root / f'{split}_images.npz')['images']
+        self.labels = self.load_data_from_pkl(root / f"{split}_labels.pkl")["labels"]
+        self.images = np.load(root / f"{split}_images.npz")["images"]
         self.class_list = set(self.labels)
         self.id_to_class = dict(enumerate(self.class_list))
         self.class_to_id = {v: k for k, v in self.id_to_class.items()}
@@ -40,13 +40,13 @@ class FeatTieredImageNet(VisionDataset):
 
     def load_data_from_pkl(self, file):
         try:
-            with open(file, 'rb') as fo:
+            with open(file, "rb") as fo:
                 data = pickle.load(fo)
             return data
         except:
-            with open(file, 'rb') as f:
+            with open(file, "rb") as f:
                 u = pickle._Unpickler(f)
-                u.encoding = 'latin1'
+                u.encoding = "latin1"
                 data = u.load()
             return data
 
@@ -73,16 +73,16 @@ class TieredImageNet(VisionDataset):
         training: bool = False,
     ):
         transform = get_transforms(args)
-        images_path = root / 'images'
+        images_path = root / "images"
         super(TieredImageNet, self).__init__(
             str(images_path), transform=transform, target_transform=target_transform
         )
 
         # Get images and labels
-        with open(root / 'specs' / f'{split}.json', "r") as file:
+        with open(root / "specs" / f"{split}.json", "r") as file:
             split_dict = json.load(file)
 
-        self.class_list = split_dict['class_names']
+        self.class_list = split_dict["class_names"]
         self.id_to_class = dict(enumerate(self.class_list))
         self.class_to_id = {v: k for k, v in self.id_to_class.items()}
         images = []

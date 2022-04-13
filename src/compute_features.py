@@ -51,7 +51,7 @@ def main(args):
                                         layers=args.layers)
 
     # if output_file is None:
-    for layer in features:
+    for layer in args.layers:
         pickle_name = Path(stem + f'_{layer}').with_suffix(f".pickle").name
         output_file = Path('data') / 'features' / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
         output_file.parent.mkdir(parents=True, exist_ok=True)

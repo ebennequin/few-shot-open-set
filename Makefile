@@ -108,11 +108,11 @@ run:
 
 extract_standard:
 	# Extract for RN and WRN
-	for tgt_dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12 wrn2810; do \
-			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
+#	for tgt_dataset in mini_imagenet tiered_imagenet; do \
+#		for backbone in resnet12 wrn2810; do \
+#			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+#		done ;\
+#	done ;\
 
 	# Extract for cross-domain
 	for tgt_dataset in cub aircraft; do \

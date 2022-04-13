@@ -11,10 +11,19 @@ import sklearn
 from sklearn.manifold import TSNE
 import streamlit as st
 
-from src.constants import FEATURES_DIR
+
+from src.utils.data_fetchers import get_test_features
 
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
-
+DATA_ROOT = Path("data")
+DATASETS_LIST = ["mini_imagenet", "imagenet", "tiered_imagenet", "cub", "aircraft"]
+MODELS_LIST = [
+    "resnet12",
+    "wrn2810",
+    "deit_tiny_patch16_224",
+    "ssl_resnext101_32x16d",
+    "vit_base_patch16_224_in21k",
+]
 
 def get_class_names(dataset, key):
     selected_specs_file = st.selectbox(
@@ -145,21 +154,47 @@ def plot_clusters(key):
     selectors_col, plot_col = st.columns([2, 3])
     with selectors_col:
         st.title("Select stuff")
-        selected_dataset = st.selectbox(
-            "Dataset",
-            list(FEATURES_DIR.glob("*")),
+        source_dataset = st.selectbox(
+            "Source dataset",
+            DATASETS_LIST,
             format_func=lambda path: path.name,
             key=key,
         )
-        feature_paths_for_selected_dataset = list(selected_dataset.glob("**/*.pickle"))
-        selected_features_path = st.selectbox(
-            "Features",
-            feature_paths_for_selected_dataset,
-            format_func=lambda path: f"{path.parent.name}/{path.name}",
+        target_dataset = st.selectbox(
+            "Target dataset",
+            DATASETS_LIST,
             key=key,
         )
+        backbone = st.selectbox(
+            "Model",
+            MODELS_LIST,
+            key=key,
+        )
+        model_source = st.selectbox(
+            "Model source",
+            ["url", "feat"],
+            key=key,
+        )
+        layer = st.selectbox(
+            "Layer",
+            ["4_4", "last", "4_3"],
+            key=key,
+        )
+        try:
+            features, train_features, average_train_features, std_train_features = get_test_features(
+                data_dir=DATA_ROOT,
+                backbone=backbone,
+                src_dataset=source_dataset,
+                tgt_dataset=target_dataset,
+                training_method="standard",
+                model_source=model_source,
+                layer=layer,
+            )
+        except FileNotFoundError:
+            st.write("No features for this combination")
+            return
 
-        class_names = get_class_names(selected_dataset.name, key)
+        class_names = get_class_names(target_dataset, key)
         selected_classes = select_classes(class_names, key)
 
         print_clustering_statistics_for_all_features(feature_paths_for_selected_dataset)

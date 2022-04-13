@@ -22,7 +22,9 @@ class FewShotMethod(nn.Module):
         self.prototypes: Tensor
 
     def compute_auc(self, outlierness, **kwargs):
-        fp_rate, tp_rate, thresholds = roc_curve(kwargs['outliers'].numpy(), outlierness.cpu().numpy())
+        fp_rate, tp_rate, thresholds = roc_curve(
+            kwargs["outliers"].numpy(), outlierness.cpu().numpy()
+        )
         return auc_fn(fp_rate, tp_rate)
 
     def forward(

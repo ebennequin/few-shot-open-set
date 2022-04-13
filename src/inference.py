@@ -290,7 +290,7 @@ def main(args):
         train_mean = {}
         train_std = {}
         for i, layer in enumerate(args.layers):
-            features, _, train_mean[i], train_std[i] = get_test_features(
+            features, _, train_mean[i], train_std[i], _, _ = get_test_features(
                 args.data_dir,
                 args.backbone,
                 args.src_dataset,

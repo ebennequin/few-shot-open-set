@@ -25,6 +25,7 @@ MODELS_LIST = [
     "vit_base_patch16_224_in21k",
 ]
 
+
 def get_class_names(dataset, key):
     selected_specs_file = st.selectbox(
         "Specs",
@@ -84,16 +85,17 @@ def compute_2d_features(features: Dict[int, ndarray]) -> pd.DataFrame:
     ).assign(x=reduced_features[:, 0], y=reduced_features[:, 1])
 
 
-def compute_or_retrieve_2d_features(features_path):
+def compute_or_retrieve_2d_features(features_path, features=None):
     # TODO : if features change or the method changes, this will not recompute 2d features
     reduced_features_file_name = features_path.with_name(f"{features_path.stem}_2d.csv")
     if reduced_features_file_name.is_file():
         reduced_features = pd.read_csv(reduced_features_file_name)
     else:
         st.write("Computing TSNE...")
-        with open(features_path, "rb") as stream:
-            selected_features = pickle.load(stream)
-        reduced_features = compute_2d_features(selected_features)
+        if features is None:
+            with open(features_path, "rb") as stream:
+                features = pickle.load(stream)
+        reduced_features = compute_2d_features(features)
         reduced_features.to_csv(reduced_features_file_name, index=False)
     return reduced_features
 
@@ -181,7 +183,14 @@ def plot_clusters(key):
             key=key,
         )
         try:
-            features, train_features, average_train_features, std_train_features = get_test_features(
+            (
+                test_features,
+                train_features,
+                average_train_features,
+                std_train_features,
+                test_features_path,
+                train_features_path,
+            ) = get_test_features(
                 data_dir=DATA_ROOT,
                 backbone=backbone,
                 src_dataset=source_dataset,
@@ -197,10 +206,12 @@ def plot_clusters(key):
         class_names = get_class_names(target_dataset, key)
         selected_classes = select_classes(class_names, key)
 
-        print_clustering_statistics_for_all_features(feature_paths_for_selected_dataset)
+        # print_clustering_statistics_for_all_features(feature_paths_for_selected_dataset)
 
     with plot_col:
-        reduced_features = compute_or_retrieve_2d_features(selected_features_path)
+        reduced_features = compute_or_retrieve_2d_features(
+            test_features_path, test_features
+        )
         reduced_features = map_label(reduced_features, class_names)
         st.title("Look at all those clusters")
         plot_2d_features(reduced_features, selected_classes)

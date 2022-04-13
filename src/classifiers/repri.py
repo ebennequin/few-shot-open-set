@@ -42,11 +42,14 @@ class RePRI(FewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        support_features, query_features = support_features.cuda(), query_features.cuda()
-        inliers = ~ kwargs['outliers'].bool().cuda()
+        support_features, query_features = (
+            support_features.cuda(),
+            query_features.cuda(),
+        )
+        inliers = ~kwargs["outliers"].bool().cuda()
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
@@ -56,14 +59,20 @@ class RePRI(FewShotMethod):
         # Metric dic
         num_classes = support_labels.unique().size(0)
         support_labels_one_hot = F.one_hot(support_labels, num_classes).cuda()
-        support_labels, query_labels = support_labels.cuda(), kwargs['query_labels'].cuda()
+        support_labels, query_labels = (
+            support_labels.cuda(),
+            kwargs["query_labels"].cuda(),
+        )
 
         # Initialize weights
-        if self.init == 'base':
-            mu = kwargs['train_mean'].squeeze().cuda()
-        elif self.init == 'rand':
-            mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True) + 0.1 * torch.randn(self.ensemble_size, 1, raw_feat_s.size(-1)).cuda()
-        elif self.init == 'mean':
+        if self.init == "base":
+            mu = kwargs["train_mean"].squeeze().cuda()
+        elif self.init == "rand":
+            mu = (
+                torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
+                + 0.1 * torch.randn(self.ensemble_size, 1, raw_feat_s.size(-1)).cuda()
+            )
+        elif self.init == "mean":
             mu = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
         mu.requires_grad_()
 
@@ -110,7 +119,11 @@ class RePRI(FewShotMethod):
                 pi = marginal_y.detach().clone()
             div = (pi - marginal_y).abs().sum(-1)  # [ens]
 
-            loss = (self.loss_weights[0] * ce + self.loss_weights[1] * div + self.loss_weights[2] * q_cond_ent.mean(-1)).sum(0)
+            loss = (
+                self.loss_weights[0] * ce
+                + self.loss_weights[1] * div
+                + self.loss_weights[2] * q_cond_ent.mean(-1)
+            ).sum(0)
 
             optimizer.zero_grad()
             loss.backward()
@@ -120,25 +133,50 @@ class RePRI(FewShotMethod):
                 q_cond_ent_values.append(q_cond_ent.mean().item())
                 q_ent_values.append(div.mean(0).item())
                 ce_values.append(ce.mean(0).item())
-                acc_values.append((q_probs.mean(0).argmax(-1) == query_labels)[inliers].float().mean().item())
+                acc_values.append(
+                    (q_probs.mean(0).argmax(-1) == query_labels)[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
                 inlier_entropy.append(q_cond_ent[:, inliers].mean().item())
                 outlier_entropy.append(q_cond_ent[:, ~inliers].mean().item())
                 aucs.append(self.compute_auc(q_cond_ent.mean(0), **kwargs))
                 thresh = threshold_otsu(q_cond_ent.mean(0).cpu().numpy())
-                believed_inliers = (q_cond_ent.mean(0) < thresh)
+                believed_inliers = q_cond_ent.mean(0) < thresh
                 acc_otsu.append((believed_inliers == inliers).float().mean().item())
 
-        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
-        kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
-        kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
+        kwargs["intra_task_metrics"]["classifier_losses"]["cond_ent"].append(
+            q_cond_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["marg_ent"].append(
+            q_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
+        kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
+            inlier_entropy
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["outlier_entropy"].append(
+            outlier_entropy
+        )
 
         with torch.no_grad():
-            probas_s = self.get_logits_from_cosine_distances_to_prototypes(support_features - mu).softmax(-1).mean(0).cpu()
-            probas_q = self.get_logits_from_cosine_distances_to_prototypes(query_features - mu).softmax(-1).mean(0).cpu()
+            probas_s = (
+                self.get_logits_from_cosine_distances_to_prototypes(
+                    support_features - mu
+                )
+                .softmax(-1)
+                .mean(0)
+                .cpu()
+            )
+            probas_q = (
+                self.get_logits_from_cosine_distances_to_prototypes(query_features - mu)
+                .softmax(-1)
+                .mean(0)
+                .cpu()
+            )
 
         return probas_s, probas_q

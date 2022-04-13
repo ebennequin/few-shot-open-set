@@ -234,4 +234,11 @@ def get_test_features(
         assert len(train_features) == 2
         average_train_features = train_features[0].unsqueeze(0)
         std_train_features = train_features[1].unsqueeze(0)
-    return features, train_features, average_train_features, std_train_features
+    return (
+        features,
+        train_features,
+        average_train_features,
+        std_train_features,
+        features_path,
+        avg_train_features_path,
+    )

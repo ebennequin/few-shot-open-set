@@ -20,6 +20,7 @@ class OOD_TIM(FewShotMethod):
         lambda_: float,
         init: str,
         params2adapt: str,
+        knn: str,
         lambda_ce: float,
         lambda_marg: float,
         lambda_em: float,
@@ -33,14 +34,35 @@ class OOD_TIM(FewShotMethod):
         self.softmax_temperature = softmax_temperature
         self.lambda_ = lambda_
         self.params2adapt = params2adapt
+        self.knn = knn
         self.init = init
 
-    def get_logits_from_cosine_distances_to_prototypes(self, samples):
-        return (
-            self.softmax_temperature
-            * F.normalize(samples - self.mu, dim=1)
-            @ F.normalize(self.prototypes - self.mu, dim=1).T
-        )
+    def cosine(self, X, Y):
+        return (F.normalize(X - self.mu, dim=1)
+                @ F.normalize(Y - self.mu, dim=1).T
+                )
+
+    def get_logits(self, support_labels, support_features, query_features, bias=True):
+
+        cossim = self.cosine(query_features, support_features)  # [Nq, Ns]
+        sorted_cossim = cossim.sort(descending=True, dim=-1).values  # [Nq, Ns]
+        # sorted_cossim = cossim[:, sorted_indexes]
+        logits = []
+
+        # Class logits
+        for class_ in range(support_labels.unique().size(0)):
+            masked_cossim = cossim[:, support_labels == class_]
+            knn = min(self.knn, masked_cossim.size(-1))
+            class_cossim = masked_cossim.topk(knn, dim=-1).values  # [Nq, Ns]
+            logits.append(class_cossim.mean(-1))  # [Nq]
+
+        # Outlier logit
+        logits.append(- sorted_cossim[:, :self.knn].mean(-1))
+        logits = torch.stack(logits, dim=1)
+        if bias:
+            return self.softmax_temperature * logits - self.biases
+        else:
+            return self.softmax_temperature * logits
 
     def forward(
         self,
@@ -67,15 +89,16 @@ class OOD_TIM(FewShotMethod):
         elif self.init == 'mean':
             self.mu = torch.cat([support_features, unlabelled_data], 0).mean(0, keepdim=True)
 
-        self.prototypes = compute_prototypes(support_features - self.mu, support_labels)
+        with torch.no_grad():
+            self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
 
         params_list = []
         if 'mu' in self.params2adapt:
             self.mu.requires_grad_()
             params_list.append(self.mu)
-        if 'proto' in self.params2adapt:
-            self.prototypes.requires_grad_()
-            params_list.append(self.prototypes)
+        if 'bias' in self.params2adapt:
+            self.biases.requires_grad_()
+            params_list.append(self.biases)
 
         # Run adaptation
         optimizer = torch.optim.Adam(params_list, lr=self.inference_lr)
@@ -91,38 +114,19 @@ class OOD_TIM(FewShotMethod):
 
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits_from_cosine_distances_to_prototypes(
-                support_features
-            )
-            logits_q = self.get_logits_from_cosine_distances_to_prototypes(
-                unlabelled_data
-            )
+            logits_s = self.get_logits(support_labels, support_features, support_features)
+            # logger.warning(logits_s)
+            logits_q = self.get_logits(support_labels, support_features, unlabelled_data)
 
-            # otsu_thresh = threshold_otsu(q_cond_ent.detach().numpy())
-            # pseudo_outliers = (q_cond_ent > otsu_thresh).float()
+            ce = F.cross_entropy(logits_s, support_labels)
+            q_probs = logits_q.softmax(-1)
+            q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
 
-            ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
-            q_probs = logits_q.softmax(1)
-            q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1) - math.log(num_classes) / 2
-
-            # if i == 0:
-            #     pi = marginal_y.clone().detach()
-            # div = (marginal_y * torch.log(marginal_y / pi)).sum(0)
-
-            # logger.warning(outlier_scores.mean())
             loss = self.lambda_ce * ce
 
-            if i < 50:
-                em = q_cond_ent.mean(0)
-                outlier_scores = q_cond_ent.detach()
-                marginal_y = q_probs.mean(0)
-                div = (marginal_y * torch.log(marginal_y)).sum(0)
-            else:
-                outlier_scores = (2 * self.lambda_ * q_cond_ent).sigmoid().detach()
-                marginal_y = ((1 - outlier_scores).unsqueeze(-1) * q_probs).sum(0) / (1 - outlier_scores).sum(0)
-                div = (marginal_y * torch.log(marginal_y)).sum(0)
-                em = (((1 - outlier_scores) / (1 - outlier_scores).sum() - (outlier_scores) / (outlier_scores).sum()) * q_cond_ent).sum(0)
-
+            em = q_cond_ent.mean(0)
+            marginal_y = q_probs.mean(0)
+            div = (marginal_y * torch.log(marginal_y)).sum(0)
             loss += self.lambda_em * em + self.lambda_marg * div
 
             optimizer.zero_grad()
@@ -130,12 +134,12 @@ class OOD_TIM(FewShotMethod):
             optimizer.step()
 
             with torch.no_grad():
-                q_probs = self.get_logits_from_cosine_distances_to_prototypes(unlabelled_data)
+                outlier_scores = q_probs[:, -1]
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
                 q_ent_values.append(div.item())
                 ce_values.append(ce.item())
                 inliers = ~ kwargs['outliers'].bool()
-                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
+                acc_values.append((q_probs[:, :-1].argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 aucs.append(self.compute_auc(outlier_scores, **kwargs))
@@ -153,7 +157,7 @@ class OOD_TIM(FewShotMethod):
         kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
 
         with torch.no_grad():
-            probas_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(-1)
-            probas_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+            probas_s = self.get_logits(support_labels, support_features, support_features)[:, :-1].softmax(-1)
+            probas_q = self.get_logits(support_labels, support_features, query_features)[:, :-1].softmax(-1)
 
         return probas_s, probas_q

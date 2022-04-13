@@ -20,9 +20,10 @@ classifiers:
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
           'lambda_em': 1.0,
-          'params2adapt': 'mu',
+          'knn': 3,
+          'params2adapt': 'mu-bias',
           'lambda_': 1.0,
-          'init': 'rand',
+          'init': 'base',
            },
              }
     tuning:

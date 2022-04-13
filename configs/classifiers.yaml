@@ -1,11 +1,44 @@
 classifiers:
+  RePRI:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 150,
+          'inference_lr': 10.0,
+          'init': rand,
+          'ensemble_size': 10,
+          'loss_weights': [1.0, 1.0 , 1.0]
+           },
+             }
+
+  OOD_TIM:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 300,
+          'inference_lr': 0.001,
+          'lambda_ce': 1.0,
+          'lambda_marg': 1.0,
+          'lambda_em': 1.0,
+          'knn': 3,
+          'params2adapt': 'mu-bias',
+          'lambda_': 1.0,
+          'init': 'base',
+           },
+             }
+    tuning:
+      hparams2tune: ['lambda_ce', 'lambda_marg', 'lambda_em', 'lambda_']
+      hparam_values: {1: [[0.1, 0.5, 1.0], [0.1, 0.5, 1.0], [0.1, 0.5, 1.0], [0.5, 1.0, 2.0]]}
+
+
+
   TIM_GD:
     default: {
         1: {
           'softmax_temperature': 10.0,
           'inference_steps': 200,
-          'inference_lr': 0.001,
-          'loss_weights': [1.0, 1.0, 0.5]
+          'inference_lr': 0.0005,
+          'loss_weights': [1.0, 1.0, 1.0]
            },
              }
   MAP:

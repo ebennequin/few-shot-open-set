@@ -4,15 +4,16 @@
 # USER=mboudiaf
 # DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test/
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
-
 # SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-# DATADIR=data
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
 # USER=malik
+
+
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+DATADIR=data
+USER=malik
 
 
 
@@ -37,13 +38,14 @@ MODEL_SRC=feat# Origin of the model. For all timm models, use MODEL_SRC=url
 TRAINING=standard# To differentiate between episodic and standard models
 
 # Misc
-EXP=default # name of the folder in which results will be stored.
+EXP=default# name of the folder in which results will be stored.
 DEBUG=False
 GPUS=0
 SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
 OVERRIDE=True # used to override existing entries in out.csv
 TUNE=""
 VISU=False
+THRESHOLD=otsu
 
 # Tasks
 OOD_QUERY=10
@@ -90,7 +92,9 @@ run:
 		        --model_source $(MODEL_SRC) \
 		        --balanced $(BALANCED) \
 		        --training $(TRAINING) \
+		        --threshold $(THRESHOLD) \
 				--src_dataset $(SRC_DATASET) \
+				--n_ood_query $(OOD_QUERY) \
 				--tgt_dataset $${dataset} \
 		        --simu_hparams $(SIMU_PARAMS) \
 		        --$(MISC_ARG) $(MISC_VAL) \
@@ -134,8 +138,8 @@ run_transductive_detectors:
 	done ;\
 
 run_pyod_detectors:
-	for feature_detector in ABOD; do \
-		make FEATURE_DETECTOR=$${feature_detector} run ;\
+	for feature_detector in kNNDetector; do \
+		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
 
 # ========== Evaluating transductive methods ===========
@@ -143,29 +147,37 @@ run_pyod_detectors:
 run_transductive_methods:
 	for dataset in mini_imagenet; do \
 		for backbone in resnet12; do \
-			for classifier in TIM_GD BDCSPN; do \
-				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
-			done ;\
 			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
 				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
+			for classifier in TIM_GD; do \
+				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+			done ;\
 		done ;\
 	done ;\
 
 run_w_knn_filtering:
-	for ood_query in 0 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} \
-			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True FEATURE_DETECTOR=kNNDetector run_transductive_methods ;\
+	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
+			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 0 1 5 10 15 20 25 30 40 50 75 100; do \
-		make EXP=transductive_methods SIMU_PARAMS=n_ood_query MISC_ARG=n_ood_query MISC_VAL=$${ood_query} run_transductive_methods ;\
+	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
 	done ;\
 
-run_thresholding:
-	for thresh in 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9; do \
-		make EXP=thresholding SIMU_PARAMS=threshold FILTERING=True MISC_ARG=threshold MISC_VAL=$${thresh} run_transductive_methods ;\
+run_fixed_thresholding:
+	for thresh in 0.1 0.12 0.15 0.17 0.2 0.22 0.25 0.27 0.3 0.32 0.35 0.37 0.4; do \
+		make DET_TRANSFORMS="Pool BaseCentering L2norm" \
+			 SIMU_PARAMS=threshold FILTERING=True THRESHOLD=$${thresh} run ;\
 	done ;\
+
+run_svm_thresholding:
+	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
+
+run_ood_tim:
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" EXP=ood_tim CLASSIFIER=OOD_TIM run_wo_filtering ;\
+
 # ========== Evaluating SSL methods ===========
 
 run_ssl_detectors:
@@ -198,8 +210,21 @@ plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
-				python -m src.plots.csv_plotter --exp transductive_methods --groupby classifier \
+				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
+					 --metrics mean_acc mean_features_rocauc \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+			done ;\
+		done ;\
+	done ;\
+
+
+plot_acc_vs_threshold:
+	for backbone in resnet12; do \
+		for shot in 1 5; do \
+			for tgt_dataset in mini_imagenet; do \
+				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
+				     --metrics mean_acc mean_features_rocauc mean_believed_inliers mean_thresholding_accuracy \
+					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\
 	done ;\

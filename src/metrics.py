@@ -8,8 +8,6 @@ from sklearn.utils import check_consistent_length
 from sklearn.utils import column_or_1d
 
 
-
-
 def precision_n_scores(y, y_pred, n=None):
     """Utility function to calculate precision @ rank n.
 
@@ -85,6 +83,6 @@ def get_label_n(y, y_pred, n=None):
         outliers_fraction = np.count_nonzero(y) / y_len
 
     threshold = percentile(y_pred, 100 * (1 - outliers_fraction))
-    y_pred = (y_pred > threshold).astype('int')
+    y_pred = (y_pred > threshold).astype("int")
 
     return y_pred

@@ -27,36 +27,55 @@ def parse_args() -> argparse.Namespace:
 
 def main(args):
     logger.info("Fetching data...")
-    dataset, _, data_loader = get_classic_loader(args,
-                                                 dataset_name=args.tgt_dataset,
-                                                 split=args.split,
-                                                 batch_size=args.batch_size)
+    dataset, _, data_loader = get_classic_loader(
+        args,
+        dataset_name=args.tgt_dataset,
+        split=args.split,
+        batch_size=args.batch_size,
+    )
 
     logger.info("Building model...")
-    if args.model_source == 'url':
+    if args.model_source == "url":
         weights = None
         stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}"  # used for saving features downstream
     else:
-        weights = Path(args.data_dir) / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        weights = (
+            Path(args.data_dir)
+            / "models"
+            / args.training
+            / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        )
         stem = weights.stem
-    feature_extractor = load_model(args, args.backbone, weights, args.src_dataset, args.device)
-    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers:]
+    feature_extractor = load_model(
+        args, args.backbone, weights, args.src_dataset, args.device
+    )
+    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers :]
     logger.info(f"Layers to extract: {args.layers}")
 
     logger.info("Computing features...")
-    features, labels = compute_features(feature_extractor,
-                                        data_loader,
-                                        device=args.device,
-                                        split=args.split,
-                                        layers=args.layers)
+    features, labels = compute_features(
+        feature_extractor,
+        data_loader,
+        device=args.device,
+        split=args.split,
+        layers=args.layers,
+    )
 
     # if output_file is None:
-    for layer in args.layers:
-        pickle_name = Path(stem + f'_{layer}').with_suffix(f".pickle").name
-        output_file = Path('data') / 'features' / args.src_dataset / args.tgt_dataset / args.split / args.training / pickle_name
+    for layer in features:
+        pickle_name = Path(stem + f"_{layer}").with_suffix(f".pickle").name
+        output_file = (
+            Path("data")
+            / "features"
+            / args.src_dataset
+            / args.tgt_dataset
+            / args.split
+            / args.training
+            / pickle_name
+        )
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        if args.split == 'test' or args.split == 'val':
+        if args.split == "test" or args.split == "val":
             logger.info("Packing by class...")
             packed_features = {
                 class_integer_label: features[layer][labels == class_integer_label]

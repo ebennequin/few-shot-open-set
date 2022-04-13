@@ -7,30 +7,41 @@ from loguru import logger
 
 
 class SnatcherF(AllInOne):
-    """
-    """
+    """ """
+
     def __init__(self, args, temperature: float):
 
-        self.temperature = 64.
+        self.temperature = 64.0
         self.device = args.device
         self.works_on_features = True
 
         # Load attention module
-        if args.backbone == 'resnet12':
+        if args.backbone == "resnet12":
             hdim = 640
-        elif args.backbone == 'resnet18':
+        elif args.backbone == "resnet18":
             hdim = 512
-        elif args.backbone == 'wrn2810':
+        elif args.backbone == "wrn2810":
             hdim = 640
         else:
-            raise ValueError('')
-        self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
-        weights = args.data_dir / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
-        state_dict = torch.load(weights)['params']
+            raise ValueError("")
+        self.attn_model = BACKBONES["MultiHeadAttention"](
+            args, 1, hdim, hdim, hdim, dropout=0.5
+        )
+        weights = (
+            args.data_dir
+            / "models"
+            / args.training
+            / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        )
+        state_dict = torch.load(weights)["params"]
         state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")
-        missing_keys, unexpected = self.attn_model.load_state_dict(state_dict, strict=False)
-        logger.info(f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}")
+        missing_keys, unexpected = self.attn_model.load_state_dict(
+            state_dict, strict=False
+        )
+        logger.info(
+            f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}"
+        )
 
         self.attn_model.eval()
         self.attn_model = self.attn_model.to(self.device)
@@ -39,14 +50,22 @@ class SnatcherF(AllInOne):
         """
         query_features [Ns, d]
         """
-        prototypes = compute_prototypes(support_features, support_labels).to(self.device).unsqueeze(0)  # [Nk, d]
+        prototypes = (
+            compute_prototypes(support_features, support_labels)
+            .to(self.device)
+            .unsqueeze(0)
+        )  # [Nk, d]
 
         query_features = query_features.to(self.device)
 
         proto = self.attn_model(prototypes, prototypes, prototypes)[0][0]  # [K, d]
 
-        logits_s = - torch.cdist(support_features, proto) ** 2 / self.temperature  # [Nq, K]
-        logits_q = - torch.cdist(query_features, proto) ** 2 / self.temperature  # [Nq, K]
+        logits_s = (
+            -torch.cdist(support_features, proto) ** 2 / self.temperature
+        )  # [Nq, K]
+        logits_q = (
+            -torch.cdist(query_features, proto) ** 2 / self.temperature
+        )  # [Nq, K]
 
         """ Snatcher """
         outlier_scores = torch.zeros(logits_q.size(0))

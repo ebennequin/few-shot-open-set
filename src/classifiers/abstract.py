@@ -61,8 +61,10 @@ class FewShotMethod(nn.Module):
 
     def __str__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
-        if 'args' in arg_names: arg_names.remove('args')
-        if 'kwargs' in arg_names: arg_names.remove('kwargs')
+        if "args" in arg_names:
+            arg_names.remove("args")
+        if "kwargs" in arg_names:
+            arg_names.remove("kwargs")
         if len(arg_names):
             args = [f"{k}={getattr(self, k)}" for k in arg_names]
             return f"{type(self).__name__}({','.join(args)})"
@@ -71,8 +73,10 @@ class FewShotMethod(nn.Module):
 
     def __repr__(self):
         arg_names = list(inspect.signature(self.__init__).parameters)
-        if 'args' in arg_names: arg_names.remove('args')
-        if 'kwargs' in arg_names: arg_names.remove('kwargs')
+        if "args" in arg_names:
+            arg_names.remove("args")
+        if "kwargs" in arg_names:
+            arg_names.remove("kwargs")
         if len(arg_names):
             args = [f"{k}={getattr(self, k)}" for k in arg_names]
             return f"{type(self).__name__}({','.join(args)})"

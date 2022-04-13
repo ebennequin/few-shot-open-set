@@ -53,15 +53,17 @@ def merge_from_dict(args, dict_: Dict):
     for key, value in dict_.items():
         setattr(args, key, value)
         # if isinstance(value, dict) and not any([isinstance(key, int) for key in value.keys()]):
-            # setattr(args, key, Namespace())
-            # merge_from_dict(getattr(args, key), value)
+        # setattr(args, key, Namespace())
+        # merge_from_dict(getattr(args, key), value)
         # else:
         #     setattr(args, key, value)
 
 
-def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda") -> Tuple[ndarray, ndarray]:
+def compute_features(
+    feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda"
+) -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
-        if split == 'val' or split == 'test':
+        if split == "val" or split == "test":
             all_features = defaultdict(list)
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
@@ -75,12 +77,11 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
             return (
                 all_features,
                 torch.cat(all_labels, dim=0),
-
             )
         else:
             mean = defaultdict(float)
             var = defaultdict(float)
-            N = 1.
+            N = 1.0
             for images, labels in tqdm(loader, unit="batch"):
                 feats = feature_extractor(images.to(device), layers=layers)
                 for layer in layers:
@@ -88,8 +89,12 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
                         if N == 1:
                             mean[layer] = new_sample
                         else:
-                            var[layer] = incremental_var(var[layer], mean[layer], new_sample, N)  # [d,]
-                            mean[layer] = incremental_mean(mean[layer], new_sample, N)  # [d,]
+                            var[layer] = incremental_var(
+                                var[layer], mean[layer], new_sample, N
+                            )  # [d,]
+                            mean[layer] = incremental_mean(
+                                mean[layer], new_sample, N
+                            )  # [d,]
                         N += 1
             train_feats = {}
             for layer in layers:
@@ -98,7 +103,7 @@ def compute_features(feature_extractor: nn.Module, loader: DataLoader, split: st
 
 
 def incremental_mean(old_mean: Tensor, new_sample: Tensor, n: int):
-    new_mean = 1 / n * (new_sample + (n-1) * old_mean)
+    new_mean = 1 / n * (new_sample + (n - 1) * old_mean)
     return new_mean
 
 
@@ -110,21 +115,29 @@ def incremental_var(old_var: Tensor, old_mean: Tensor, new_sample: Tensor, n: in
 def strip_prefix(state_dict: OrderedDict, prefix: str):
     return OrderedDict(
         [
-            (k[len(prefix):] if k.startswith(prefix) else k, v)
+            (k[len(prefix) :] if k.startswith(prefix) else k, v)
             for k, v in state_dict.items()
         ]
     )
 
 
-def load_model(args, backbone: str, weights: Optional[Path], dataset_name: str,
-               device: torch.device, num_classes: int = None):
+def load_model(
+    args,
+    backbone: str,
+    weights: Optional[Path],
+    dataset_name: str,
+    device: torch.device,
+    num_classes: int = None,
+):
     logger.info("Fetching data...")
     if num_classes is None:
-        train_dataset, _, _ = get_classic_loader(args, dataset_name, split='train', batch_size=10)
+        train_dataset, _, _ = get_classic_loader(
+            args, dataset_name, split="train", batch_size=10
+        )
         num_classes = len(np.unique(train_dataset.labels))
 
     logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone](num_classes=num_classes, pretrained=weights is None).to(device)
+    feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
 
     if weights is not None:
         state_dict = torch.load(weights, map_location=device)
@@ -136,11 +149,13 @@ def load_model(args, backbone: str, weights: Optional[Path], dataset_name: str,
         else:
             state_dict = strip_prefix(state_dict, "backbone.")
 
-        missing_keys, unexpected = feature_extractor.load_state_dict(state_dict, strict=False)
+        missing_keys, unexpected = feature_extractor.load_state_dict(
+            state_dict, strict=False
+        )
         logger.info(f"Loaded weights from {weights}")
         logger.info(f"Missing keys {missing_keys}")
         logger.info(f"Unexpected keys {unexpected}")
-        
+
     feature_extractor.eval()
 
     return feature_extractor
@@ -157,14 +172,12 @@ def main_process(args: argparse.Namespace) -> bool:
         return True
 
 
-def setup(args: argparse.Namespace,
-          rank: int,
-          world_size: int) -> None:
+def setup(args: argparse.Namespace, rank: int, world_size: int) -> None:
     """
     Used for distributed learning
     """
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = str(args.port)
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = str(args.port)
 
     # initialize the process group
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
@@ -182,6 +195,7 @@ def find_free_port() -> int:
     Used for distributed learning
     """
     import socket
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("", 0))
     port = sock.getsockname()[1]
@@ -189,41 +203,58 @@ def find_free_port() -> int:
     return port
 
 
-def get_modules_to_try(args, module_group: str, module_name: str,
-                       module_pool: Dict[str, Any], tune: bool):
+def get_modules_to_try(
+    args, module_group: str, module_name: str, module_pool: Dict[str, Any], tune: bool
+):
 
     modules_to_try: List[Any] = []
     # logger.warning(module_pool)
-    module_dict = eval(f'args.{module_group}')
+    module_dict = eval(f"args.{module_group}")
 
     if tune:
         logger.warning(f"Tuning over {module_group} activated")
-        if module_name in eval(f'args.{module_group}'):
-            shot = args.n_shot if args.n_shot in module_dict[module_name]['default'] else 1
-            module_args = module_dict[module_name]['default'][shot]  # take default args
-            if 'tuning' in module_dict[module_name]:
-                params2tune = module_dict[module_name]['tuning']['hparams2tune']
-                shot = args.n_shot if args.n_shot in module_dict[module_name]['tuning']['hparam_values'] else 1
-                values2tune = module_dict[module_name]['tuning']['hparam_values'][shot]
+        if module_name in eval(f"args.{module_group}"):
+            shot = (
+                args.n_shot if args.n_shot in module_dict[module_name]["default"] else 1
+            )
+            module_args = module_dict[module_name]["default"][shot]  # take default args
+            if "tuning" in module_dict[module_name]:
+                params2tune = module_dict[module_name]["tuning"]["hparams2tune"]
+                shot = (
+                    args.n_shot
+                    if args.n_shot
+                    in module_dict[module_name]["tuning"]["hparam_values"]
+                    else 1
+                )
+                values2tune = module_dict[module_name]["tuning"]["hparam_values"][shot]
                 values_combinations = itertools.product(*values2tune)
                 for some_combin in values_combinations:
                     # Override default args
                     for k, v in zip(params2tune, some_combin):
                         module_args[k] = v
-                    if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
-                        module_args['args'] = args
+                    if (
+                        "args"
+                        in inspect.getfullargspec(
+                            module_pool[module_name].__init__
+                        ).args
+                    ):
+                        module_args["args"] = args
                     modules_to_try.append(module_pool[module_name](**module_args))
             else:
-                logger.warning(f"Module {module_name} has no specified grid to search over. Using default arguments.")
+                logger.warning(
+                    f"Module {module_name} has no specified grid to search over. Using default arguments."
+                )
                 modules_to_try.append(module_pool[module_name](**module_args))
         else:
             modules_to_try.append(module_pool[module_name]())
     else:
         module_args = {}
         if module_name in module_dict:
-            shot = args.n_shot if args.n_shot in module_dict[module_name]['default'] else 1
-            module_args = module_dict[module_name]['default'][shot]  # take default args
+            shot = (
+                args.n_shot if args.n_shot in module_dict[module_name]["default"] else 1
+            )
+            module_args = module_dict[module_name]["default"][shot]  # take default args
         if "args" in inspect.getfullargspec(module_pool[module_name].__init__).args:
-            module_args['args'] = args
+            module_args["args"] = args
         modules_to_try = [module_pool[module_name](**module_args)]
     return modules_to_try

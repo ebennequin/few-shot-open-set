@@ -10,6 +10,7 @@ class ProbaDetector:
     """
     Abstract class for an outlier detector
     """
+
     def __init__(self):
         pass
 

@@ -16,4 +16,4 @@ class MaxProbDetector(ProbaDetector):
         support_probas: [Ns, K]
         query_probas: [Nq, K]
         """
-        return - query_probas.max(-1).values
+        return -query_probas.max(-1).values

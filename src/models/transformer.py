@@ -1,11 +1,11 @@
 """
 Adapted from https://github.com/lukemelas/simple-bert
 """
- 
+
 import numpy as np
 import torch
 from torch import nn
-from torch import Tensor 
+from torch import Tensor
 from torch.nn import functional as F
 from typing import Dict, List
 
@@ -28,6 +28,7 @@ def merge_last(x, n_dims):
 
 class MultiHeadedSelfAttention(nn.Module):
     """Multi-Headed Dot Product Attention"""
+
     def __init__(self, dim, num_heads, dropout):
         super().__init__()
         self.proj_q = nn.Linear(dim, dim)
@@ -35,7 +36,7 @@ class MultiHeadedSelfAttention(nn.Module):
         self.proj_v = nn.Linear(dim, dim)
         self.drop = nn.Dropout(dropout)
         self.n_heads = num_heads
-        self.scores = None # for visualization
+        self.scores = None  # for visualization
 
     def forward(self, x, mask):
         """
@@ -62,6 +63,7 @@ class MultiHeadedSelfAttention(nn.Module):
 
 class PositionWiseFeedForward(nn.Module):
     """FeedForward Neural Networks for each position"""
+
     def __init__(self, dim, ff_dim):
         super().__init__()
         self.fc1 = nn.Linear(dim, ff_dim)
@@ -74,6 +76,7 @@ class PositionWiseFeedForward(nn.Module):
 
 class Block(nn.Module):
     """Transformer Block"""
+
     def __init__(self, dim, num_heads, ff_dim, dropout):
         super().__init__()
         self.attn = MultiHeadedSelfAttention(dim, num_heads, dropout)
@@ -93,10 +96,12 @@ class Block(nn.Module):
 
 class Transformer(nn.Module):
     """Transformer with Self-Attentive Blocks"""
+
     def __init__(self, num_layers, dim, num_heads, ff_dim, dropout):
         super().__init__()
-        self.blocks = nn.ModuleList([
-            Block(dim, num_heads, ff_dim, dropout) for _ in range(num_layers)])
+        self.blocks = nn.ModuleList(
+            [Block(dim, num_heads, ff_dim, dropout) for _ in range(num_layers)]
+        )
 
     def forward(self, x, layers: List[str], mask=None):
         all_layers = {}

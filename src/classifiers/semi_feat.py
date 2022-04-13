@@ -18,35 +18,54 @@ class SemiFEAT(FewShotMethod):
         self.temperature = temperature
 
         # Load attention module
-        if args.backbone == 'resnet12':
+        if args.backbone == "resnet12":
             hdim = 640
-        elif args.backbone == 'resnet18':
+        elif args.backbone == "resnet18":
             hdim = 512
-        elif args.backbone == 'wrn2810':
+        elif args.backbone == "wrn2810":
             hdim = 640
         else:
-            raise ValueError('')
+            raise ValueError("")
         self.device = args.device
-        self.attn_model = BACKBONES['MultiHeadAttention'](args, 1, hdim, hdim, hdim, dropout=0.5)
-        weights = args.data_dir / 'models' / args.training / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
-        state_dict = torch.load(weights)['params']
+        self.attn_model = BACKBONES["MultiHeadAttention"](
+            args, 1, hdim, hdim, hdim, dropout=0.5
+        )
+        weights = (
+            args.data_dir
+            / "models"
+            / args.training
+            / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
+        )
+        state_dict = torch.load(weights)["params"]
         state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")
-        missing_keys, unexpected = self.attn_model.load_state_dict(state_dict, strict=False)
-        logger.info(f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}")
+        missing_keys, unexpected = self.attn_model.load_state_dict(
+            state_dict, strict=False
+        )
+        logger.info(
+            f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}"
+        )
 
         self.attn_model.eval()
         self.attn_model = self.attn_model.to(self.device)
 
     def forward(self, support_features, query_features, support_labels, **kwargs):
 
-        support_features, query_features = support_features.cuda(), query_features.cuda()
-        support_features, query_features = support_features.cuda(), query_features.cuda()
+        support_features, query_features = (
+            support_features.cuda(),
+            query_features.cuda(),
+        )
+        support_features, query_features = (
+            support_features.cuda(),
+            query_features.cuda(),
+        )
         support_labels = support_labels.cuda()
 
         # get mean of the support
-        proto = compute_prototypes(support_features, support_labels).unsqueeze(0)  # NK x d
-    
+        proto = compute_prototypes(support_features, support_labels).unsqueeze(
+            0
+        )  # NK x d
+
         # query: (num_batch, num_query, num_proto, num_emb)
         # proto: (num_batch, num_proto, num_emb)
         whole_set = torch.cat([proto, query_features.unsqueeze(0)], 1)
@@ -55,11 +74,19 @@ class SemiFEAT(FewShotMethod):
             proto = self.attn_model(proto, whole_set, whole_set)[0][0]
 
             if self.use_euclidean:
-                logits_s = - (torch.cdist(support_features, proto) ** 2 / self.temperature)  # [Nq, K]
-                logits_q = - (torch.cdist(query_features, proto) ** 2 / self.temperature)  # [Nq, K]
+                logits_s = -(
+                    torch.cdist(support_features, proto) ** 2 / self.temperature
+                )  # [Nq, K]
+                logits_q = -(
+                    torch.cdist(query_features, proto) ** 2 / self.temperature
+                )  # [Nq, K]
             else:
                 proto = F.normalize(proto, dim=-1)  # normalize for cosine distance
-                logits_s = torch.bmm(support_features, proto.t()) / self.temperature  # [Nq, K]
-                logits_q = torch.bmm(query_features, proto.t()) / self.temperature  # [Nq, K]
+                logits_s = (
+                    torch.bmm(support_features, proto.t()) / self.temperature
+                )  # [Nq, K]
+                logits_q = (
+                    torch.bmm(query_features, proto.t()) / self.temperature
+                )  # [Nq, K]
 
             return logits_s.softmax(-1).cpu(), logits_q.softmax(-1).cpu()

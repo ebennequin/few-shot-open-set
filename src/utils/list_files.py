@@ -27,7 +27,7 @@ def menu_selection(paths: Union[Path, List[Path]]) -> List[Path]:
         return [paths[i] for i in selected_digits]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     in_folder = sys.argv[1]
     out_folder = sys.argv[2]
@@ -44,8 +44,8 @@ if __name__ == '__main__':
     src_line = menu_selection(in_path)
     src_line = list(map(lambda x: str(x), src_line))  # type: ignore[arg-type]
     if isinstance(src_line, list):
-        src_line = ' '.join(src_line)  # type: ignore[arg-type]
-    with open(out_file, 'w') as f:
+        src_line = " ".join(src_line)  # type: ignore[arg-type]
+    with open(out_file, "w") as f:
         f.write(src_line + "\n")  # type: ignore[arg-type]
 
     if "archive" in out_folder:
@@ -54,5 +54,5 @@ if __name__ == '__main__':
         archive_path = Path(out_folder) / exp_name
         archive_path.mkdir(parents=True, exist_ok=True)
 
-        with open(out_file, 'a') as f:
+        with open(out_file, "a") as f:
             f.write(str(archive_path))

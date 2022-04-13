@@ -15,6 +15,7 @@ class PyodWrapper(FeatureDetector):
     """
     Abstract class for an outlier detector
     """
+
     def __init__(self, pyod_detector: str, **kwargs):
         self.pyod_detector = pyod_detector
         self.kwargs = kwargs
@@ -24,7 +25,9 @@ class PyodWrapper(FeatureDetector):
     def __call__(self, support_features, query_features, **kwargs):
 
         self.detector.fit(support_features.cpu().numpy())
-        return torch.from_numpy(self.detector.decision_function(query_features.cpu().numpy()))
+        return torch.from_numpy(
+            self.detector.decision_function(query_features.cpu().numpy())
+        )
 
     def __str__(self):
         arg_names = list(inspect.signature(self.detector.__init__).parameters)

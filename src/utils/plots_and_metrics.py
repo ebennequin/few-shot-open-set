@@ -44,8 +44,8 @@ def plot_roc(metrics: dict, title: str) -> float:
         the area under the ROC curve.
     """
     aucs = []
-    outliers = metrics['outliers']
-    outlier_scores = metrics['outlier_scores']
+    outliers = metrics["outliers"]
+    outlier_scores = metrics["outlier_scores"]
     assert outliers.size() == outlier_scores.size()
     for i in range(len(outliers)):
         gt, scores = outliers[i], outlier_scores[i]
@@ -70,16 +70,14 @@ def plot_twin_hist(outliers_df: pd.DataFrame, title: str, plot: bool):
         st.pyplot(fig, clear_figure=True)
 
 
-def update_csv(args: argparse.Namespace,
-               metrics: dict,
-               path: str):
+def update_csv(args: argparse.Namespace, metrics: dict, path: str):
 
     # Load records
     try:
         res = pd.read_csv(path)
     except FileNotFoundError:
         res = pd.DataFrame({})
-    records = res.to_dict('records')
+    records = res.to_dict("records")
 
     # Metrics part of the new record
     fill_entry = metrics
@@ -90,7 +88,7 @@ def update_csv(args: argparse.Namespace,
     for param in group_by_args:
         value = getattr(args, param)
         if isinstance(value, list):
-            value = '-'.join(value)
+            value = "-".join(value)
         else:
             value = str(value)
         new_entry[param] = value
@@ -100,8 +98,10 @@ def update_csv(args: argparse.Namespace,
     for existing_entry in records:
         if any([param not in existing_entry for param in group_by_args]):
             continue
-        matches = [str(existing_entry[param]) == new_entry[param] for param in group_by_args]
-        match = (sum(matches) == len(matches))
+        matches = [
+            str(existing_entry[param]) == new_entry[param] for param in group_by_args
+        ]
+        match = sum(matches) == len(matches)
         if match:
             if not args.override:
                 print("Matching entry found. Not overriding.")

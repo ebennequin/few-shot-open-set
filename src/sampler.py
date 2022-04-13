@@ -19,8 +19,15 @@ class TaskSampler(Sampler):
     """
 
     def __init__(
-        self, dataset: Dataset, n_way: int, n_shot: int, n_id_query: int, n_ood_query: int,
-        n_tasks: int, balanced: bool, alpha: float,
+        self,
+        dataset: Dataset,
+        n_way: int,
+        n_shot: int,
+        n_id_query: int,
+        n_ood_query: int,
+        n_tasks: int,
+        balanced: bool,
+        alpha: float,
     ):
         """
         Args:
@@ -68,18 +75,19 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
             # TODO: allow customizable shape of the open query task
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
-            open_set_labels = all_labels[self.n_way:]
+            open_set_labels = all_labels[self.n_way :]
             if self.balanced:
                 id_samples_per_class = [self.n_id_query] * self.n_way
                 ood_samples_per_class = [self.n_ood_query] * self.n_way
             else:
-                query_samples_per_class = get_dirichlet_proportion([self.alpha] * self.n_way * 2,
-                                                                   1,
-                                                                   2 * self.n_way,
-                                                                   self.n_way * (self.n_id_query + self.n_ood_query)
-                                                                   )[0]
-                id_samples_per_class = query_samples_per_class[:self.n_way]
-                ood_samples_per_class = query_samples_per_class[self.n_way:]
+                query_samples_per_class = get_dirichlet_proportion(
+                    [self.alpha] * self.n_way * 2,
+                    1,
+                    2 * self.n_way,
+                    self.n_way * (self.n_id_query + self.n_ood_query),
+                )[0]
+                id_samples_per_class = query_samples_per_class[: self.n_way]
+                ood_samples_per_class = query_samples_per_class[self.n_way :]
 
             yield torch.cat(
                 [
@@ -88,16 +96,19 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
                     )
                     for i, label in enumerate(support_labels)
                 ]
-                +
-                [
+                + [
                     torch.tensor(
-                        random.sample(self.items_per_label[label], id_samples_per_class[i])
+                        random.sample(
+                            self.items_per_label[label], id_samples_per_class[i]
+                        )
                     )
                     for i, label in enumerate(support_labels)
                 ]
                 + [
                     torch.tensor(
-                        random.sample(self.items_per_label[label], ood_samples_per_class[i])
+                        random.sample(
+                            self.items_per_label[label], ood_samples_per_class[i]
+                        )
                     )
                     for i, label in enumerate(open_set_labels)
                 ]
@@ -121,18 +132,28 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
                 - the dataset class ids of the class sampled in the episode
         """
         layers = list(input_data[0][0].keys())
-        true_class_ids = list(dict.fromkeys([x[1] for x in input_data]))  # This way we keep class orders
+        true_class_ids = list(
+            dict.fromkeys([x[1] for x in input_data])
+        )  # This way we keep class orders
 
         support_data = input_data[: self.n_way * self.n_shot]
         in_set_labels = set([x[1] for x in support_data])
-        id_query = [x for x in input_data[self.n_way * self.n_shot:] if x[1] in in_set_labels]
-        ood_query = [x for x in input_data[self.n_way * self.n_shot:] if x[1] not in in_set_labels]
+        id_query = [
+            x for x in input_data[self.n_way * self.n_shot :] if x[1] in in_set_labels
+        ]
+        ood_query = [
+            x
+            for x in input_data[self.n_way * self.n_shot :]
+            if x[1] not in in_set_labels
+        ]
 
         support_images = {}
         query_images = {}
 
         # Preparing labels
-        support_labels = torch.Tensor([true_class_ids.index(x[1]) for x in support_data])
+        support_labels = torch.Tensor(
+            [true_class_ids.index(x[1]) for x in support_data]
+        )
         id_query_labels = torch.Tensor([true_class_ids.index(x[1]) for x in id_query])
         ood_query_labels = torch.Tensor([true_class_ids.index(x[1]) for x in ood_query])
         query_labels = torch.cat([id_query_labels, ood_query_labels])
@@ -142,10 +163,19 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
 
         # Preparing features
         for layer in layers:
-            support_images[layer] = torch.stack([x[0][layer] for x in support_data], 0)  # [Ns, d_layer]
-            query_images[layer] = torch.stack([x[0][layer] for x in id_query], 0)  # [Ns, d_layer]
+            support_images[layer] = torch.stack(
+                [x[0][layer] for x in support_data], 0
+            )  # [Ns, d_layer]
+            query_images[layer] = torch.stack(
+                [x[0][layer] for x in id_query], 0
+            )  # [Ns, d_layer]
             if len(ood_query):
-                query_images[layer] = torch.cat([query_images[layer], torch.stack([x[0][layer] for x in ood_query], 0)])
+                query_images[layer] = torch.cat(
+                    [
+                        query_images[layer],
+                        torch.stack([x[0][layer] for x in ood_query], 0),
+                    ]
+                )
 
         return (
             support_images,
@@ -162,18 +192,19 @@ class OpenQuerySampler(TaskSampler):
             # TODO: allow customizable shape of the open query task
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
-            open_set_labels = all_labels[self.n_way:]
+            open_set_labels = all_labels[self.n_way :]
             if self.balanced:
                 id_samples_per_class = [self.n_id_query] * self.n_way
                 ood_samples_per_class = [self.n_ood_query] * self.n_way
             else:
-                query_samples_per_class = get_dirichlet_proportion([self.alpha] * self.n_way * 2,
-                                                                   1,
-                                                                   2 * self.n_way,
-                                                                   self.n_way * (self.n_id_query + self.n_ood_query)
-                                                                   )[0]
-                id_samples_per_class = query_samples_per_class[:self.n_way]
-                ood_samples_per_class = query_samples_per_class[self.n_way:]
+                query_samples_per_class = get_dirichlet_proportion(
+                    [self.alpha] * self.n_way * 2,
+                    1,
+                    2 * self.n_way,
+                    self.n_way * (self.n_id_query + self.n_ood_query),
+                )[0]
+                id_samples_per_class = query_samples_per_class[: self.n_way]
+                ood_samples_per_class = query_samples_per_class[self.n_way :]
 
             yield torch.cat(
                 [
@@ -182,16 +213,19 @@ class OpenQuerySampler(TaskSampler):
                     )
                     for i, label in enumerate(support_labels)
                 ]
-                +
-                [
+                + [
                     torch.tensor(
-                        random.sample(self.items_per_label[label], id_samples_per_class[i])
+                        random.sample(
+                            self.items_per_label[label], id_samples_per_class[i]
+                        )
                     )
                     for i, label in enumerate(support_labels)
                 ]
                 + [
                     torch.tensor(
-                        random.sample(self.items_per_label[label], ood_samples_per_class[i])
+                        random.sample(
+                            self.items_per_label[label], ood_samples_per_class[i]
+                        )
                     )
                     for i, label in enumerate(open_set_labels)
                 ]
@@ -214,18 +248,28 @@ class OpenQuerySampler(TaskSampler):
                 - their labels,
                 - the dataset class ids of the class sampled in the episode
         """
-        true_class_ids = list(dict.fromkeys([x[1] for x in input_data]))  # This way we keep class orders
+        true_class_ids = list(
+            dict.fromkeys([x[1] for x in input_data])
+        )  # This way we keep class orders
 
         support_data = input_data[: self.n_way * self.n_shot]
         in_set_labels = set([x[1] for x in support_data])
-        id_query = [x for x in input_data[self.n_way * self.n_shot:] if x[1] in in_set_labels]
-        ood_query = [x for x in input_data[self.n_way * self.n_shot:] if x[1] not in in_set_labels]
+        id_query = [
+            x for x in input_data[self.n_way * self.n_shot :] if x[1] in in_set_labels
+        ]
+        ood_query = [
+            x
+            for x in input_data[self.n_way * self.n_shot :]
+            if x[1] not in in_set_labels
+        ]
 
         support_images = []
         query_images = []
 
         # Preparing labels
-        support_labels = torch.Tensor([true_class_ids.index(x[1]) for x in support_data])
+        support_labels = torch.Tensor(
+            [true_class_ids.index(x[1]) for x in support_data]
+        )
         id_query_labels = torch.Tensor([true_class_ids.index(x[1]) for x in id_query])
         ood_query_labels = torch.Tensor([true_class_ids.index(x[1]) for x in ood_query])
         query_labels = torch.cat([id_query_labels, ood_query_labels])

@@ -28,7 +28,7 @@ class SimpleShot(FewShotMethod):
             self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             ).softmax(-1),
-            self.get_logits_from_cosine_distances_to_prototypes(
-                query_features
-            ).softmax(-1),
+            self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(
+                -1
+            ),
         )

@@ -12,6 +12,7 @@ import json
 import numpy as np
 from .utils import get_transforms
 
+
 class CUB(VisionDataset):
     def __init__(
         self,
@@ -22,21 +23,25 @@ class CUB(VisionDataset):
     ):
         self.transform = get_transforms(args)
 
-        with open(root / 'images.txt', 'r') as f:
+        with open(root / "images.txt", "r") as f:
             image_list = f.readlines()
 
         image_index = []
         image_path = []
         for data in image_list:
-            index, path = data.split(' ')
+            index, path = data.split(" ")
             image_index.append(int(index))
-            image_path.append(root / 'images' / path[:-1])
+            image_path.append(root / "images" / path[:-1])
 
         self.images = image_path
 
-        train_flag = np.loadtxt(root / 'train_test_split.txt', delimiter=' ', dtype=np.int32)
+        train_flag = np.loadtxt(
+            root / "train_test_split.txt", delimiter=" ", dtype=np.int32
+        )
         train_flag = train_flag[:, 1]
-        labels = np.loadtxt(root / 'image_class_labels.txt', delimiter=' ', dtype=np.int32)
+        labels = np.loadtxt(
+            root / "image_class_labels.txt", delimiter=" ", dtype=np.int32
+        )
         labels = labels[:, 1]
 
         # use first 100 classes
@@ -46,9 +51,13 @@ class CUB(VisionDataset):
         self.label = list(self.labels[self.indices] - 1)
         self.num_classes = self.num_class = 100
 
-        train_flag = np.loadtxt(root / 'train_test_split.txt', delimiter=' ', dtype=np.int32)
+        train_flag = np.loadtxt(
+            root / "train_test_split.txt", delimiter=" ", dtype=np.int32
+        )
         train_flag = train_flag[:, 1]
-        labels = np.loadtxt(root / 'image_class_labels.txt', delimiter=' ', dtype=np.int32)
+        labels = np.loadtxt(
+            root / "image_class_labels.txt", delimiter=" ", dtype=np.int32
+        )
         labels = labels[:, 1]
 
     def __len__(self):

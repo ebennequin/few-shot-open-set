@@ -17,6 +17,7 @@ class ImageNet(VisionDataset):
     """
     Placeholder for compatitiblity
     """
+
     def __init__(
         self,
         args,

@@ -7,5 +7,3 @@ from .feat import FEAT
 from .semi_feat import SemiFEAT
 from .ici import ICI
 from .abstract import FewShotMethod
-from .repri import RePRI
-from .ood_tim import OOD_TIM

@@ -6,7 +6,6 @@ from torch import Tensor
 from loguru import logger
 from .abstract import FewShotMethod
 from easyfsl.utils import compute_prototypes
-from skimage.filters import threshold_otsu
 
 
 class AbstractTIM(FewShotMethod):
@@ -39,8 +38,8 @@ class TIM_GD(AbstractTIM):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
@@ -56,12 +55,8 @@ class TIM_GD(AbstractTIM):
         optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
 
         q_cond_ent_values = []
-        acc_otsu = []
-        aucs = []
         q_ent_values = []
         ce_values = []
-        inlier_entropy = []
-        outlier_entropy = []
         acc_values = []
 
         for i in range(self.inference_steps):
@@ -74,12 +69,12 @@ class TIM_GD(AbstractTIM):
 
             ce = -(support_labels_one_hot * logits_s.log_softmax(1)).sum(1).mean(0)
             q_probs = logits_q.softmax(1)
-            q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1)
+            q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(1).mean(0)
             marginal_y = q_probs.mean(0)
             q_ent = -(marginal_y * torch.log(marginal_y)).sum(0)
 
             loss = self.loss_weights[0] * ce - (
-                self.loss_weights[1] * q_ent - self.loss_weights[2] * q_cond_ent.mean(0)
+                self.loss_weights[1] * q_ent - self.loss_weights[2] * q_cond_ent
             )
 
             optimizer.zero_grad()
@@ -87,30 +82,35 @@ class TIM_GD(AbstractTIM):
             optimizer.step()
 
             with torch.no_grad():
-                q_probs = self.get_logits_from_cosine_distances_to_prototypes(query_features)
-                q_cond_ent_values.append(q_cond_ent.mean(0).item())
+                q_probs = self.get_logits_from_cosine_distances_to_prototypes(
+                    query_features
+                )
+                q_cond_ent_values.append(q_cond_ent.item())
                 q_ent_values.append(q_ent.item())
                 ce_values.append(ce.item())
-                inliers = ~ kwargs['outliers'].bool()
-                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
-                inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
-                outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
-                aucs.append(self.compute_auc(q_cond_ent, **kwargs))
-                thresh = threshold_otsu(q_cond_ent.cpu().numpy())
-                believed_inliers = (q_cond_ent < thresh)
-                acc_otsu.append((believed_inliers == inliers).float().mean().item())
+                inliers = ~kwargs["outliers"].bool()
+                acc_values.append(
+                    (q_probs.argmax(-1) == kwargs["query_labels"])[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
 
-        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
-        kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
-        kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
+        kwargs["intra_task_metrics"]["classifier_losses"]["cond_ent"].append(
+            q_cond_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["marg_ent"].append(
+            q_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
+        kwargs["intra_task_metrics"]["classifier_metrics"]["acc"].append(acc_values)
 
         with torch.no_grad():
-            probas_s = self.get_logits_from_cosine_distances_to_prototypes(support_features).softmax(-1)
-            probas_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+            probas_s = self.get_logits_from_cosine_distances_to_prototypes(
+                support_features
+            ).softmax(-1)
+            probas_q = self.get_logits_from_cosine_distances_to_prototypes(
+                query_features
+            ).softmax(-1)
 
         return probas_s, probas_q

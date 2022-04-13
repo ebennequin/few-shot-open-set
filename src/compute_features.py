@@ -62,7 +62,7 @@ def main(args):
     )
 
     # if output_file is None:
-    for layer in features:
+    for layer in args.layers:
         pickle_name = Path(stem + f"_{layer}").with_suffix(f".pickle").name
         output_file = (
             Path("data")

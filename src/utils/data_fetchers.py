@@ -191,25 +191,6 @@ def get_task_loader(
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 
-def get_train_features(
-    backbone, dataset, training_method, layer, path: Optional[Path] = None
-):
-
-    pickle_basename = f"{backbone}_{dataset}_{training_method}_{layer}.pickle"
-    avg_train_features_path = (
-        Path("data/features") / dataset / "train" / pickle_basename
-    )
-
-    # We also load features from the train set to center query features on the average train set
-    # feature vector
-    with open(avg_train_features_path, "rb") as stream:
-        train_features = pickle.load(stream)
-        assert len(train_features) == 2
-        average_train_features = train_features[0].unsqueeze(0)
-        std_train_features = train_features[1].unsqueeze(0)
-    return average_train_features, std_train_features
-
-
 def get_test_features(
     data_dir,
     backbone,
@@ -219,7 +200,7 @@ def get_test_features(
     model_source,
     layer,
     path: Optional[Path] = None,
-) -> Tuple[Dict, Dict, ndarray]:
+):
     if not isinstance(data_dir, Path):
         data_dir = Path(data_dir)
     pickle_basename = f"{backbone}_{src_dataset}_{model_source}_{layer}.pickle"
@@ -253,4 +234,11 @@ def get_test_features(
         assert len(train_features) == 2
         average_train_features = train_features[0].unsqueeze(0)
         std_train_features = train_features[1].unsqueeze(0)
-    return features, train_features, average_train_features, std_train_features
+    return (
+        features,
+        train_features,
+        average_train_features,
+        std_train_features,
+        features_path,
+        avg_train_features_path,
+    )

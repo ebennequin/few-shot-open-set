@@ -11,7 +11,6 @@ import math
 
 
 class OOD_TIM(FewShotMethod):
-
     def __init__(
         self,
         softmax_temperature: float,
@@ -36,9 +35,7 @@ class OOD_TIM(FewShotMethod):
         self.init = init
 
     def cosine(self, X, Y):
-        return (F.normalize(X - self.mu, dim=1)
-                @ F.normalize(Y - self.mu, dim=1).T
-                )
+        return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
 
     def get_logits(self, support_labels, support_features, query_features, bias=True):
 
@@ -55,7 +52,7 @@ class OOD_TIM(FewShotMethod):
             logits.append(class_cossim.mean(-1))  # [Nq]
 
         # Outlier logit
-        logits.append(- sorted_cossim[:, :self.knn].mean(-1))
+        logits.append(-sorted_cossim[:, : self.knn].mean(-1))
         logits = torch.stack(logits, dim=1)
         if bias:
             return self.softmax_temperature * logits - self.biases
@@ -70,8 +67,8 @@ class OOD_TIM(FewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
@@ -79,22 +76,24 @@ class OOD_TIM(FewShotMethod):
         num_classes = support_labels.unique().size(0)
 
         # Initialize weights
-        if self.init == 'base':
-            self.mu = kwargs['train_mean'].squeeze()
-        elif self.init == 'rand':
+        if self.init == "base":
+            self.mu = kwargs["train_mean"].squeeze()
+        elif self.init == "rand":
             self.mu = 0.1 * torch.randn(1, support_features.size(-1))
-        elif self.init == 'mean':
-            self.mu = torch.cat([support_features, unlabelled_data], 0).mean(0, keepdim=True)
+        elif self.init == "mean":
+            self.mu = torch.cat([support_features, unlabelled_data], 0).mean(
+                0, keepdim=True
+            )
 
         with torch.no_grad():
             # self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
             self.biases = torch.zeros(num_classes + 1)
 
         params_list = []
-        if 'mu' in self.params2adapt:
+        if "mu" in self.params2adapt:
             self.mu.requires_grad_()
             params_list.append(self.mu)
-        if 'bias' in self.params2adapt:
+        if "bias" in self.params2adapt:
             self.biases.requires_grad_()
             params_list.append(self.biases)
 
@@ -114,9 +113,13 @@ class OOD_TIM(FewShotMethod):
 
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits(support_labels, support_features, support_features)
+            logits_s = self.get_logits(
+                support_labels, support_features, support_features
+            )
             # logger.warning(logits_s)
-            logits_q = self.get_logits(support_labels, support_features, unlabelled_data)
+            logits_q = self.get_logits(
+                support_labels, support_features, unlabelled_data
+            )
 
             ce = F.cross_entropy(logits_s, support_labels)
             q_probs = logits_q.softmax(-1)
@@ -141,15 +144,20 @@ class OOD_TIM(FewShotMethod):
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
                 q_ent_values.append(div.item())
                 ce_values.append(ce.item())
-                inliers = ~ kwargs['outliers'].bool()
-                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
+                inliers = ~kwargs["outliers"].bool()
+                acc_values.append(
+                    (q_probs[:, :-1].argmax(-1) == kwargs["query_labels"])[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 inlier_outscore.append(outlier_scores[inliers].mean(0).item())
                 oulier_outscore.append(outlier_scores[~inliers].mean(0).item())
                 aucs.append(self.compute_auc(outlier_scores, **kwargs))
                 thresh = threshold_otsu(outlier_scores.numpy())
-                believed_inliers = (outlier_scores < thresh)
+                believed_inliers = outlier_scores < thresh
                 acc_otsu.append((believed_inliers == inliers).float().mean().item())
 
         kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
@@ -164,7 +172,11 @@ class OOD_TIM(FewShotMethod):
         kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
 
         with torch.no_grad():
-            probas_s = self.get_logits(support_labels, support_features, support_features)[:, :-1].softmax(-1)
-            probas_q = self.get_logits(support_labels, support_features, query_features)[:, :-1].softmax(-1)
+            probas_s = self.get_logits(
+                support_labels, support_features, support_features
+            )[:, :-1].softmax(-1)
+            probas_q = self.get_logits(
+                support_labels, support_features, query_features
+            )[:, :-1].softmax(-1)
 
         return probas_s, probas_q

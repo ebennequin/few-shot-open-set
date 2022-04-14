@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -176,7 +176,7 @@ run_svm_thresholding:
 	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
 
 run_ood_tim:
-	make CLS_TRANSFORMS="Pool BaseCentering L2norm" EXP=ood_tim CLASSIFIER=OOD_TIM run_wo_filtering ;\
+	make DET_TRANSFORMS="Pool" EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run_wo_filtering ;\
 
 # ========== Evaluating SSL methods ===========
 

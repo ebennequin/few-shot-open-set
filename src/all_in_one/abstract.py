@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
 from typing import Tuple, List, Dict
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc as auc_fn
 
 
 class AllInOne:
@@ -17,7 +19,13 @@ class AllInOne:
             False  # by default most all-in-one methods need raw features and model
         )
 
-    def forward(
+    def compute_auc(self, outlierness, **kwargs):
+        fp_rate, tp_rate, thresholds = roc_curve(
+            kwargs["outliers"].numpy(), outlierness.cpu().numpy()
+        )
+        return auc_fn(fp_rate, tp_rate)
+
+    def __call__(
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
     ) -> Tuple[Tensor, Tensor, Tensor]:
         """

@@ -34,7 +34,6 @@ from src.detectors.proba import __dict__ as PROBA_DETECTORS
 from src.detectors.proba import ProbaDetector
 from src.all_in_one import __dict__ as ALL_IN_ONE_METHODS
 from src.robust_ssl import __dict__ as SSL_METHODS
-from src.all_in_one import AllInOne
 
 from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
@@ -223,7 +222,7 @@ def main(args):
         )
         proba_detectors = classifiers = [None]
 
-    if args.feature_detector in SSL_METHODS:
+    elif args.feature_detector in SSL_METHODS:
 
         feature_detectors = get_modules_to_try(
             args,
@@ -454,31 +453,32 @@ def detect_outliers(
                     probas_s, probas_q, scores = output
                 else:
                     scores = output
-                outlier_scores["features"].append(scores)
 
-                if args.use_filtering:  # Then we filter out before giving
-                    assert feature_detector is not None
-                    if args.threshold == "otsu":
-                        thresh = threshold_otsu(scores.numpy())
+                    if args.use_filtering:  # Then we filter out before giving
+                        assert feature_detector is not None
+                        if args.threshold == "otsu":
+                            thresh = threshold_otsu(scores.numpy())
+                        else:
+                            thresh = float(args.threshold)
+                        believed_inliers = scores < thresh
+                        metrics["thresholding_accuracy"].append(
+                            (believed_inliers == ~outliers.bool()).float().mean().item()
+                        )
                     else:
-                        thresh = float(args.threshold)
-                    believed_inliers = scores < thresh
-                    metrics["thresholding_accuracy"].append(
-                        (believed_inliers == ~outliers.bool()).float().mean().item()
-                    )
-                else:
-                    believed_inliers = None
+                        believed_inliers = None
 
-                probas_s, probas_q = classifier(
-                    support_features=transformed_features["cls_sup"][layer],
-                    query_features=transformed_features["cls_query"][layer],
-                    train_mean=train_mean[layer],
-                    support_labels=support_labels,
-                    intra_task_metrics=intra_task_metrics,
-                    query_labels=query_labels,
-                    use_transductively=believed_inliers,
-                    outliers=outliers,
-                )
+                    probas_s, probas_q = classifier(
+                        support_features=transformed_features["cls_sup"][layer],
+                        query_features=transformed_features["cls_query"][layer],
+                        train_mean=train_mean[layer],
+                        support_labels=support_labels,
+                        intra_task_metrics=intra_task_metrics,
+                        query_labels=query_labels,
+                        use_transductively=believed_inliers,
+                        outliers=outliers,
+                    )
+
+                outlier_scores["features"].append(scores)
                 if proba_detector is not None:
                     outlier_scores["probas"].append(
                         proba_detector(support_probas=probas_s, query_probas=probas_q)

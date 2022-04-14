@@ -1,8 +1,8 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
@@ -10,10 +10,10 @@ DATADIR=data
 # USER=malik
 
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-# DATADIR=data
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+DATADIR=data
+USER=malik
 
 
 
@@ -174,6 +174,9 @@ run_fixed_thresholding:
 
 run_svm_thresholding:
 	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
+
+tune_ood_tim:
+	make DET_TRANSFORMS="Pool" N_TASKS=500 EXP=tune_ood_tim FEATURE_DETECTOR=OOD_TIM TUNE=feature_detector run ;\
 
 run_ood_tim:
 	make DET_TRANSFORMS="Pool" EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run_wo_filtering ;\

@@ -68,7 +68,7 @@ class Plotter:
 
             n_methods = len(self.metric_dic[metric])
             n_cols = min(self.max_col, n_methods)
-            ax.legend(bbox_to_anchor=(0.5, 1.05), loc='center', ncol=n_cols, shadow=True)
+            ax.legend(bbox_to_anchor=(0.5, 1.05), loc='center', ncol=n_cols, shadow=True, prop={'size': 6})
             ax.set_xlabel(method_dic['xlabel'])
             ax.set_ylabel(metric)
             ax.grid(True)

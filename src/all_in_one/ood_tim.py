@@ -4,11 +4,11 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from loguru import logger
-
+from sklearn.metrics import precision_recall_curve
 from skimage.filters import threshold_otsu
 import math
 from .abstract import AllInOne
-
+from easyfsl.utils import compute_prototypes
 
 class OOD_TIM(AllInOne):
     def __init__(
@@ -22,6 +22,8 @@ class OOD_TIM(AllInOne):
         lambda_ce: float,
         lambda_marg: float,
         lambda_em: float,
+        use_proto: bool,
+        use_extra_class: bool,
     ):
         super().__init__()
         self.lambda_ce = lambda_ce
@@ -33,6 +35,8 @@ class OOD_TIM(AllInOne):
         self.params2adapt = params2adapt
         self.knn = knn
         self.init = init
+        self.use_proto = use_proto
+        self.use_extra_class = use_extra_class
 
     def cosine(self, X, Y):
         return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
@@ -52,7 +56,8 @@ class OOD_TIM(AllInOne):
             logits.append(class_cossim.mean(-1))  # [Nq]
 
         # Outlier logit
-        logits.append(-sorted_cossim[:, : self.knn].mean(-1))
+        if self.use_extra_class:
+            logits.append(-sorted_cossim[:, : self.knn].mean(-1))
         logits = torch.stack(logits, dim=1)
         if bias:
             return self.softmax_temperature * logits - self.biases
@@ -82,7 +87,10 @@ class OOD_TIM(AllInOne):
 
         with torch.no_grad():
             # self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
-            self.biases = torch.zeros(num_classes + 1)
+            if self.use_extra_class:
+                self.biases = torch.zeros(num_classes + 1)
+            else:
+                self.biases = torch.zeros(num_classes)      
 
         params_list = []
         if "mu" in self.params2adapt:
@@ -101,20 +109,32 @@ class OOD_TIM(AllInOne):
         q_ent_values = []
         ce_values = []
         inlier_entropy = []
+        precs = []
+        recalls = []
         outlier_entropy = []
         inlier_outscore = []
         oulier_outscore = []
         acc_values = []
 
-        for i in range(self.inference_steps):
+        if self.use_proto:
+            prototypes = compute_prototypes(support_features, support_labels)
 
-            logits_s = self.get_logits(
-                support_labels, support_features, support_features
-            )
-            # logger.warning(logits_s)
-            logits_q = self.get_logits(
-                support_labels, support_features, query_features
-            )
+        for i in range(self.inference_steps):
+            if self.use_proto:
+                proto_labels = torch.arange(num_classes)
+                logits_s = self.get_logits(
+                    proto_labels, prototypes, support_features
+                )
+                logits_q = self.get_logits(
+                    proto_labels, prototypes, query_features
+                )
+            else:
+                logits_s = self.get_logits(
+                    support_labels, support_features, support_features
+                )
+                logits_q = self.get_logits(
+                    support_labels, support_features, query_features
+                )
 
             ce = F.cross_entropy(logits_s, support_labels)
             q_probs = logits_q.softmax(-1)
@@ -132,9 +152,13 @@ class OOD_TIM(AllInOne):
             optimizer.step()
 
             with torch.no_grad():
-                outlier_scores = q_probs[:, -1]
-                q_probs = logits_q[:, :-1].softmax(-1)
-                q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
+                if self.use_extra_class:
+                    outlier_scores = q_probs[:, -1]
+                    q_probs = logits_q[:, :-1].softmax(-1)
+                    q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
+                else:
+                    outlier_scores = q_cond_ent
+
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
                 q_ent_values.append(div.item())
                 ce_values.append(ce.item())
@@ -153,6 +177,11 @@ class OOD_TIM(AllInOne):
                 thresh = threshold_otsu(outlier_scores.numpy())
                 believed_inliers = outlier_scores < thresh
                 acc_otsu.append((believed_inliers == inliers).float().mean().item())
+                precision, recall, thresholds = precision_recall_curve(
+                    (~inliers).numpy(), outlier_scores.numpy()
+                )
+                precs.append(precision[recall > 0.9][-1])
+                recalls.append(recall[precision > 0.9][0])
 
         kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
         kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
@@ -160,17 +189,14 @@ class OOD_TIM(AllInOne):
         kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
         kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
         kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
+        kwargs['intra_task_metrics']['main_metrics']['prec_at_90'].append(precs)
+        kwargs['intra_task_metrics']['main_metrics']['rec_at_90'].append(recalls)
         kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['inlier_outscore'].append(inlier_outscore)
         kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
 
-        with torch.no_grad():
-            probas_s = self.get_logits(
-                support_labels, support_features, support_features
-            )[:, :-1].softmax(-1)
-            probas_q = self.get_logits(
-                support_labels, support_features, query_features
-            )[:, :-1].softmax(-1)
-
-        return probas_s, probas_q, outlier_scores.detach()
+        if self.use_extra_class:
+            return logits_s[:, :-1].softmax(-1).detach(), logits_q[:, :-1].softmax(-1).detach(), outlier_scores.detach()
+        else:
+            return logits_s.softmax(-1).detach(), logits_q.softmax(-1).detach(), outlier_scores.detach()

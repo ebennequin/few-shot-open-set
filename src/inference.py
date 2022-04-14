@@ -517,13 +517,17 @@ def detect_outliers(
         metrics["acc"].append(acc)
         if args.n_ood_query:
             for score_type, scores in outlier_scores.items():
-                fp_rate, tp_rate, thresholds = roc_curve(
+                fp_rate, tp_rate, _ = roc_curve(
                     outliers.numpy(), scores.numpy()
                 )
-                precision, recall, _ = precision_recall_curve(
+                precision, recall, thresholds = precision_recall_curve(
                     outliers.numpy(), scores.numpy()
                 )
+                precision_at_90 = precision[recall > 0.9][-1]
+                recall_at_90 = recall[precision > 0.9][0]
                 metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
+                metrics[f"{score_type}_prec_at_90"].append(precision_at_90)
+                metrics[f"{score_type}_rec_at_90"].append(recall_at_90)
             metrics["outlier_ratio"].append(outliers.sum().item() / outliers.size(0))
 
     # ====== Computing mean and std of metrics across tasks ======

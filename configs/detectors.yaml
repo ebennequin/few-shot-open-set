@@ -42,18 +42,20 @@ feature_detectors:
         1: {
           'softmax_temperature': 10.0,
           'inference_steps': 200,
-          'inference_lr': 0.005,
-          'lambda_ce': 0.1,
+          'inference_lr': 0.001,
+          'lambda_ce': 0.,
           'lambda_marg': 1.0,
           'lambda_em': 0.5,
-          'knn': 5,
+          "use_extra_class": True,
+          'use_proto': True,
+          'knn': 10,
           'params2adapt': 'mu-bias',
           'init': 'base',
            },
              }
     tuning:
       hparams2tune: ['lambda_ce', 'lambda_marg', 'lambda_em', 'knn']
-      hparam_values: {1: [[0.1, 0.5, 1.0], [0.5, 1.0, 2.0], [0.1, 0.5, 1.0], [1, 3, 5]]}
+      hparam_values: {1: [[0.1, 0.5, 1.0], [0.5, 1.0, 2.0], [0.1, 0.5, 1.0]]}
 
   kNNDetector:
     default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},

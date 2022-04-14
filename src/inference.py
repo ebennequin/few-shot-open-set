@@ -472,6 +472,7 @@ def detect_outliers(
                 probas_s, probas_q = classifier(
                     support_features=transformed_features["cls_sup"][layer],
                     query_features=transformed_features["cls_query"][layer],
+                    train_mean=train_mean[layer],
                     support_labels=support_labels,
                     intra_task_metrics=intra_task_metrics,
                     query_labels=query_labels,

@@ -10,27 +10,25 @@ from skimage.filters import threshold_otsu
 import math
 
 
-class OOD_TIM(FewShotMethod):
+class LAME(FewShotMethod):
 
     def __init__(
         self,
         softmax_temperature: float,
         inference_steps: int,
         inference_lr: float,
+        lambda_kernel: float,
+        lambda_ent: float,
         init: str,
         params2adapt: str,
         knn: str,
-        lambda_ce: float,
-        lambda_marg: float,
-        lambda_em: float,
     ):
         super().__init__()
-        self.lambda_ce = lambda_ce
-        self.lambda_em = lambda_em
-        self.lambda_marg = lambda_marg
         self.inference_steps = inference_steps
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
+        self.lambda_kernel = lambda_kernel
+        self.lambda_ent = lambda_ent
         self.params2adapt = params2adapt
         self.knn = knn
         self.init = init
@@ -50,17 +48,27 @@ class OOD_TIM(FewShotMethod):
         # Class logits
         for class_ in range(support_labels.unique().size(0)):
             masked_cossim = cossim[:, support_labels == class_]
-            knn = min(self.knn, masked_cossim.size(-1))
+            knn = (support_labels == class_).sum()
             class_cossim = masked_cossim.topk(knn, dim=-1).values  # [Nq, Ns]
             logits.append(class_cossim.mean(-1))  # [Nq]
 
         # Outlier logit
-        logits.append(- sorted_cossim[:, :self.knn].mean(-1))
+        logits.append(- sorted_cossim[:, :knn].mean(-1))
         logits = torch.stack(logits, dim=1)
         if bias:
             return self.softmax_temperature * logits - self.biases
         else:
             return self.softmax_temperature * logits
+
+    def laplacian_optimization(self, unary, kernel, max_steps=10):
+
+        # E_list = []
+        # oldE = float('inf')
+        Z = unary  # [N, K]
+        for i in range(max_steps):
+            Z = unary ** (1 / self.lambda_ent) * torch.exp(1 / self.lambda_ent * self.lambda_kernel * (kernel @ Z))
+            Z /= Z.sum(-1, keepdim=True)
+        return Z
 
     def forward(
         self,
@@ -87,8 +95,8 @@ class OOD_TIM(FewShotMethod):
             self.mu = torch.cat([support_features, unlabelled_data], 0).mean(0, keepdim=True)
 
         with torch.no_grad():
-            # self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
-            self.biases = torch.zeros(num_classes + 1)
+            self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
+            # self.biases = torch.zeros(num_classes + 1)
 
         params_list = []
         if 'mu' in self.params2adapt:
@@ -112,35 +120,39 @@ class OOD_TIM(FewShotMethod):
         oulier_outscore = []
         acc_values = []
 
+        support_onehot = torch.cat([F.one_hot(support_labels), torch.zeros(support_labels.size(0), 1)], dim=1)
+
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits(support_labels, support_features, support_features)
-            # logger.warning(logits_s)
             logits_q = self.get_logits(support_labels, support_features, unlabelled_data)
+            probs_q = logits_q.softmax(-1)
 
-            ce = F.cross_entropy(logits_s, support_labels)
-            q_probs = logits_q.softmax(-1)
-            q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
+            # === Perform Z-update ===
+            with torch.no_grad():
+                unary = torch.cat([support_onehot, probs_q], 0)
+                all_features = torch.cat([support_features, query_features], 0)
+                N = all_features.size(0)
+                cossim = self.cosine(all_features, all_features)
+                # W = cossim
+                knn_index = cossim.topk(self.knn + 1, -1).indices[:, 1:]  # [N, knn]
+                W = torch.zeros(N, N)
+                W.scatter_(dim=-1, index=knn_index, value=1.0)
+                Z = self.laplacian_optimization(unary, W)
+                Z = Z[-query_features.size(0):]
 
+            # === Perform mu and bias updates ===
 
-            loss = self.lambda_ce * ce
-
-            em = q_cond_ent.mean(0)
-            marginal_y = q_probs.mean(0)
-            div = (marginal_y * torch.log(marginal_y)).sum(0)
-            loss += self.lambda_em * em + self.lambda_marg * div
+            loss = - (Z * logits_q.log_softmax(-1)).sum(-1).mean(0)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             with torch.no_grad():
-                outlier_scores = q_probs[:, -1]
+                outlier_scores = Z[:, -1]
                 q_probs = logits_q[:, :-1].softmax(-1)
                 q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
-                q_ent_values.append(div.item())
-                ce_values.append(ce.item())
                 inliers = ~ kwargs['outliers'].bool()
                 acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
@@ -168,3 +180,11 @@ class OOD_TIM(FewShotMethod):
             probas_q = self.get_logits(support_labels, support_features, query_features)[:, :-1].softmax(-1)
 
         return probas_s, probas_q
+
+    def entropy_energy(self, Z, unary, pairwise):
+        """
+        pairwise: [N, N]
+        Z: [N, K]
+        """
+        E = - (Z * unary).sum() - self.lambda_kernel * (pairwise * (Z @ Z.T)).sum() + self.lambda_ent * (Z * torch.log(Z.clip(1e-20))).sum()
+        return E

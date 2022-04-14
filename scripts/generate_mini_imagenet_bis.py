@@ -45,7 +45,7 @@ def main(ilsvrc_root_dir: Path = Path("/data/etienneb/ILSVRC2015/")):
     image_names_by_class = {}
     for i, image_path in enumerate(image_paths):
         class_name = class_names[i]
-        if class_name in mini_imagenet_classes.class_name:
+        if class_name in set(mini_imagenet_classes.class_name):
             (MINI_IMAGENET_BIS_ROOT / "images" / class_name).mkdir(
                 parents=True, exist_ok=True
             )

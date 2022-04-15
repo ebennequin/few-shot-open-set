@@ -24,11 +24,13 @@ def main(features_path: Path, normalize_features: bool = True):
     )
 
     ratio, sigma_within, sigma_between = clustering_variances_ratio(features)
+    mean_auroc, average_precision = compute_mean_auroc(features)
     logger.info(f"Metrics:")
     logger.info(f"Intra-class variance: {sigma_within}")
-    logger.info(f"Intra-class variance: {sigma_between}")
+    logger.info(f"Inter-class variance: {sigma_between}")
     logger.info(f"Variance ratio: {ratio}")
-    logger.info(f"Mean AUROC: {compute_mean_auroc(features)}")
+    logger.info(f"Mean AUROC: {mean_auroc}")
+    logger.info(f"Average Precision: {average_precision}")
 
 
 if __name__ == "__main__":

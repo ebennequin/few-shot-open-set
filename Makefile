@@ -156,13 +156,13 @@ run_transductive_methods:
 	done ;\
 
 run_w_knn_filtering:
-	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+	for ood_query in 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 1 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+	for ood_query in 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
 	done ;\
 

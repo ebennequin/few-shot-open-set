@@ -18,11 +18,9 @@ class OOD_TIM(AllInOne):
         inference_lr: float,
         init: str,
         params2adapt: str,
-        knn: str,
         lambda_ce: float,
         lambda_marg: float,
         lambda_em: float,
-        use_proto: bool,
         use_extra_class: bool,
     ):
         super().__init__()
@@ -33,32 +31,15 @@ class OOD_TIM(AllInOne):
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
         self.params2adapt = params2adapt
-        self.knn = knn
         self.init = init
-        self.use_proto = use_proto
         self.use_extra_class = use_extra_class
 
     def cosine(self, X, Y):
         return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
 
-    def get_logits(self, support_labels, support_features, query_features, bias=True):
+    def get_logits(self, prototypes, query_features, bias=True):
 
-        cossim = self.cosine(query_features, support_features)  # [Nq, Ns]
-        sorted_cossim = cossim.sort(descending=True, dim=-1).values  # [Nq, Ns]
-        # sorted_cossim = cossim[:, sorted_indexes]
-        logits = []
-
-        # Class logits
-        for class_ in range(support_labels.unique().size(0)):
-            masked_cossim = cossim[:, support_labels == class_]
-            knn = min(self.knn, masked_cossim.size(-1))
-            class_cossim = masked_cossim.topk(knn, dim=-1).values  # [Nq, Ns]
-            logits.append(class_cossim.mean(-1))  # [Nq]
-
-        # Outlier logit
-        if self.use_extra_class:
-            logits.append(-sorted_cossim[:, : self.knn].mean(-1))
-        logits = torch.stack(logits, dim=1)
+        logits = self.cosine(query_features, prototypes)  # [Nq, Ns]
         if bias:
             return self.softmax_temperature * logits - self.biases
         else:
@@ -71,6 +52,8 @@ class OOD_TIM(AllInOne):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor, Tensor]:
+
+        self.iter_ = 0
 
         # Metric dic
         num_classes = support_labels.unique().size(0)
@@ -87,7 +70,11 @@ class OOD_TIM(AllInOne):
 
         with torch.no_grad():
             # self.biases = self.get_logits(support_labels, support_features, query_features, bias=False).mean(dim=0)
+            self.prototypes = compute_prototypes(support_features, support_labels)
             if self.use_extra_class:
+                mu_ood = torch.cat([support_features, query_features], 0).mean(0, keepdim=True)
+                # mu_ood = query_features[find_farthest_point(support_features, query_features)].unsqueeze(0)
+                self.prototypes = torch.cat([self.prototypes, mu_ood], 0)
                 self.biases = torch.zeros(num_classes + 1)
             else:
                 self.biases = torch.zeros(num_classes)
@@ -99,6 +86,9 @@ class OOD_TIM(AllInOne):
         if "bias" in self.params2adapt:
             self.biases.requires_grad_()
             params_list.append(self.biases)
+        if "prototypes" in self.params2adapt:
+            self.prototypes.requires_grad_()
+            params_list.append(self.prototypes)
 
         # Run adaptation
         optimizer = torch.optim.Adam(params_list, lr=self.inference_lr)
@@ -116,25 +106,14 @@ class OOD_TIM(AllInOne):
         oulier_outscore = []
         acc_values = []
 
-        if self.use_proto:
-            prototypes = compute_prototypes(support_features, support_labels)
-
-        for i in range(self.inference_steps):
-            if self.use_proto:
-                proto_labels = torch.arange(num_classes)
-                logits_s = self.get_logits(
-                    proto_labels, prototypes, support_features
-                )
-                logits_q = self.get_logits(
-                    proto_labels, prototypes, query_features
-                )
-            else:
-                logits_s = self.get_logits(
-                    support_labels, support_features, support_features
-                )
-                logits_q = self.get_logits(
-                    support_labels, support_features, query_features
-                )
+        for self.iter_ in range(self.inference_steps):
+            # proto_labels = torch.arange(num_classes)
+            logits_s = self.get_logits(
+                self.prototypes, support_features
+            )
+            logits_q = self.get_logits(
+                self.prototypes, query_features
+            )
 
             ce = F.cross_entropy(logits_s, support_labels)
             q_probs = logits_q.softmax(-1)
@@ -201,3 +180,8 @@ class OOD_TIM(AllInOne):
             return logits_s[:, :-1].softmax(-1).detach(), logits_q[:, :-1].softmax(-1).detach(), outlier_scores.detach()
         else:
             return logits_s.softmax(-1).detach(), logits_q.softmax(-1).detach(), outlier_scores.detach()
+
+
+def find_farthest_point(support_features, query_features):
+    distances = torch.cdist(query_features, support_features).mean(-1)
+    return distances.argmax()

@@ -185,6 +185,18 @@ tune_ood_tim:
 run_ood_tim:
 	make DET_TRANSFORMS="Pool" EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run_wo_filtering ;\
 
+# ========== Feature Investigation ==========
+
+clustering_metrics:
+	for dataset in mini_imagenet; do \
+		for split in train test; do \
+			python -m src.investigate_features \
+				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\
+			python -m src.investigate_features \
+				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/wrn2810_$${dataset}_feat_last.pickle ;\
+		done ;\
+	done ;\
+
 # ========== Evaluating SSL methods ===========
 
 run_ssl_detectors:

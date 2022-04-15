@@ -149,6 +149,7 @@ def clustering_variances_ratio(features) -> Tuple[float, float, float]:
 def compute_mean_auroc(features):
 
     aurocs = []
+    average_precisions = []
     for label in features.keys():
         ground_truth = []
         predictions = []
@@ -157,7 +158,7 @@ def compute_mean_auroc(features):
             ground_truth += len(v) * [0 if label == second_label else 1]
             distances = np.linalg.norm(v - centroid, axis=1)
             predictions += distances.tolist()
-        auroc = sklearn.metrics.roc_auc_score(ground_truth, predictions)
-        aurocs.append(auroc)
+        aurocs.append(sklearn.metrics.roc_auc_score(ground_truth, predictions))
+        average_precisions.append(sklearn.metrics.average_precision_score(ground_truth, predictions))
 
-    return mean(aurocs)
+    return mean(aurocs), mean(average_precisions)

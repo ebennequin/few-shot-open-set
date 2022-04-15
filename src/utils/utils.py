@@ -2,6 +2,7 @@ import random
 import inspect
 from typing import Tuple, Dict, Optional, Any, List
 import numpy as np
+import sklearn
 import torch
 from loguru import logger
 from numpy import ndarray
@@ -263,3 +264,7 @@ def get_modules_to_try(
             module_args["args"] = args
         modules_to_try = [module_pool[module_name](**module_args)]
     return modules_to_try
+
+
+def normalize(features: Dict[int, ndarray]) -> Dict[int, ndarray]:
+    return {k: sklearn.preprocessing.normalize(v, axis=1) for k, v in features.items()}

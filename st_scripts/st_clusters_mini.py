@@ -1,21 +1,16 @@
-import matplotlib.pyplot as plt
-import itertools
-import json
 import pickle
-from statistics import mean
-from typing import Dict, Tuple, List
+from typing import Dict, List
 
 import numpy as np
 from numpy import ndarray
 from matplotlib import pyplot as plt
 import pandas as pd
 from pathlib import Path
-import sklearn
 from sklearn.manifold import TSNE
 import streamlit as st
-from torch import tensor
 
-from src.utils.data_fetchers import get_test_features
+from src.utils.utils import normalize
+from src.utils.plots_and_metrics import clustering_variances_ratio, compute_mean_auroc
 from st_scripts.colors import COLORS_64, COLORS_20
 
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
@@ -68,10 +63,6 @@ def map_label(features: pd.DataFrame, class_names: List[str]):
     return features
 
 
-def normalize(features: Dict[int, ndarray]) -> Dict[int, ndarray]:
-    return {k: sklearn.preprocessing.normalize(v, axis=1) for k, v in features.items()}
-
-
 def compute_2d_features(features: Dict[int, ndarray]) -> pd.DataFrame:
     reduced_features = TSNE(n_components=2, init="pca").fit_transform(
         np.concatenate(list(normalize(features).values()))
@@ -119,45 +110,10 @@ def plot_2d_features(features, classes_to_plot):
     st.write(fig)
 
 
-def compute_statistics(features, use_normalize=True):
-    if use_normalize:
-        features = normalize(features)
-
-    sigma_within = np.mean([np.linalg.norm(v.std(axis=0)) for k, v in features.items()])
-
-    sigma_between = np.linalg.norm(
-        np.stack([v.mean(axis=0) for v in features.values()]).std(axis=0)
-    )
-
-    return sigma_within, sigma_between
-
-
-def compute_mean_auroc(features, use_normalize=True):
-    if use_normalize:
-        features = normalize(features)
-
-    # features = {k: v for k,v in features.items() if k<10}
-    # st.write("coucou")
-
-    aurocs = []
-    for label in features.keys():
-        ground_truth = []
-        predictions = []
-        centroid = features[label].mean(axis=0)
-        for second_label, v in features.items():
-            ground_truth += len(v) * [0 if label == second_label else 1]
-            distances = np.linalg.norm(v - centroid, axis=1)
-            predictions += distances.tolist()
-        auroc = sklearn.metrics.roc_auc_score(ground_truth, predictions)
-        aurocs.append(auroc)
-
-    return mean(aurocs)
-
-
 def print_clustering_statistics_for_all_features(features_paths_list):
     all_stats = []
     for feature_path in features_paths_list:
-        statistics = compute_statistics(feature_path)
+        statistics = clustering_variances_ratio(feature_path)
         all_stats.append(
             {
                 "backbone": feature_path.stem,
@@ -205,6 +161,7 @@ def plot_clusters(key):
             test_features = {
                 k: v.reshape(v.shape[0], -1) for k, v in test_features.items()
             }
+            test_features = normalize(test_features)
             # test_features = {k: v for k, v in test_features.items() if k<20}
     except FileNotFoundError:
         st.write("No features for this combination")
@@ -215,9 +172,9 @@ def plot_clusters(key):
     class_names = get_class_names("mini_imagenet", split, key)
     selected_classes = select_classes(class_names, key)
 
-    sigma_within, sig_between = compute_statistics(test_features)
+    ratio, sigma_within, sig_between = clustering_variances_ratio(test_features)
     st.write(
-        f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}"
+        f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={ratio}"
     )
 
     reduced_features = compute_or_retrieve_2d_features(

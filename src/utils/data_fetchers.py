@@ -91,18 +91,21 @@ def get_imagenet_set(args, split, training):
     )
 
 
-def get_tiered_imagenet_set(args, split, training):
+def get_tiered_imagenet_set(args, split, training, bis=False):
+    root = Path(args.data_dir) / "tiered_imagenet"
+    if bis:
+        root = root / "bis"
     if args.model_source == "feat":
         logger.warning("Return FEAT version of Tiered-ImageNet ! ")
         return FeatTieredImageNet(
-            root=Path(args.data_dir) / "tiered_imagenet",
+            root=root,
             args=args,
             split=split,
             training=training,
         )
     else:
         return TieredImageNet(
-            root=Path(args.data_dir) / "tiered_imagenet",
+            root=root,
             args=args,
             split=split,
             training=training,
@@ -128,6 +131,8 @@ def get_dataset(dataset_name, args, split, training):
     elif dataset_name == "imagenet":
         dataset = get_imagenet_set(args, split, training)
     elif dataset_name == "tiered_imagenet":
+        dataset = get_tiered_imagenet_set(args, split, training)
+    elif dataset_name == "tiered_imagenet_bis":
         dataset = get_tiered_imagenet_set(args, split, training)
     elif dataset_name == "cub":
         dataset = get_cub_set(args, split, training)

@@ -1,3 +1,4 @@
+import pandas as pd
 import json
 from pathlib import Path
 
@@ -6,7 +7,7 @@ import numpy as np
 import pickle
 import typer
 from loguru import logger
-
+from tqdm import tqdm
 
 from src.utils.imagenet_val_utils import list_imagenet_val
 
@@ -24,17 +25,25 @@ def main(ilsvrc_root_dir: Path = Path("/data/etienneb/ILSVRC2015/")):
             tiered_imagenet_classes[split] = json.load(f)["class_names"]
 
     image_paths, class_names = list_imagenet_val(ilsvrc_root_dir)
+    ilsvrc_df = pd.DataFrame(
+        {
+            "image_path": image_paths,
+            "class_name": class_names,
+        }
+    )
 
     logger.info("Writing tieredImageNet bis images")
     for split, split_classes in tiered_imagenet_classes.items():
         logger.info(f"Writing {split}")
         images = []
         labels = []
-        for integer, class_name in enumerate(split_classes):
-            class_images = image_paths[class_names == class_name]
+        for integer, class_name in tqdm(enumerate(split_classes), unit="class"):
+            class_images = ilsvrc_df.loc[
+                lambda df: df.class_name == class_name
+            ].image_path
             labels += len(class_images) * [integer]
             for image_path in class_images:
-                img = cv2.imread(image_path)
+                img = cv2.imread(str(image_path))
                 img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_CUBIC)
                 images.append(img)
 

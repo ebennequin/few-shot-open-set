@@ -131,7 +131,7 @@ extract_snatcher:
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \
-		make BACKBONE=$${backbone} SRC_DATASET=mini_imagenet MODEL_SRC='feat' TGT_DATASETS=mini_imagenet_bis extract ;\
+		make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=tiered_imagenet_bis extract ;\
 	done ;\
 
 # ========== Evaluating OOD detectors in isolation ===========

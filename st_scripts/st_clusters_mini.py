@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import itertools
 import json
 import pickle
 from statistics import mean
@@ -14,6 +16,7 @@ import streamlit as st
 from torch import tensor
 
 from src.utils.data_fetchers import get_test_features
+from st_scripts.colors import COLORS_64, COLORS_20
 
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
 DATA_ROOT = Path("data")
@@ -35,44 +38,29 @@ MODELS_LIST = [
 ]
 
 
-def get_class_names(dataset, key):
-    selected_specs_file = st.selectbox(
-        "Specs",
-        [
-            path
-            for path in (Path("data") / dataset / "specs").glob("*")
-            if path.suffix in {".json", ".csv"}
-        ],
-        format_func=lambda path: str(path)[len("data/") :],
-        key=key,
-    )
-    if selected_specs_file.suffix == ".json":
-        with open(selected_specs_file, "r") as file:
-            return json.load(file)["class_names"]
-    elif selected_specs_file.suffix == ".csv":
-        synset_codes = pd.read_csv(selected_specs_file).class_name.unique()
-        words = {}
-        with open(IMAGENET_WORDS_PATH, "r") as file:
-            for line in file:
-                synset, word = line.rstrip().split("\t")
-                words[synset] = word.split(",")[0]
-        return [words[synset] for synset in synset_codes]
-    else:
-        raise ValueError
+def get_class_names(dataset, split, key):
+    selected_specs_file = Path("data") / dataset / "specs" / f"{split}_images.csv"
+    synset_codes = pd.read_csv(selected_specs_file).class_name.unique()
+    words = {}
+    with open(IMAGENET_WORDS_PATH, "r") as file:
+        for line in file:
+            synset, word = line.rstrip().split("\t")
+            words[synset] = word.split(",")[0]
+    return [words[synset] for synset in synset_codes]
 
 
 def select_classes(class_names, key):
-    container = st.container()
-    select_all = st.checkbox("All classes", value=True)
+    with st.expander("Select classes to plot"):
+        select_all = st.checkbox("All classes", value=True, key=key)
 
-    if select_all:
-        selected_options = container.multiselect(
-            "Classes", class_names, default=class_names, key=key
-        )
-    else:
-        selected_options = container.multiselect("Classes", class_names, key=key)
+        if select_all:
+            selected_options = st.multiselect(
+                "Classes", class_names, default=class_names, key=key
+            )
+        else:
+            selected_options = st.multiselect("Classes", class_names, key=key)
 
-    return selected_options
+        return selected_options
 
 
 def map_label(features: pd.DataFrame, class_names: List[str]):
@@ -113,16 +101,19 @@ def plot_2d_features(features, classes_to_plot):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
+    colors = COLORS_64 if len(classes_to_plot) > 40 else COLORS_20
     for label, group in features.loc[lambda df: df.label.isin(classes_to_plot)].groupby(
         "label"
     ):
         ax.scatter(
             group.x,
             group.y,
-            s=0.5,
+            s=3.5,
             marker="o",
             label=label,
+            color=next(colors),
         )
+    plt.axis("off")
     if len(classes_to_plot) < 10:
         plt.legend(loc="best", ncol=2, fontsize="xx-small")
     st.write(fig)
@@ -185,92 +176,60 @@ def print_clustering_statistics_for_all_features(features_paths_list):
 
 
 def plot_clusters(key):
-    selectors_col, plot_col = st.columns([2, 3])
-    with selectors_col:
-        st.title("Select stuff")
-        source_dataset = st.selectbox(
-            "Source dataset",
-            DATASETS_LIST,
-            key=key,
-        )
-        target_dataset = st.selectbox(
-            "Target dataset",
-            DATASETS_LIST,
-            key=key,
-        )
-        backbone = st.selectbox(
-            "Model",
-            MODELS_LIST,
-            key=key,
-        )
-        model_source = st.selectbox(
-            "Model source",
-            ["url", "feat"],
-            key=key,
-        )
-        layer = st.selectbox(
-            "Layer",
-            ["4_4", "last", "4_3", "last_cls"],
-            key=key,
-        )
-        split = st.selectbox(
-            "Split",
-            ["train", "val", "test"],
-            key=key,
-        )
-        try:
-            pickle_basename = (
-                f"{backbone}_{source_dataset}_{model_source}_{layer}.pickle"
-            )
-            test_features_path = (
-                DATA_ROOT
-                / "features"
-                / source_dataset
-                / target_dataset
-                / split
-                / "standard"
-                / pickle_basename
-            )
-
-            with open(test_features_path, "rb") as stream:
-                test_features = pickle.load(stream)
-                # WRN returns a weird shape for the features (n_instances, n_channels, 1, 1)
-                test_features = {
-                    k: v.reshape(v.shape[0], -1) for k, v in test_features.items()
-                }
-        except FileNotFoundError:
-            st.write("No features for this combination")
-            return
-
-        mean_auroc = compute_mean_auroc(features=test_features)
-        st.write(mean_auroc)
-        use_class_names = st.checkbox(
-            "Use class names",
-            key=key,
-        )
-        if use_class_names:
-            class_names = get_class_names(target_dataset, key)
-            selected_classes = select_classes(class_names, key)
-
-        sigma_within, sig_between = compute_statistics(test_features)
-        st.write(
-            f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}"
+    backbone = st.selectbox(
+        "Model",
+        MODELS_LIST,
+        key=key,
+    )
+    layer = "last" if backbone == "wrn2810" else "4_4"
+    split = st.selectbox(
+        "Split",
+        ["train", "val", "test"],
+        key=key,
+    )
+    try:
+        pickle_basename = f"{backbone}_mini_imagenet_feat_{layer}.pickle"
+        test_features_path = (
+            DATA_ROOT
+            / "features"
+            / "mini_imagenet"
+            / "mini_imagenet_bis"
+            / split
+            / "standard"
+            / pickle_basename
         )
 
-        # sigma_within, sig_between = compute_statistics(train_features)
-        # st.write(f"Train set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}")
+        with open(test_features_path, "rb") as stream:
+            test_features = pickle.load(stream)
+            # WRN returns a weird shape for the features (n_instances, n_channels, 1, 1)
+            test_features = {
+                k: v.reshape(v.shape[0], -1) for k, v in test_features.items()
+            }
+            # test_features = {k: v for k, v in test_features.items() if k<20}
+    except FileNotFoundError:
+        st.write("No features for this combination")
+        return
 
-    with plot_col:
-        reduced_features = compute_or_retrieve_2d_features(
-            test_features_path, test_features
-        )
-        st.title("Look at all those clusters")
-        if use_class_names:
-            reduced_features = map_label(reduced_features, class_names)
-        else:
-            selected_classes = reduced_features.label.unique()
-        plot_2d_features(reduced_features, selected_classes)
+    mean_auroc = compute_mean_auroc(features=test_features)
+    st.write(mean_auroc)
+    class_names = get_class_names("mini_imagenet", split, key)
+    selected_classes = select_classes(class_names, key)
+
+    sigma_within, sig_between = compute_statistics(test_features)
+    st.write(
+        f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}"
+    )
+
+    reduced_features = compute_or_retrieve_2d_features(
+        test_features_path, test_features
+    )
+    reduced_features = map_label(reduced_features, class_names)
+    plot_2d_features(reduced_features, selected_classes)
 
 
 st.set_page_config(page_title="Look at clusters", layout="wide")
-plot_clusters(1)
+col1, col2 = st.columns(2)
+with col1:
+    plot_clusters(1)
+with col2:
+    plot_clusters(2)

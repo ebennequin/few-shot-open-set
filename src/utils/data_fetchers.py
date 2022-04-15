@@ -20,6 +20,7 @@ from src.datasets import (
     ImageNet,
     Aircraft,
 )
+from src.datasets.imagenet_val import ImageNetVal
 from src.sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
 
 
@@ -53,9 +54,12 @@ def get_cifar_set(args, split, training):
     )
 
 
-def get_mini_imagenet_set(args, split, training):
+def get_mini_imagenet_set(args, split, training, bis=False):
+    root = Path(args.data_dir) / "mini_imagenet"
+    if bis:
+        root = root / "bis"
     return MiniImageNet(
-        root=Path(args.data_dir) / "mini_imagenet",
+        root=root,
         args=args,
         split=split,
         training=training,
@@ -68,6 +72,13 @@ def get_aircraft_set(args, split, training):
         args=args,
         split=split,
         training=training,
+    )
+
+
+def get_imagenet_val_set(args):
+    return ImageNetVal(
+        root=Path("/data/etienneb/ILSVRC2015/"),
+        args=args,
     )
 
 
@@ -112,6 +123,8 @@ def get_dataset(dataset_name, args, split, training):
         dataset = get_cifar_set(args, split, training)
     elif dataset_name == "mini_imagenet":
         dataset = get_mini_imagenet_set(args, split, training)
+    elif dataset_name == "mini_imagenet_bis":
+        dataset = get_mini_imagenet_set(args, split, training, bis=True)
     elif dataset_name == "imagenet":
         dataset = get_imagenet_set(args, split, training)
     elif dataset_name == "tiered_imagenet":
@@ -120,6 +133,8 @@ def get_dataset(dataset_name, args, split, training):
         dataset = get_cub_set(args, split, training)
     elif dataset_name == "aircraft":
         dataset = get_aircraft_set(args, split, training)
+    elif dataset_name == "imagenet_val":
+        dataset = get_imagenet_val_set(args)
     else:
         raise NotImplementedError(f"I don't know this dataset {dataset_name}.")
     return dataset

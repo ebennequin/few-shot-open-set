@@ -86,11 +86,11 @@ class OOD_TIM(AllInOne):
             )
 
         with torch.no_grad():
-            # self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
+            # self.biases = self.get_logits(support_labels, support_features, query_features, bias=False).mean(dim=0)
             if self.use_extra_class:
                 self.biases = torch.zeros(num_classes + 1)
             else:
-                self.biases = torch.zeros(num_classes)      
+                self.biases = torch.zeros(num_classes)
 
         params_list = []
         if "mu" in self.params2adapt:
@@ -143,9 +143,11 @@ class OOD_TIM(AllInOne):
             loss = self.lambda_ce * ce
 
             em = q_cond_ent.mean(0)
-            marginal_y = q_probs.mean(0)
+            marginal_y = logits_q.softmax(-1).mean(0)
             div = (marginal_y * torch.log(marginal_y)).sum(0)
             loss += self.lambda_em * em + self.lambda_marg * div
+
+            # logger.warning(marginal_y)
 
             optimizer.zero_grad()
             loss.backward()
@@ -195,7 +197,6 @@ class OOD_TIM(AllInOne):
         kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['inlier_outscore'].append(inlier_outscore)
         kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
-
         if self.use_extra_class:
             return logits_s[:, :-1].softmax(-1).detach(), logits_q[:, :-1].softmax(-1).detach(), outlier_scores.detach()
         else:

@@ -60,10 +60,15 @@ def merge_from_dict(args, dict_: Dict):
 
 
 def compute_features(
-    feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda"
+    feature_extractor: nn.Module,
+    loader: DataLoader,
+    split: str,
+    layers,
+    device="cuda",
+    keep_all_train_features=False,
 ) -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
-        if split == "val" or split == "test":
+        if split == "val" or split == "test" or keep_all_train_features:
             all_features = defaultdict(list)
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):

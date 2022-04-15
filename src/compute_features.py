@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--keep_all_train_features", type=bool, default=False)
 
     args = parser.parse_args()
     return args
@@ -59,6 +60,7 @@ def main(args):
         device=args.device,
         split=args.split,
         layers=args.layers,
+        keep_all_train_features=args.keep_all_train_features,
     )
 
     # if output_file is None:
@@ -75,7 +77,7 @@ def main(args):
         )
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        if args.split == "test" or args.split == "val":
+        if args.split == "test" or args.split == "val" or args.keep_all_train_features:
             logger.info("Packing by class...")
             packed_features = {
                 class_integer_label: features[layer][labels == class_integer_label]

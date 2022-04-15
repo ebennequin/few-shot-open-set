@@ -8,6 +8,8 @@ import xmltodict
 
 import pandas as pd
 
+from src.utils.imagenet_val_utils import list_imagenet_val
+
 MINI_IMAGENET_SPECS_ROOT = Path("data/mini_imagenet/specs")
 MINI_IMAGENET_BIS_ROOT = Path("data/mini_imagenet/bis/")
 
@@ -29,17 +31,7 @@ def main(ilsvrc_root_dir: Path = Path("/data/etienneb/ILSVRC2015/")):
         ]
     )
 
-    image_paths = sorted((ilsvrc_root_dir / "Data/CLS-LOC/val").glob("*"))
-    annotations = sorted((ilsvrc_root_dir / "Annotations/CLS-LOC/val").glob("*"))
-    class_names = []
-    for annotation in annotations:
-        with open(annotation, "r") as f:
-            current_annotation = xmltodict.parse(f.read())["annotation"]["object"]
-            if type(current_annotation) == list:
-                class_name = current_annotation[0]["name"]
-            else:
-                class_name = current_annotation["name"]
-        class_names.append(class_name)
+    image_paths, class_names = list_imagenet_val(ilsvrc_root_dir)
 
     logger.info("Copying miniImageNet bis images")
     image_names_by_class = {}

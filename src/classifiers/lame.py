@@ -11,7 +11,6 @@ import math
 
 
 class LAME(FewShotMethod):
-
     def __init__(
         self,
         softmax_temperature: float,
@@ -34,9 +33,7 @@ class LAME(FewShotMethod):
         self.init = init
 
     def cosine(self, X, Y):
-        return (F.normalize(X - self.mu, dim=1)
-                @ F.normalize(Y - self.mu, dim=1).T
-                )
+        return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
 
     def get_logits(self, support_labels, support_features, query_features, bias=True):
 
@@ -53,7 +50,7 @@ class LAME(FewShotMethod):
             logits.append(class_cossim.mean(-1))  # [Nq]
 
         # Outlier logit
-        logits.append(- sorted_cossim[:, :knn].mean(-1))
+        logits.append(-sorted_cossim[:, :knn].mean(-1))
         logits = torch.stack(logits, dim=1)
         if bias:
             return self.softmax_temperature * logits - self.biases
@@ -66,7 +63,9 @@ class LAME(FewShotMethod):
         # oldE = float('inf')
         Z = unary  # [N, K]
         for i in range(max_steps):
-            Z = unary ** (1 / self.lambda_ent) * torch.exp(1 / self.lambda_ent * self.lambda_kernel * (kernel @ Z))
+            Z = unary ** (1 / self.lambda_ent) * torch.exp(
+                1 / self.lambda_ent * self.lambda_kernel * (kernel @ Z)
+            )
             Z /= Z.sum(-1, keepdim=True)
         return Z
 
@@ -78,8 +77,8 @@ class LAME(FewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs['use_transductively'] is not None:
-            unlabelled_data = query_features[kwargs['use_transductively']]
+        if kwargs["use_transductively"] is not None:
+            unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
             unlabelled_data = query_features
 
@@ -87,22 +86,26 @@ class LAME(FewShotMethod):
         num_classes = support_labels.unique().size(0)
 
         # Initialize weights
-        if self.init == 'base':
-            self.mu = kwargs['train_mean'].squeeze()
-        elif self.init == 'rand':
+        if self.init == "base":
+            self.mu = kwargs["train_mean"].squeeze()
+        elif self.init == "rand":
             self.mu = 0.1 * torch.randn(1, support_features.size(-1))
-        elif self.init == 'mean':
-            self.mu = torch.cat([support_features, unlabelled_data], 0).mean(0, keepdim=True)
+        elif self.init == "mean":
+            self.mu = torch.cat([support_features, unlabelled_data], 0).mean(
+                0, keepdim=True
+            )
 
         with torch.no_grad():
-            self.biases = self.get_logits(support_labels, support_features, unlabelled_data, bias=False).mean(dim=0)
+            self.biases = self.get_logits(
+                support_labels, support_features, unlabelled_data, bias=False
+            ).mean(dim=0)
             # self.biases = torch.zeros(num_classes + 1)
 
         params_list = []
-        if 'mu' in self.params2adapt:
+        if "mu" in self.params2adapt:
             self.mu.requires_grad_()
             params_list.append(self.mu)
-        if 'bias' in self.params2adapt:
+        if "bias" in self.params2adapt:
             self.biases.requires_grad_()
             params_list.append(self.biases)
 
@@ -120,11 +123,15 @@ class LAME(FewShotMethod):
         oulier_outscore = []
         acc_values = []
 
-        support_onehot = torch.cat([F.one_hot(support_labels), torch.zeros(support_labels.size(0), 1)], dim=1)
+        support_onehot = torch.cat(
+            [F.one_hot(support_labels), torch.zeros(support_labels.size(0), 1)], dim=1
+        )
 
         for i in range(self.inference_steps):
 
-            logits_q = self.get_logits(support_labels, support_features, unlabelled_data)
+            logits_q = self.get_logits(
+                support_labels, support_features, unlabelled_data
+            )
             probs_q = logits_q.softmax(-1)
 
             # === Perform Z-update ===
@@ -138,11 +145,11 @@ class LAME(FewShotMethod):
                 W = torch.zeros(N, N)
                 W.scatter_(dim=-1, index=knn_index, value=1.0)
                 Z = self.laplacian_optimization(unary, W)
-                Z = Z[-query_features.size(0):]
+                Z = Z[-query_features.size(0) :]
 
             # === Perform mu and bias updates ===
 
-            loss = - (Z * logits_q.log_softmax(-1)).sum(-1).mean(0)
+            loss = -(Z * logits_q.log_softmax(-1)).sum(-1).mean(0)
 
             optimizer.zero_grad()
             loss.backward()
@@ -153,31 +160,52 @@ class LAME(FewShotMethod):
                 q_probs = logits_q[:, :-1].softmax(-1)
                 q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
-                inliers = ~ kwargs['outliers'].bool()
-                acc_values.append((q_probs.argmax(-1) == kwargs['query_labels'])[inliers].float().mean().item())
+                inliers = ~kwargs["outliers"].bool()
+                acc_values.append(
+                    (q_probs.argmax(-1) == kwargs["query_labels"])[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 inlier_outscore.append(outlier_scores[inliers].mean(0).item())
                 oulier_outscore.append(outlier_scores[~inliers].mean(0).item())
                 aucs.append(self.compute_auc(outlier_scores, **kwargs))
                 thresh = threshold_otsu(outlier_scores.numpy())
-                believed_inliers = (outlier_scores < thresh)
+                believed_inliers = outlier_scores < thresh
                 acc_otsu.append((believed_inliers == inliers).float().mean().item())
 
-        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
-        kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
-        kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_outscore'].append(inlier_outscore)
-        kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
+        kwargs["intra_task_metrics"]["classifier_losses"]["cond_ent"].append(
+            q_cond_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["marg_ent"].append(
+            q_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
+        kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
+            inlier_entropy
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["outlier_entropy"].append(
+            outlier_entropy
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_outscore"].append(
+            inlier_outscore
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["oulier_outscore"].append(
+            oulier_outscore
+        )
 
         with torch.no_grad():
-            probas_s = self.get_logits(support_labels, support_features, support_features)[:, :-1].softmax(-1)
-            probas_q = self.get_logits(support_labels, support_features, query_features)[:, :-1].softmax(-1)
+            probas_s = self.get_logits(
+                support_labels, support_features, support_features
+            )[:, :-1].softmax(-1)
+            probas_q = self.get_logits(
+                support_labels, support_features, query_features
+            )[:, :-1].softmax(-1)
 
         return probas_s, probas_q
 
@@ -186,5 +214,9 @@ class LAME(FewShotMethod):
         pairwise: [N, N]
         Z: [N, K]
         """
-        E = - (Z * unary).sum() - self.lambda_kernel * (pairwise * (Z @ Z.T)).sum() + self.lambda_ent * (Z * torch.log(Z.clip(1e-20))).sum()
+        E = (
+            -(Z * unary).sum()
+            - self.lambda_kernel * (pairwise * (Z @ Z.T)).sum()
+            + self.lambda_ent * (Z * torch.log(Z.clip(1e-20))).sum()
+        )
         return E

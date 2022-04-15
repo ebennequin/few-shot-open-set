@@ -129,6 +129,10 @@ extract_snatcher:
 # 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
 
 
+extract_bis:
+	for backbone in resnet12 wrn2810; do \
+		make BACKBONE=$${backbone} SRC_DATASET=mini_imagenet MODEL_SRC='feat' TGT_DATASETS=mini_imagenet_bis extract ;\
+	done ;\
 
 # ========== Evaluating OOD detectors in isolation ===========
 

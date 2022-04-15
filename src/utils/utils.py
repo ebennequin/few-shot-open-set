@@ -2,6 +2,7 @@ import random
 import inspect
 from typing import Tuple, Dict, Optional, Any, List
 import numpy as np
+import sklearn
 import torch
 from loguru import logger
 from numpy import ndarray
@@ -60,10 +61,15 @@ def merge_from_dict(args, dict_: Dict):
 
 
 def compute_features(
-    feature_extractor: nn.Module, loader: DataLoader, split: str, layers, device="cuda"
+    feature_extractor: nn.Module,
+    loader: DataLoader,
+    split: str,
+    layers,
+    device="cuda",
+    keep_all_train_features=False,
 ) -> Tuple[ndarray, ndarray]:
     with torch.no_grad():
-        if split == "val" or split == "test":
+        if split == "val" or split == "test" or keep_all_train_features:
             all_features = defaultdict(list)
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
@@ -258,3 +264,7 @@ def get_modules_to_try(
             module_args["args"] = args
         modules_to_try = [module_pool[module_name](**module_args)]
     return modules_to_try
+
+
+def normalize(features: Dict[int, ndarray]) -> Dict[int, ndarray]:
+    return {k: sklearn.preprocessing.normalize(v, axis=1) for k, v in features.items()}

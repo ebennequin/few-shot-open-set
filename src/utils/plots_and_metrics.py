@@ -1,10 +1,13 @@
 """
 Utils for metric computation and plots.
 """
+from statistics import mean
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import sklearn
 import torchvision
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
@@ -131,3 +134,30 @@ def confidence_interval(standard_deviation, n_samples):
         float: confidence interval
     """
     return 1.96 * standard_deviation / np.sqrt(n_samples)
+
+
+def clustering_variances_ratio(features) -> Tuple[float, float, float]:
+    sigma_within = np.mean([np.linalg.norm(v.std(axis=0)) for k, v in features.items()])
+
+    sigma_between = np.linalg.norm(
+        np.stack([v.mean(axis=0) for v in features.values()]).std(axis=0)
+    )
+
+    return sigma_within / sigma_between, sigma_within, sigma_between
+
+
+def compute_mean_auroc(features):
+
+    aurocs = []
+    for label in features.keys():
+        ground_truth = []
+        predictions = []
+        centroid = features[label].mean(axis=0)
+        for second_label, v in features.items():
+            ground_truth += len(v) * [0 if label == second_label else 1]
+            distances = np.linalg.norm(v - centroid, axis=1)
+            predictions += distances.tolist()
+        auroc = sklearn.metrics.roc_auc_score(ground_truth, predictions)
+        aurocs.append(auroc)
+
+    return mean(aurocs)

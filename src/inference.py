@@ -517,9 +517,7 @@ def detect_outliers(
         metrics["acc"].append(acc)
         if args.n_ood_query:
             for score_type, scores in outlier_scores.items():
-                fp_rate, tp_rate, _ = roc_curve(
-                    outliers.numpy(), scores.numpy()
-                )
+                fp_rate, tp_rate, _ = roc_curve(outliers.numpy(), scores.numpy())
                 precision, recall, thresholds = precision_recall_curve(
                     outliers.numpy(), scores.numpy()
                 )

@@ -1,5 +1,6 @@
 import json
 import pickle
+from statistics import mean
 from typing import Dict, Tuple, List
 
 import numpy as np
@@ -10,13 +11,21 @@ from pathlib import Path
 import sklearn
 from sklearn.manifold import TSNE
 import streamlit as st
-
+from torch import tensor
 
 from src.utils.data_fetchers import get_test_features
 
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
 DATA_ROOT = Path("data")
-DATASETS_LIST = ["mini_imagenet", "imagenet", "tiered_imagenet", "cub", "aircraft"]
+DATASETS_LIST = [
+    "mini_imagenet",
+    "imagenet",
+    "tiered_imagenet",
+    "cub",
+    "aircraft",
+    "imagenet_val",
+    "mini_imagenet_bis",
+]
 MODELS_LIST = [
     "resnet12",
     "wrn2810",
@@ -81,7 +90,7 @@ def compute_2d_features(features: Dict[int, ndarray]) -> pd.DataFrame:
     )
 
     return pd.concat(
-        [pd.DataFrame({"label": len(v) * [k]}) for k, v in features.items()]
+        [pd.DataFrame({"label": len(v) * [int(k)]}) for k, v in features.items()]
     ).assign(x=reduced_features[:, 0], y=reduced_features[:, 1])
 
 
@@ -114,13 +123,14 @@ def plot_2d_features(features, classes_to_plot):
             marker="o",
             label=label,
         )
-    plt.legend(loc="best", ncol=2, fontsize="xx-small")
+    if len(classes_to_plot) < 10:
+        plt.legend(loc="best", ncol=2, fontsize="xx-small")
     st.write(fig)
 
 
-def compute_statistics(features_path):
-    with open(features_path, "rb") as stream:
-        features = normalize(pickle.load(stream))
+def compute_statistics(features, use_normalize=True):
+    if use_normalize:
+        features = normalize(features)
 
     sigma_within = np.mean([np.linalg.norm(v.std(axis=0)) for k, v in features.items()])
 
@@ -129,6 +139,28 @@ def compute_statistics(features_path):
     )
 
     return sigma_within, sigma_between
+
+
+def compute_mean_auroc(features, use_normalize=True):
+    if use_normalize:
+        features = normalize(features)
+
+    # features = {k: v for k,v in features.items() if k<10}
+    # st.write("coucou")
+
+    aurocs = []
+    for label in features.keys():
+        ground_truth = []
+        predictions = []
+        centroid = features[label].mean(axis=0)
+        for second_label, v in features.items():
+            ground_truth += len(v) * [0 if label == second_label else 1]
+            distances = np.linalg.norm(v - centroid, axis=1)
+            predictions += distances.tolist()
+        auroc = sklearn.metrics.roc_auc_score(ground_truth, predictions)
+        aurocs.append(auroc)
+
+    return mean(aurocs)
 
 
 def print_clustering_statistics_for_all_features(features_paths_list):
@@ -159,7 +191,6 @@ def plot_clusters(key):
         source_dataset = st.selectbox(
             "Source dataset",
             DATASETS_LIST,
-            format_func=lambda path: path.name,
             key=key,
         )
         target_dataset = st.selectbox(
@@ -179,41 +210,65 @@ def plot_clusters(key):
         )
         layer = st.selectbox(
             "Layer",
-            ["4_4", "last", "4_3"],
+            ["4_4", "last", "4_3", "last_cls"],
+            key=key,
+        )
+        split = st.selectbox(
+            "Split",
+            ["train", "val", "test"],
             key=key,
         )
         try:
-            (
-                test_features,
-                train_features,
-                average_train_features,
-                std_train_features,
-                test_features_path,
-                train_features_path,
-            ) = get_test_features(
-                data_dir=DATA_ROOT,
-                backbone=backbone,
-                src_dataset=source_dataset,
-                tgt_dataset=target_dataset,
-                training_method="standard",
-                model_source=model_source,
-                layer=layer,
+            pickle_basename = (
+                f"{backbone}_{source_dataset}_{model_source}_{layer}.pickle"
             )
+            test_features_path = (
+                DATA_ROOT
+                / "features"
+                / source_dataset
+                / target_dataset
+                / split
+                / "standard"
+                / pickle_basename
+            )
+
+            with open(test_features_path, "rb") as stream:
+                test_features = pickle.load(stream)
+                # WRN returns a weird shape for the features (n_instances, n_channels, 1, 1)
+                test_features = {
+                    k: v.reshape(v.shape[0], -1) for k, v in test_features.items()
+                }
         except FileNotFoundError:
             st.write("No features for this combination")
             return
 
-        class_names = get_class_names(target_dataset, key)
-        selected_classes = select_classes(class_names, key)
+        mean_auroc = compute_mean_auroc(features=test_features)
+        st.write(mean_auroc)
+        use_class_names = st.checkbox(
+            "Use class names",
+            key=key,
+        )
+        if use_class_names:
+            class_names = get_class_names(target_dataset, key)
+            selected_classes = select_classes(class_names, key)
 
-        # print_clustering_statistics_for_all_features(feature_paths_for_selected_dataset)
+        sigma_within, sig_between = compute_statistics(test_features)
+        st.write(
+            f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}"
+        )
+
+        # sigma_within, sig_between = compute_statistics(train_features)
+        # st.write(f"Train set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={sigma_within / sig_between}")
 
     with plot_col:
         reduced_features = compute_or_retrieve_2d_features(
             test_features_path, test_features
         )
-        reduced_features = map_label(reduced_features, class_names)
         st.title("Look at all those clusters")
+        if use_class_names:
+            reduced_features = map_label(reduced_features, class_names)
+        else:
+            selected_classes = reduced_features.label.unique()
         plot_2d_features(reduced_features, selected_classes)
 
 

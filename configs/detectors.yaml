@@ -45,9 +45,9 @@ feature_detectors:
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.1,
+          'lambda_em': 0.5,
           "use_extra_class": True,
-          'params2adapt': 'prototypes',
+          'params2adapt': 'mu',
           'init': 'base',
            },
              }

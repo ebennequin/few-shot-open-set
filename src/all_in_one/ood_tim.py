@@ -40,6 +40,8 @@ class OOD_TIM(AllInOne):
     def get_logits(self, prototypes, query_features, bias=True):
 
         logits = self.cosine(query_features, prototypes)  # [Nq, Ns]
+        if self.use_extra_class:
+            logits = torch.cat([logits, -logits.mean(-1, keepdim=True)], dim=1)  # [Nq, Ns]
         if bias:
             return self.softmax_temperature * logits - self.biases
         else:
@@ -72,9 +74,8 @@ class OOD_TIM(AllInOne):
             # self.biases = self.get_logits(support_labels, support_features, query_features, bias=False).mean(dim=0)
             self.prototypes = compute_prototypes(support_features, support_labels)
             if self.use_extra_class:
-                mu_ood = torch.cat([support_features, query_features], 0).mean(0, keepdim=True)
+                # mu_ood = torch.cat([support_features, query_features], 0).mean(0, keepdim=True)
                 # mu_ood = query_features[find_farthest_point(support_features, query_features)].unsqueeze(0)
-                self.prototypes = torch.cat([self.prototypes, mu_ood], 0)
                 self.biases = torch.zeros(num_classes + 1)
             else:
                 self.biases = torch.zeros(num_classes)

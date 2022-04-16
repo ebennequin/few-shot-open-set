@@ -25,7 +25,8 @@ BACKBONE=resnet12
 DATA_DIR=${SLURM_TMPDIR}/data
 mkdir -p $DATA_DIR
 tar xf ~/scratch/open-set/data/${DATASET}.tar.gz -C ${DATA_DIR}
-cp -Rv data/features/${DATASET} ${DATA_DIR}/features
+mkdir -p ${DATA_DIR}/features
+cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 
 METHODS=(LaplacianShot ICI TIM_GD BDCSPN Finetune MAP)
 TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool Power QRreduction L2norm MeanCentering")

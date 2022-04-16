@@ -13,6 +13,7 @@ import argparse
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Plot training metrics')
     parser.add_argument('--exp', type=str, help='Name of the experiment')
+    parser.add_argument('--action', type=str, default='plot')
     parser.add_argument('--plot_versus', type=str, default='alpha')
     parser.add_argument('--filters', type=str, nargs='+', default=[],
                         help="Format: n_query=5 n_shot=1 ...")
@@ -35,8 +36,8 @@ class CSVPlotter(Plotter):
         At the end of this function, metric_dic should be filled as:
 
             metric_dic[metric_name][method] = {
-                                                'x': ndarray [n_iter],
-                                                'y': ndarray [n_iter],
+                                                'x': ndarray [n_points_found],
+                                                'y': ndarray [n_points_found],
                                                 'pm': Optional[ndarray],
                                                }
         """
@@ -47,8 +48,8 @@ class CSVPlotter(Plotter):
         assert len(csv_files)
 
         #  ===== Recover all csv result files =====
-        result_dir = self.nested_default_dict(3, list)
         for file in csv_files:
+            result_dir = self.nested_default_dict(3, list)
             df = pd.read_csv(file)
 
             # Perform necesary filtering
@@ -66,7 +67,6 @@ class CSVPlotter(Plotter):
                     result_dir[metric][method_at_row][x_value].append(row[metric])
 
             # Fill the metric_dic
-
             for metric in result_dir:
                 for method, method_dic in result_dir[metric].items():
                     for x_value, values in method_dic.items():
@@ -84,8 +84,29 @@ class CSVPlotter(Plotter):
         self.out_dir = Path(kwargs['exp']) / '-'.join(args.filters)
 
 
+class CSVPrinter(CSVPlotter):
+
+    def log_best(self, **kwargs):
+        assert hasattr(self, 'metric_dic')
+        assert len(self.metric_dic) == 1, list(self.metric_dic.keys())
+        for metric in self.metric_dic:
+            for method, res in self.metric_dic[metric].items():
+                assert len(res['x']) == 1, res
+            sorted_methods = list(sorted(self.metric_dic[metric].items(),
+                                         key=lambda res: res[1]['y'][0],
+                                         reverse=True)
+                                  )
+            best_method = sorted_methods[0]
+            logger.info(f"Best method {best_method[0]} achieved {best_method[1]['y'][0]} {metric}")
+
+
 if __name__ == "__main__":
     args = parse_args()
-    plotter = CSVPlotter()
-    plotter.fit(**vars(args))
-    plotter.plot()
+    if args.action == 'plot':
+        plotter = CSVPlotter()
+        plotter.fit(**vars(args))
+        plotter.plot()
+    else:
+        plotter = CSVPrinter()
+        plotter.fit(**vars(args))
+        plotter.log_best()

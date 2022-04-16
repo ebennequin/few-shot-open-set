@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6   # There are 40 CPU cores on Beluga GPU nodes
 #SBATCH --time=02:00:00
-#SBATCH --array=0-5
+#SBATCH --array=0-6
 #SBATCH --account=rrg-ebrahimi
 
 #SBATCH --mail-user=malik.boudiaf.1@etsmtl.net
@@ -28,8 +28,8 @@ tar xf ~/scratch/open-set/data/${DATASET}.tar.gz -C ${DATA_DIR}
 mkdir -p ${DATA_DIR}/features
 cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 
-METHODS=(LaplacianShot ICI TIM_GD BDCSPN Finetune MAP)
-TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool Power QRreduction L2norm MeanCentering")
+METHODS=(LaplacianShot ICI TIM_GD BDCSPN Finetune SimpleShot MAP)
+TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool BaseCentering L2norm" "Pool Power QRreduction L2norm MeanCentering")
 
 # for SLURM_ARRAY_TASK_ID in {2..5}; do
 method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}

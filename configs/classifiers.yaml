@@ -16,9 +16,9 @@ classifiers:
   Finetune:
     default: {
         1: {
-          'softmax_temperature': 10.0,
-          'inference_steps': 200,
-          'inference_lr': 0.0005,
+          'softmax_temperature': 5.0,
+          'inference_steps': 100,
+          'inference_lr': 0.0001,
            },
              }
     tuning:
@@ -29,8 +29,8 @@ classifiers:
     default: {
         1: {
             'alpha': 0.2,
-            'inference_steps': 20,
-            'lam': 10,
+            'inference_steps': 10,
+            'lam': 15,
            },
              }
     tuning:
@@ -40,10 +40,10 @@ classifiers:
   LaplacianShot:
     default: {
         1: {
-            'lambda_': 0.8,
+            'lambda_': 0.1,
             'inference_steps': 20,
             'knn': 3,
-            'softmax_temperature': 10,
+            'softmax_temperature': 1,
             'proto_rect': True
            },
              }

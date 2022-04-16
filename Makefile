@@ -160,13 +160,13 @@ run_pyod_detectors:
 
 
 run_w_knn_filtering:
-	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50; do \
+	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 42 45 47 50; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50; do \
+	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 42 45 47 50; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
 	done ;\
 
@@ -212,6 +212,22 @@ cross_domain:
 	done ;\
 
 # ========== Plots ===========
+
+log_best_conf:
+	for backbone in resnet12; do \
+		for shot in 1 5; do \
+			for exp in tune_Finetune tune_LaplacianShot tune_BDCSPN tune_TIM_GD tune_MAP; do \
+				python -m src.plots.csv_plotter \
+					 --exp $${exp} \
+					 --groupby classifier \
+					 --metrics mean_acc \
+					 --plot_versus backbone \
+					 --action log_best \
+					 --filters n_shot=$${shot} \
+					 backbone=$${backbone} ;\
+			done ;\
+		done ;\
+	done ;\
 
 plot_acc_vs_n_ood:
 	for backbone in resnet12; do \

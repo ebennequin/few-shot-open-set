@@ -23,7 +23,7 @@ class Finetune(FewShotMethod):
         super().__init__()
         self.inference_steps = inference_steps
         self.softmax_temperature = softmax_temperature
-        self.lr = inference_lr
+        self.inference_lr = inference_lr
 
     def forward(
         self,
@@ -40,10 +40,10 @@ class Finetune(FewShotMethod):
 
         # Run adaptation
         self.prototypes.requires_grad_()
-        optimizer = torch.optim.Adam([self.prototypes], lr=self.lr)
+        optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
         for i in range(self.inference_steps):
 
-            logits_s = self.get_logits_from_euclidean_distances_to_prototypes(
+            logits_s = self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             )
             ce = nn.functional.cross_entropy(logits_s, support_labels)
@@ -51,10 +51,10 @@ class Finetune(FewShotMethod):
             ce.backward()
             optimizer.step()
 
-        probs_q = self.get_logits_from_euclidean_distances_to_prototypes(
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(
             query_features
         ).softmax(-1)
-        probs_s = self.get_logits_from_euclidean_distances_to_prototypes(
+        probs_s = self.get_logits_from_cosine_distances_to_prototypes(
             support_features
         ).softmax(-1)
 

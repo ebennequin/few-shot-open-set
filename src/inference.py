@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--data_dir", type=str)
+    parser.add_argument("--split", type=str, default='test')
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_id_query", type=int, default=10)
@@ -297,13 +298,14 @@ def main(args):
                 args.training,
                 args.model_source,
                 layer,
+                args.split,
             )
             for class_ in features:
                 feature_dic[class_.item()][layer] = features[class_]
 
     data_loader = get_task_loader(
         args,
-        "test",
+        args.split,
         args.tgt_dataset,
         args.n_way,
         args.n_shot,

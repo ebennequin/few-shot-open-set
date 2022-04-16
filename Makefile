@@ -1,8 +1,8 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
@@ -10,10 +10,10 @@
 # USER=malik
 
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-DATADIR=data
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+# DATADIR=data
+# USER=malik
 
 
 
@@ -23,7 +23,7 @@ TGT_DATASETS=$(SRC_DATASET)
 
 
 # Modules
-CLS_TRANSFORMS=Pool L2norm  # Feature transformations used before feeding to the classifier
+CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classifier
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
 FEATURE_DETECTOR=kNNDetector
 PROBA_DETECTOR=EntropyDetector # may be removed, was just curious to see how detection on proba was working --> very bad
@@ -48,6 +48,7 @@ VISU=False
 THRESHOLD=otsu
 
 # Tasks
+SPLIT=test
 OOD_QUERY=10
 N_TASKS=1000
 SHOTS=1 5 # will iterate over these values
@@ -59,7 +60,7 @@ MISC_VAL=1.0
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train test; do \
+		    for split in train test val; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -92,6 +93,7 @@ run:
 		        --model_source $(MODEL_SRC) \
 		        --balanced $(BALANCED) \
 		        --training $(TRAINING) \
+		        --split $(SPLIT) \
 		        --threshold $(THRESHOLD) \
 				--src_dataset $(SRC_DATASET) \
 				--n_ood_query $(OOD_QUERY) \
@@ -108,11 +110,11 @@ run:
 
 extract_standard:
 	# Extract for RN and WRN
-#	for tgt_dataset in mini_imagenet tiered_imagenet; do \
-#		for backbone in resnet12 wrn2810; do \
-#			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-#		done ;\
-#	done ;\
+	for tgt_dataset in mini_imagenet tiered_imagenet; do \
+		for backbone in resnet12 wrn2810; do \
+			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
+	done ;\
 
 	# Extract for cross-domain
 	for tgt_dataset in cub aircraft; do \
@@ -131,15 +133,23 @@ extract_snatcher:
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \
-		make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=tiered_imagenet_bis extract ;\
+		make BACKBONE=$${backbone} SRC_DATASET=mini_imagenet MODEL_SRC='feat' TGT_DATASETS=mini_imagenet_bis extract ;\
+	done ;\
+
+# ===================== Base recipes =======================
+
+run_classifiers:
+	for dataset in mini_imagenet; do \
+		for backbone in resnet12; do \
+			for classifier in ICI TIM_GD BDCSPN Finetune; do \
+				make CLS_TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+			done ;\
+			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
+		done ;\
 	done ;\
 
 # ========== Evaluating OOD detectors in isolation ===========
-
-run_transductive_detectors:
-	for feature_detector in FinetuneDetector; do \
-		make FEATURE_DETECTOR=$${feature_detector} run ;\
-	done ;\
 
 run_pyod_detectors:
 	for feature_detector in kNNDetector; do \
@@ -148,39 +158,17 @@ run_pyod_detectors:
 
 # ========== Evaluating transductive methods ===========
 
-run_transductive_methods:
-	for dataset in mini_imagenet; do \
-		for backbone in resnet12; do \
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
-			for classifier in TIM_GD; do \
-				make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
-			done ;\
-		done ;\
-	done ;\
 
 run_w_knn_filtering:
-	for ood_query in 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
 			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
 	done ;\
 
 run_wo_filtering:
-	for ood_query in 3 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50 60 75 90 100; do \
+	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 35 40 45 50; do \
 		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
 	done ;\
-
-run_fixed_thresholding:
-	for thresh in 0.1 0.12 0.15 0.17 0.2 0.22 0.25 0.27 0.3 0.32 0.35 0.37 0.4; do \
-		make DET_TRANSFORMS="Pool BaseCentering L2norm" \
-			 SIMU_PARAMS=threshold FILTERING=True THRESHOLD=$${thresh} run ;\
-	done ;\
-
-run_svm_thresholding:
-	make EXP=svm_thresholding THRESHOLD=svm run_w_knn_filtering ;\
-
-tune_ood_tim:
-	make DET_TRANSFORMS="Pool" N_TASKS=500 EXP=tune_ood_tim FEATURE_DETECTOR=OOD_TIM TUNE=feature_detector run ;\
 
 run_ood_tim:
 	make DET_TRANSFORMS="Pool" EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run_wo_filtering ;\
@@ -280,7 +268,7 @@ deploy_models:
 
 deploy_features:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
-		rsync -avm data/features $(SERVER_IP):${SERVER_PATH}/ ;\
+		rsync -avm data/features/$${dataset} $(SERVER_IP):${SERVER_PATH}/data/features/ ;\
 	done ;\
 
 

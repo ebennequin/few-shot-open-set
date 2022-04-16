@@ -1,33 +1,4 @@
 classifiers:
-  RePRI:
-    default: {
-        1: {
-          'softmax_temperature': 10.0,
-          'inference_steps': 150,
-          'inference_lr': 10.0,
-          'init': rand,
-          'ensemble_size': 10,
-          'loss_weights': [1.0, 1.0 , 1.0]
-           },
-             }
-
-  LAME:
-    default: {
-         1: {
-           'softmax_temperature': 10.0,
-           'inference_steps': 300,
-           'inference_lr': 0.001,
-           'knn': 1,
-           'params2adapt': 'mu-bias',
-           'lambda_kernel': 1.0,
-           'lambda_ent': 0.1,
-           'init': 'base',
-            },
-              }
-    tuning:
-      hparams2tune: ['lambda_kernel', 'lambda_ent', 'knn']
-      hparam_values: {1: [[0.1, 0.5, 1.0], [0.1, 0.5, 1.0], [1, 3, 5, 7, 10]]}
-
 
   TIM_GD:
     default: {
@@ -38,6 +9,22 @@ classifiers:
           'loss_weights': [1.0, 1.0, 1.0]
            },
              }
+    tuning:
+      hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr']
+      hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001]]}
+
+  Finetune:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 200,
+          'inference_lr': 0.0005,
+           },
+             }
+    tuning:
+      hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr']
+      hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001]]}
+
   MAP:
     default: {
         1: {
@@ -46,6 +33,23 @@ classifiers:
             'lam': 10,
            },
              }
+    tuning:
+      hparams2tune: ['alpha', 'inference_steps', 'lam']
+      hparam_values: {1: [[0.2, 0.3, 0.5], [10, 20, 30], [5, 10, 15]]}
+
+  LaplacianShot:
+    default: {
+        1: {
+            'lambda_': 0.8,
+            'inference_steps': 20,
+            'knn': 3,
+            'softmax_temperature': 10,
+            'proto_rect': True
+           },
+             }
+    tuning:
+      hparams2tune: ['knn', 'lambda_', 'proto_rect']
+      hparam_values: {1: [[3, 5, 10], [0.1, 0.3, 0.5, 0.7, 0.8, 1.0, 1.2, 1.5], [True, False]]}
 
   FEAT:
     default: {
@@ -73,3 +77,6 @@ classifiers:
              'norm_name': 'l2',
             },
           }
+    tuning:
+      hparams2tune: ['classifier', 'reduce']
+      hparam_values: {1: [['lr', 'svm'], ['none', 'pca']]}

@@ -33,8 +33,6 @@ class Finetune(FewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        num_classes = support_labels.unique().size(0)
-
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)
 

@@ -2,7 +2,7 @@
 #SBATCH --mem=10000
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6   # There are 40 CPU cores on Beluga GPU nodes
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --array=0-6
 #SBATCH --account=rrg-ebrahimi
 

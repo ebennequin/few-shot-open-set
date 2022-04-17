@@ -45,15 +45,15 @@ feature_detectors:
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.1,
+          'lambda_em': 1.0,
           "use_extra_class": True,
           'params2adapt': 'prototypes',
-          'init': 'base',
+          'init': 'zeros',
            },
              }
     tuning:
-      hparams2tune: ['use_extra_class']
-      hparam_values: {1: [[True, False]]}
+      hparams2tune: ['params2adapt', 'inference_steps', 'inference_lr']
+      hparam_values: {1: [['prototypes', 'mu', 'mu-prototypes'], [200, 300], [0.0001, 0.001]]}
 
   kNNDetector:
     default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},

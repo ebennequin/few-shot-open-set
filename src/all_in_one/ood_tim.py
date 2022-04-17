@@ -10,6 +10,7 @@ import math
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 
+
 class OOD_TIM(AllInOne):
     def __init__(
         self,
@@ -63,6 +64,8 @@ class OOD_TIM(AllInOne):
         # Initialize weights
         if self.init == "base":
             self.mu = kwargs["train_mean"].squeeze()
+        elif self.init == "zeros":
+            self.mu = torch.zeros(support_features.size(-1))
         elif self.init == "rand":
             self.mu = 0.1 * torch.randn(1, support_features.size(-1))
         elif self.init == "mean":

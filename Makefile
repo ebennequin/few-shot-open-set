@@ -234,7 +234,7 @@ plot_acc_vs_n_ood:
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
-					 --metrics mean_acc mean_features_rocauc \
+					 --metrics mean_acc mean_features_rocauc mean_probas_rocauc \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\

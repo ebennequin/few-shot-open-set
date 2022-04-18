@@ -64,7 +64,8 @@ class CSVPlotter(Plotter):
                 for metric in kwargs['metrics']:
                     method_at_row = row[kwargs['groupby']]
                     x_value = row[kwargs['plot_versus']]
-                    result_dir[metric][method_at_row][x_value].append(row[metric])
+                    if metric in row:
+                        result_dir[metric][method_at_row][x_value].append(row[metric])
 
             # Fill the metric_dic
             for metric in result_dir:

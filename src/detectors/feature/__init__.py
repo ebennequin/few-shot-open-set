@@ -16,8 +16,8 @@ __all__ = {
     "NaiveAggregator": NaiveAggregator,
     "RepriDetector": RepriDetector,
     "FinetuneDetector": FinetuneDetector,
-    "kNNDetector": kNNDetector,
+    "KNN": kNNDetector,
 }
 
-for pyod_detector in ["ABOD", "IForest", "LOF", "MCD", "PCA"]:
+for pyod_detector in ["HBOS", "IForest", "LOF", "MCD", "PCA", "OCSVM"]:
     __all__[pyod_detector] = partial(instanciate_wrapper, pyod_detector=pyod_detector)

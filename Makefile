@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -60,7 +60,7 @@ MISC_VAL=1.0
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train test val; do \
+		    for split in train val test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -149,9 +149,20 @@ run_classifiers:
 		done ;\
 	done ;\
 
+
 # ========== Evaluating OOD detectors in isolation ===========
 
-run_pyod_detectors:
+tune_pyod:
+	for dataset in mini_imagenet; do \
+		for backbone in resnet12; do \
+			for method in HBOS KNN PCA OCSVM IForest; do \
+				make EXP=tune_$${method} TUNE=feature_detector SPLIT=val N_TASKS=500 \
+				DET_TRANSFORMS="Pool BaseCentering L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} FEATURE_DETECTOR=$${method} run ;\
+			done ;\
+		done ;\
+	done ;\
+
+benchmark_pyod_detectors:
 	for feature_detector in kNNDetector; do \
 		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${feature_detector} run ;\
 	done ;\
@@ -317,8 +328,9 @@ store: # Archive experiments
 restore: # Restore experiments to output/
 	python src/utils/list_files.py archive/ results/ tmp.txt ; \
 	read -r out_files < tmp.txt ; \
-	mkdir -p results/$${folder[1]} ; \
+	folder=`echo ${out_files} | cut -d'/' -f2-` ;\
+	mkdir -p results/$${folder} ; \
 	for file in $${out_files}; do \
-		cp -Rv $${file} results/$${folder[1]}/ ; \
+		cp -Rv $${file} results/$${folder}/ ; \
 	done
 	rm tmp.txt

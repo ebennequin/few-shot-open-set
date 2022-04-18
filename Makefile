@@ -171,7 +171,10 @@ run_wo_filtering:
 	done ;\
 
 run_ood_tim:
-	make DET_TRANSFORMS="Pool" EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run_wo_filtering ;\
+	for dataset in tiered_imagenet mini_imagenet; do \
+		make DET_TRANSFORMS="Pool" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
+		EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run ;\
+	done ;\
 
 # ========== Feature Investigation ==========
 
@@ -232,7 +235,7 @@ log_best_conf:
 plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
-			for tgt_dataset in mini_imagenet; do \
+			for tgt_dataset in mini_imagenet tiered_imagenet; do \
 				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
 					 --metrics mean_acc mean_features_rocauc mean_probas_rocauc \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\

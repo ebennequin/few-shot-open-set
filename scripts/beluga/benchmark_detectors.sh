@@ -2,7 +2,7 @@
 #SBATCH --mem=10000
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6   # There are 40 CPU cores on Beluga GPU nodes
-#SBATCH --time=03:00:00
+#SBATCH --time=04:00:00
 #SBATCH --array=0-0
 #SBATCH --account=rrg-ebrahimi
 
@@ -34,18 +34,14 @@ TRANSFORMS=("Pool")
 # for SLURM_ARRAY_TASK_ID in {0..0}; do
 method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
 transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
-make EXP=tune_${method} \
+make EXP=benchmark_${method} \
      DATADIR=${DATA_DIR} \
-     SPLIT=val \
-     TUNE="feature_detector" \
-     N_TASKS=500 \
      DET_TRANSFORMS="${transforms}" \
      SRC_DATASET=${DATASET} \
      TGT_DATASET=${DATASET} \
      BACKBONE=resnet12 \
      FEATURE_DETECTOR=${method} \
-     run
-
+     run_wo_filtering
 # done
 
 

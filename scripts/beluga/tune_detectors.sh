@@ -31,20 +31,20 @@ cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 METHODS=("OOD_TIM")
 TRANSFORMS=("Pool")
 
-for SLURM_ARRAY_TASK_ID in {0..0}; do
-     method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
-     transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
-     make EXP=tune_${method} \
-          DATADIR=${DATA_DIR} \
-          SPLIT=val \
-          TUNE="feature_detector" \
-          N_TASKS=500 \
-          DET_TRANSFORMS="${transforms}" \
-          SRC_DATASET=${DATASET} \
-          TGT_DATASET=${DATASET} \
-          BACKBONE=resnet12 \
-          FEATURE_DETECTOR=${method} \
-          run
-done
+# for SLURM_ARRAY_TASK_ID in {0..0}; do
+method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
+transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
+make EXP=tune_${method} \
+     DATADIR=${DATA_DIR} \
+     SPLIT=val \
+     TUNE="feature_detector" \
+     N_TASKS=500 \
+     DET_TRANSFORMS="${transforms}" \
+     SRC_DATASET=${DATASET} \
+     TGT_DATASET=${DATASET} \
+     BACKBONE=resnet12 \
+     FEATURE_DETECTOR=${method} \
+     run
+# done
 
 

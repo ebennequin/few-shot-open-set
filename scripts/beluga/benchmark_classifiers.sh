@@ -18,7 +18,6 @@ source ~/.bash_profile
 module load python/3.8.2
 source ~/ENV/bin/activate
 
-# Extracting data to current node for fast I/O
 
 # DATASET=mini_imagenet
 DATASET=tiered_imagenet
@@ -32,18 +31,18 @@ cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 METHODS=(LaplacianShot TIM_GD BDCSPN Finetune SimpleShot MAP)
 TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool Power QRreduction L2norm MeanCentering")
 
-for SLURM_ARRAY_TASK_ID in {2..5}; do
-     method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
-     transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
-     make EXP=classifiers_wo_filtering \
-          DATADIR=${DATA_DIR} \
-          N_TASKS=1000 \
-          CLS_TRANSFORMS="${transforms}" \
-          SRC_DATASET=${DATASET} \
-          TGT_DATASET=${DATASET} \
-          BACKBONE=resnet12 \
-          CLASSIFIER=${method} \
-          run_wo_filtering
-done
+# for SLURM_ARRAY_TASK_ID in {2..5}; do
+method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
+transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
+make EXP=classifiers_wo_filtering \
+     DATADIR=${DATA_DIR} \
+     N_TASKS=1000 \
+     CLS_TRANSFORMS="${transforms}" \
+     SRC_DATASET=${DATASET} \
+     TGT_DATASET=${DATASET} \
+     BACKBONE=resnet12 \
+     CLASSIFIER=${method} \
+     run_wo_filtering
+# done
 
 

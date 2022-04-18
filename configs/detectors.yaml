@@ -41,19 +41,19 @@ feature_detectors:
     default: {
         1: {
           'softmax_temperature': 10.0,
-          'inference_steps': 300,
+          'inference_steps': 100,
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.5,
+          'lambda_em': 0.75,
           "use_extra_class": True,
-          'params2adapt': 'mu',
+          'params2adapt': 'prototypes-mu',
           'init': 'base',
            },
              }
     tuning:
-      hparams2tune: ['use_extra_class']
-      hparam_values: {1: [[True, False]]}
+      hparams2tune: ['params2adapt', 'inference_steps', 'inference_lr']
+      hparam_values: {1: [['prototypes', 'mu', 'mu-prototypes'], [200, 300], [0.0001, 0.001]]}
 
   kNNDetector:
     default: {1: {'n_neighbors': 1, 'method': 'mean', 'distance': 'l2'},

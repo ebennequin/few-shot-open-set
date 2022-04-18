@@ -16,7 +16,7 @@ class BDCSPN(FewShotMethod):
 
     def rectify_prototypes(
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
-    ) -> None:
+    ) -> Tensor:
         Kes = support_labels.unique().size(0)
         one_hot_s = F.one_hot(support_labels, Kes)  # [shot_s, K]
         eta = support_features.mean(0, keepdim=True) - query_features.mean(
@@ -42,9 +42,11 @@ class BDCSPN(FewShotMethod):
         w_s = (one_hot_s * logits_s) / normalization  # [shot_s, K]
         w_q = (one_hot_q * logits_q) / normalization  # [shot_q, K]
 
-        self.prototypes = (w_s * one_hot_s).t().matmul(support_features) + (
+        prototypes = (w_s * one_hot_s).t().matmul(support_features) + (
             w_q * one_hot_q
         ).t().matmul(query_features)
+
+        return prototypes
 
     def forward(
         self,
@@ -61,7 +63,7 @@ class BDCSPN(FewShotMethod):
 
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]
-        self.rectify_prototypes(
+        self.prototypes = self.rectify_prototypes(
             support_features=support_features,
             support_labels=support_labels,
             query_features=unlabelled_data,

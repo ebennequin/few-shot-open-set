@@ -5,3 +5,6 @@ transforms:
               1: {'beta': 0.5},
               5: {'beta': 0.5}
              }
+    tuning:
+      hparams2tune: ['beta']
+      hparam_values: {1: [[0.2, 0.5, 0.8]]}

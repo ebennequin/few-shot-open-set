@@ -10,6 +10,7 @@ import math
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 
+
 class OOD_TIM(AllInOne):
     def __init__(
         self,
@@ -63,6 +64,8 @@ class OOD_TIM(AllInOne):
         # Initialize weights
         if self.init == "base":
             self.mu = kwargs["train_mean"].squeeze()
+        elif self.init == "zeros":
+            self.mu = torch.zeros(support_features.size(-1))
         elif self.init == "rand":
             self.mu = 0.1 * torch.randn(1, support_features.size(-1))
         elif self.init == "mean":
@@ -106,6 +109,7 @@ class OOD_TIM(AllInOne):
         inlier_outscore = []
         oulier_outscore = []
         acc_values = []
+        oracle_diff = []
 
         for self.iter_ in range(self.inference_steps):
             # proto_labels = torch.arange(num_classes)
@@ -121,6 +125,10 @@ class OOD_TIM(AllInOne):
             q_cond_ent = -(q_probs * torch.log(q_probs + 1e-12)).sum(-1)
 
             loss = self.lambda_ce * ce
+
+            # if i == 0:
+            #                     thresh = threshold_otsu(outlier_scores.numpy())
+            #     believed_inliers = outlier_scores < thresh
 
             em = q_cond_ent.mean(0)
             marginal_y = logits_q.softmax(-1).mean(0)
@@ -164,6 +172,8 @@ class OOD_TIM(AllInOne):
                 )
                 precs.append(precision[recall > 0.9][-1])
                 recalls.append(recall[precision > 0.9][0])
+                oracle_diff.append(believed_inliers.float().mean() - inliers.float().mean())
+
 
         kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
         kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
@@ -177,6 +187,9 @@ class OOD_TIM(AllInOne):
         kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
         kwargs['intra_task_metrics']['secondary_metrics']['inlier_outscore'].append(inlier_outscore)
         kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
+        kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
+        kwargs['intra_task_metrics']['secondary_metrics']['oracle_diff'].append(oracle_diff)
+
         if self.use_extra_class:
             return logits_s[:, :-1].softmax(-1).detach(), logits_q[:, :-1].softmax(-1).detach(), outlier_scores.detach()
         else:

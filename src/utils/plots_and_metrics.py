@@ -159,6 +159,8 @@ def compute_mean_auroc(features):
             distances = np.linalg.norm(v - centroid, axis=1)
             predictions += distances.tolist()
         aurocs.append(sklearn.metrics.roc_auc_score(ground_truth, predictions))
-        average_precisions.append(sklearn.metrics.average_precision_score(ground_truth, predictions))
+        average_precisions.append(
+            sklearn.metrics.average_precision_score(ground_truth, predictions)
+        )
 
     return mean(aurocs), mean(average_precisions)

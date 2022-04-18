@@ -55,7 +55,7 @@ def save_tiered_imagenet(
 
     # Save images
     images_file = save_dir / f"{specs_file.stem}_images.npz"
-    logger.info(f"Saving labels to {images_file}...")
+    logger.info(f"Saving images to {images_file}...")
     np.savez(images_file, images=np.stack(all_images))
 
 

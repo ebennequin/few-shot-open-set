@@ -19,8 +19,6 @@ module load python/3.8.2
 source ~/ENV/bin/activate
 
 
-# DATASET=mini_imagenet
-DATASET=tiered_imagenet
 BACKBONE=resnet12
 DATA_DIR=${SLURM_TMPDIR}/data
 mkdir -p $DATA_DIR
@@ -30,9 +28,10 @@ cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 
 METHODS=(LaplacianShot TIM_GD BDCSPN Finetune SimpleShot MAP)
 TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool Power QRreduction L2norm MeanCentering")
+DATASET=(mini_imagenet tiered_imagenet)
 
 # for SLURM_ARRAY_TASK_ID in {2..5}; do
-method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
+method=${METHODS[$((SLURM_ARRAY_TASK_ID % 6))]}
 transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
 make EXP=classifiers_wo_filtering \
      DATADIR=${DATA_DIR} \
@@ -40,7 +39,7 @@ make EXP=classifiers_wo_filtering \
      CLS_TRANSFORMS="${transforms}" \
      SRC_DATASET=${DATASET} \
      TGT_DATASET=${DATASET} \
-     BACKBONE=resnet12 \
+     BACKBONE=${BACKBONE} \
      CLASSIFIER=${method} \
      run_wo_filtering
 # done

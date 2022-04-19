@@ -1,18 +1,18 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+#SERVER_IP=shannon
+#SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
 #DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+#USER=malik
 
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-DATADIR=data
+# DATADIR=data
 # USER=malik
 
 
@@ -25,7 +25,7 @@ TGT_DATASETS=$(SRC_DATASET)
 # Modules
 CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classifier
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
-FEATURE_DETECTOR=kNNDetector
+FEATURE_DETECTOR=KNN
 PROBA_DETECTOR=EntropyDetector # may be removed, was just curious to see how detection on proba was working --> very bad
 CLASSIFIER=SimpleShot
 FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
@@ -147,38 +147,48 @@ extract_bis:
 		done \
 	done ;\
 
-# ===================== Base recipes =======================
-
-run_classifiers:
-	for dataset in mini_imagenet; do \
-		for backbone in resnet12; do \
-			for classifier in ICI TIM_GD BDCSPN Finetune; do \
-				make CLS_TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
-			done ;\
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
-		done ;\
-	done ;\
-
-
-# ========== Evaluating OOD detectors in isolation ===========
+# ========== PyOD detectors ===========
 
 tune_pyod:
 	for dataset in mini_imagenet; do \
 		for backbone in resnet12; do \
 			for method in HBOS KNN PCA OCSVM IForest; do \
 				make EXP=tune_$${method} TUNE=feature_detector SPLIT=val N_TASKS=500 \
-				DET_TRANSFORMS="Pool BaseCentering L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} FEATURE_DETECTOR=$${method} run ;\
+				DET_TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} FEATURE_DETECTOR=$${method} run ;\
+			done ;\
+		done ;\
+	done ;\
+
+log_best_pyod:
+	for backbone in resnet12; do \
+		for shot in 1 5; do \
+			for exp in HBOS KNN PCA OCSVM IForest; do \
+				python -m src.plots.csv_plotter \
+					 --exp tune_$${exp} \
+					 --groupby feature_detector \
+					 --metrics mean_features_rocauc \
+					 --plot_versus backbone \
+					 --action log_best \
+					 --filters n_shot=$${shot} \
+					 backbone=$${backbone} ;\
 			done ;\
 		done ;\
 	done ;\
 
 benchmark_pyod_detectors:
-	for feature_detector in kNNDetector; do \
-		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${feature_detector} run ;\
+	for method in HBOS KNN PCA OCSVM IForest; do \
+		make EXP=benchmark_$${method} DET_TRANSFORMS="Pool L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
-# ========== Evaluating transductive methods ===========
+# ========== Open-Set detectors ===========
+
+benchmark_snatcher:
+	for method in SnatcherF; do \
+		make EXP=benchmark_$${method} DET_TRANSFORMS="Pool" TRAINING='feat' \
+		FEATURE_DETECTOR=$${method} run ;\
+	done ;\
+
+# ========== Classifiers ===========
 
 
 run_w_knn_filtering:
@@ -196,6 +206,28 @@ run_ood_tim:
 	for dataset in tiered_imagenet mini_imagenet; do \
 		make DET_TRANSFORMS="Pool" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
 		EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run ;\
+	done ;\
+
+
+run_inductive_classifiers:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for backbone in resnet12 wrn2810; do \
+			for classifier in SimpleShot Finetune; do \
+				make EXP=benchmark_$${classifier} CLS_TRANSFORMS="Pool BaseCentering L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+			done ;\
+			make EXP=benchmark_FEAT CLS_TRANSFORMS="Pool" TRAINING='feat' SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=FEAT run ;\
+			done ;\
+		done ;\
+	done ;\
+
+run_transductive_classifiers:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for backbone in resnet12 wrn2810; do \
+			for classifier in TIM_GD BDCSPN LaplacianShot; do \
+				make EXP=benchmark_$${classifier} CLS_TRANSFORMS="Pool BaseCentering L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+			done ;\
+			make EXP=benchmark_$${classifier} CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
+		done ;\
 	done ;\
 
 # ========== Feature Investigation ==========
@@ -254,7 +286,7 @@ log_best_conf:
 				python -m src.plots.csv_plotter \
 					 --exp $${exp} \
 					 --groupby classifier \
-					 --metrics mean_acc \
+					 --metrics mean_features_rocauc \
 					 --plot_versus backbone \
 					 --action log_best \
 					 --filters n_shot=$${shot} \

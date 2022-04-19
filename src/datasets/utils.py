@@ -19,7 +19,10 @@ def get_transforms(args):
         NORMALIZE = transforms.Normalize(mean, std)
         image_size = BACKBONE_CONFIGS[args.backbone]["input_size"][-1]
 
-        if args.tgt_dataset == "tiered_imagenet":
+        if (
+            args.tgt_dataset == "tiered_imagenet"
+            or args.tgt_dataset == "tiered_imagenet_bis"
+        ):
             res = transforms.Compose(
                 [
                     transforms.ToTensor(),

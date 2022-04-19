@@ -131,7 +131,18 @@ extract_snatcher:
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \
-		make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=tiered_imagenet_bis extract ;\
+		for split in train val test; do \
+			python -m src.compute_features \
+				--backbone $${backbone} \
+				--src_dataset tiered_imagenet \
+				--tgt_dataset tiered_imagenet_bis \
+				--data_dir $(DATADIR) \
+				--model_source feat \
+				--training $(TRAINING) \
+				--split $${split} \
+				--layers $(LAYERS) \
+				--keep_all_train_features True ;\
+		done \
 	done ;\
 
 # ========== Evaluating OOD detectors in isolation ===========
@@ -188,7 +199,7 @@ run_ood_tim:
 # ========== Feature Investigation ==========
 
 clustering_metrics:
-	for dataset in mini_imagenet; do \
+	for dataset in tiered_imagenet; do \
 		for split in train test; do \
 			python -m src.investigate_features \
 				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\

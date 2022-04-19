@@ -219,6 +219,7 @@ def get_test_features(
     training_method,
     model_source,
     layer,
+    split: str = 'test',
     path: Optional[Path] = None,
 ):
     if not isinstance(data_dir, Path):
@@ -229,7 +230,7 @@ def get_test_features(
         / "features"
         / src_dataset
         / tgt_dataset
-        / "test"
+        / split
         / training_method
         / pickle_basename
     )

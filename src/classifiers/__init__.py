@@ -8,3 +8,4 @@ from .semi_feat import SemiFEAT
 from .ici import ICI
 from .abstract import FewShotMethod
 from .lame import LAME
+from .laplacian_shot import LaplacianShot

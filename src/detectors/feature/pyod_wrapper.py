@@ -2,6 +2,7 @@ from .abstract import FeatureDetector
 from pyod.models.base import BaseDetector
 import torch
 from pyod.models.abod import ABOD
+from pyod.models.hbos import HBOS
 from pyod.models.ocsvm import OCSVM
 from pyod.models.pca import PCA
 from pyod.models.iforest import IForest
@@ -33,7 +34,7 @@ class PyodWrapper(FeatureDetector):
         arg_names = list(inspect.signature(self.detector.__init__).parameters)
         if len(arg_names):
             args = [f"{k}={self.kwargs[k]}" for k in arg_names if k in self.kwargs]
-            return f"{type(self).__name__}({','.join(args)})"
+            return f"{self.pyod_detector}({','.join(args)})"
         else:
             return type(self).__name__
 
@@ -41,6 +42,6 @@ class PyodWrapper(FeatureDetector):
         arg_names = list(inspect.signature(self.detector.__init__).parameters)
         if len(arg_names):
             args = [f"{k}={self.kwargs[k]}" for k in arg_names if k in self.kwargs]
-            return f"{type(self).__name__}({','.join(args)})"
+            return f"{self.pyod_detector}({','.join(args)})"
         else:
             return type(self).__name__

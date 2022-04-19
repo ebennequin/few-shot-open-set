@@ -6,13 +6,13 @@
 
 SERVER_IP=shannon
 SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
+#DATADIR=../Open-Set/open-query-set/data/
 USER=malik
 
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-# DATADIR=data
+DATADIR=data
 # USER=malik
 
 
@@ -117,7 +117,7 @@ extract_standard:
 	done ;\
 
 	# Extract for cross-domain
-	for tgt_dataset in cub aircraft; do \
+	for tgt_dataset in cub aircraft imagenet_val; do \
 		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
@@ -207,6 +207,15 @@ clustering_metrics:
 				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\
 			python -m src.investigate_features \
 				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/wrn2810_$${dataset}_feat_last.pickle ;\
+		done ;\
+	done ;\
+
+	for dataset in aircraft imagenet_val; do \
+		for feature in ssl_resnext101_32x16d_imagenet_url_4_3 vit_base_patch16_224_in21k_imagenet_url_last_cls; do \
+			for split in train test; do \
+				python -m src.investigate_features \
+					data/features/imagenet/$${dataset}/$${split}/standard/$${feature}.pickle ;\
+			done ;\
 		done ;\
 	done ;\
 

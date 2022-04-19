@@ -143,7 +143,7 @@ def get_dataset(dataset_name, args, split, training):
     elif dataset_name == "tiered_imagenet":
         dataset = get_tiered_imagenet_set(args, split, training)
     elif dataset_name == "tiered_imagenet_bis":
-        dataset = get_tiered_imagenet_set(args, split, training)
+        dataset = get_tiered_imagenet_set(args, split, training, bis=True)
     elif dataset_name == "cub":
         dataset = get_cub_set(args, split, training)
     elif dataset_name == "aircraft":
@@ -231,7 +231,7 @@ def get_test_features(
     training_method,
     model_source,
     layer,
-    split: str = 'test',
+    split: str = "test",
     path: Optional[Path] = None,
 ):
     if not isinstance(data_dir, Path):

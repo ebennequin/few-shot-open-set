@@ -143,7 +143,9 @@ def load_model(
         num_classes = len(np.unique(train_dataset.labels))
 
     logger.info("Building model...")
-    feature_extractor = BACKBONES[backbone](num_classes=num_classes).to(device)
+    feature_extractor = BACKBONES[backbone](
+        num_classes=num_classes, pretrained=True
+    ).to(device)
 
     if weights is not None:
         state_dict = torch.load(weights, map_location=device)

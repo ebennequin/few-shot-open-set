@@ -14,6 +14,7 @@ class SnatcherF(AllInOne):
         self.temperature = 64.0
         self.device = args.device
         self.works_on_features = True
+        self.args = args
 
         # Load attention module
         if args.backbone == "resnet12":
@@ -50,13 +51,14 @@ class SnatcherF(AllInOne):
         """
         query_features [Ns, d]
         """
+        support_features = support_features.to(self.device)
+        query_features = query_features.to(self.device)
+
         prototypes = (
             compute_prototypes(support_features, support_labels)
             .to(self.device)
             .unsqueeze(0)
         )  # [Nk, d]
-
-        query_features = query_features.to(self.device)
 
         proto = self.attn_model(prototypes, prototypes, prototypes)[0][0]  # [K, d]
 
@@ -71,7 +73,7 @@ class SnatcherF(AllInOne):
         outlier_scores = torch.zeros(logits_q.size(0))
         with torch.no_grad():
             for j in range(logits_q.size(0)):
-                pproto = self.prototypes.clone().detach()  # [K, d]
+                pproto = prototypes.clone().detach()  # [K, d]
                 """ Algorithm 1 Line 1 """
                 c = logits_q[j].argmax(0)
                 """ Algorithm 1 Line 2 """
@@ -81,4 +83,8 @@ class SnatcherF(AllInOne):
                 pdiff = (pproto - proto).pow(2).sum(-1).sum() / self.temperature
                 """ pdiff: d_SnaTCHer in Algorithm 1 """
                 outlier_scores[j] = pdiff
-        return logits_s.softmax(-1), logits_q.softmax(-1), outlier_scores
+        return (
+            logits_s.softmax(-1).cpu(),
+            logits_q.softmax(-1).cpu(),
+            outlier_scores.cpu(),
+        )

@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--tgt_dataset", type=str, default="mini_imagenet")
     parser.add_argument("--data_dir", type=str)
-    parser.add_argument("--split", type=str, default='test')
+    parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--n_way", type=int, default=5)
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_id_query", type=int, default=10)

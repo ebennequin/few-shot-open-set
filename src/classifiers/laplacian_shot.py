@@ -70,13 +70,20 @@ class LaplacianShot(FewShotMethod):
             for batch_idx in range(num_batch):
                 start = batch_idx * batch_size
                 end = min((batch_idx + 1) * batch_size, tot_size)
-                temp = (unary[start:end] * Y[start:end]) + (-bound_lambda * pairwise[start:end] * Y[start:end])
-                E = E + (Y[start:end] * np.log(np.maximum(Y[start:end], 1e-20)) + temp).sum()
+                temp = (unary[start:end] * Y[start:end]) + (
+                    -bound_lambda * pairwise[start:end] * Y[start:end]
+                )
+                E = (
+                    E
+                    + (
+                        Y[start:end] * np.log(np.maximum(Y[start:end], 1e-20)) + temp
+                    ).sum()
+                )
 
         return E
 
     def bound_update(self, unary, kernel, batch=False):
-        oldE = float('inf')
+        oldE = float("inf")
         Y = self.normalize(-unary)
         for i in range(self.inference_steps):
             additive = -unary
@@ -86,7 +93,7 @@ class LaplacianShot(FewShotMethod):
             Y = self.normalize(additive)
             E = self.entropy_energy(Y, unary, kernel, self.lambda_, batch)
 
-            if (i > 1 and (abs(E - oldE) <= 1e-6 * abs(oldE))):
+            if i > 1 and (abs(E - oldE) <= 1e-6 * abs(oldE)):
                 break
 
             else:
@@ -107,9 +114,10 @@ class LaplacianShot(FewShotMethod):
             rectifier = BDCSPN(self.softmax_temperature)
             rectifier.prototypes = compute_prototypes(support_features, support_labels)
             support = rectifier.rectify_prototypes(
-                        support_features=support_features,
-                        query_features=query_features,
-                        support_labels=support_labels)
+                support_features=support_features,
+                query_features=query_features,
+                support_labels=support_labels,
+            )
         else:
             support = compute_prototypes(support_features, support_labels)
 

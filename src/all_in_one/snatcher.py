@@ -83,4 +83,8 @@ class SnatcherF(AllInOne):
                 pdiff = (pproto - proto).pow(2).sum(-1).sum() / self.temperature
                 """ pdiff: d_SnaTCHer in Algorithm 1 """
                 outlier_scores[j] = pdiff
-        return logits_s.softmax(-1).cpu(), logits_q.softmax(-1).cpu(), outlier_scores.cpu()
+        return (
+            logits_s.softmax(-1).cpu(),
+            logits_q.softmax(-1).cpu(),
+            outlier_scores.cpu(),
+        )

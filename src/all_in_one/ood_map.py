@@ -8,7 +8,9 @@ from easyfsl.utils import compute_prototypes
 
 
 class MAP(FewShotMethod):
-    def __init__(self, alpha: float, inference_steps: int, lam: float, use_extra_class: bool):
+    def __init__(
+        self, alpha: float, inference_steps: int, lam: float, use_extra_class: bool
+    ):
         super().__init__()
         self.alpha = alpha
         self.inference_steps = inference_steps

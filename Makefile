@@ -243,11 +243,9 @@ clustering_metrics:
 	done ;\
 
 	for dataset in aircraft imagenet_val; do \
-		for feature in ssl_resnext101_32x16d_imagenet_url_4_3 vit_base_patch16_224_in21k_imagenet_url_last_cls; do \
-			for split in train test; do \
-				python -m src.investigate_features \
-					data/features/imagenet/$${dataset}/$${split}/standard/$${feature}.pickle ;\
-			done ;\
+		for feature in ssl_resnext101_32x16d_imagenet_url_4_3 vit_base_patch16_224_in21k_imagenet_url_last_cls deit_tiny_patch16_224_imagenet_url_last_cls; do \
+			python -m src.investigate_features \
+				data/features/imagenet/$${dataset}/test/standard/$${feature}.pickle ;\
 		done ;\
 	done ;\
 

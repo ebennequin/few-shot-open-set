@@ -42,7 +42,9 @@ class OOD_TIM(AllInOne):
 
         logits = self.cosine(query_features, prototypes)  # [Nq, Ns]
         if self.use_extra_class:
-            logits = torch.cat([logits, -logits.mean(-1, keepdim=True)], dim=1)  # [Nq, Ns]
+            logits = torch.cat(
+                [logits, -logits.mean(-1, keepdim=True)], dim=1
+            )  # [Nq, Ns]
         if bias:
             return self.softmax_temperature * logits - self.biases
         else:
@@ -113,12 +115,8 @@ class OOD_TIM(AllInOne):
 
         for self.iter_ in range(self.inference_steps):
             # proto_labels = torch.arange(num_classes)
-            logits_s = self.get_logits(
-                self.prototypes, support_features
-            )
-            logits_q = self.get_logits(
-                self.prototypes, query_features
-            )
+            logits_s = self.get_logits(self.prototypes, support_features)
+            logits_q = self.get_logits(self.prototypes, query_features)
 
             ce = F.cross_entropy(logits_s, support_labels)
             q_probs = logits_q.softmax(-1)
@@ -172,28 +170,53 @@ class OOD_TIM(AllInOne):
                 )
                 precs.append(precision[recall > 0.9][-1])
                 recalls.append(recall[precision > 0.9][0])
-                oracle_diff.append(believed_inliers.float().mean() - inliers.float().mean())
+                oracle_diff.append(
+                    believed_inliers.float().mean() - inliers.float().mean()
+                )
 
-
-        kwargs['intra_task_metrics']['classifier_losses']['cond_ent'].append(q_cond_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['marg_ent'].append(q_ent_values)
-        kwargs['intra_task_metrics']['classifier_losses']['ce'].append(ce_values)
-        kwargs['intra_task_metrics']['main_metrics']['acc'].append(acc_values)
-        kwargs['intra_task_metrics']['main_metrics']['rocauc'].append(aucs)
-        kwargs['intra_task_metrics']['main_metrics']['acc_otsu'].append(acc_otsu)
-        kwargs['intra_task_metrics']['main_metrics']['prec_at_90'].append(precs)
-        kwargs['intra_task_metrics']['main_metrics']['rec_at_90'].append(recalls)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_entropy'].append(inlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['outlier_entropy'].append(outlier_entropy)
-        kwargs['intra_task_metrics']['secondary_metrics']['inlier_outscore'].append(inlier_outscore)
-        kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
-        kwargs['intra_task_metrics']['secondary_metrics']['oulier_outscore'].append(oulier_outscore)
-        kwargs['intra_task_metrics']['secondary_metrics']['oracle_diff'].append(oracle_diff)
+        kwargs["intra_task_metrics"]["classifier_losses"]["cond_ent"].append(
+            q_cond_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["marg_ent"].append(
+            q_ent_values
+        )
+        kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
+        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
+        kwargs["intra_task_metrics"]["main_metrics"]["prec_at_90"].append(precs)
+        kwargs["intra_task_metrics"]["main_metrics"]["rec_at_90"].append(recalls)
+        kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
+            inlier_entropy
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["outlier_entropy"].append(
+            outlier_entropy
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_outscore"].append(
+            inlier_outscore
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["oulier_outscore"].append(
+            oulier_outscore
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["oulier_outscore"].append(
+            oulier_outscore
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["oracle_diff"].append(
+            oracle_diff
+        )
 
         if self.use_extra_class:
-            return logits_s[:, :-1].softmax(-1).detach(), logits_q[:, :-1].softmax(-1).detach(), outlier_scores.detach()
+            return (
+                logits_s[:, :-1].softmax(-1).detach(),
+                logits_q[:, :-1].softmax(-1).detach(),
+                outlier_scores.detach(),
+            )
         else:
-            return logits_s.softmax(-1).detach(), logits_q.softmax(-1).detach(), outlier_scores.detach()
+            return (
+                logits_s.softmax(-1).detach(),
+                logits_q.softmax(-1).detach(),
+                outlier_scores.detach(),
+            )
 
 
 def find_farthest_point(support_features, query_features):

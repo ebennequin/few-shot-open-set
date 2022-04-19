@@ -219,7 +219,7 @@ def get_test_features(
     training_method,
     model_source,
     layer,
-    split: str = 'test',
+    split: str = "test",
     path: Optional[Path] = None,
 ):
     if not isinstance(data_dir, Path):

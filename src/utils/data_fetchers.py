@@ -14,6 +14,7 @@ from src.datasets import (
     FewShotCIFAR100,
     MiniImageNet,
     CUB,
+    Fungi,
     FeaturesDataset,
     TieredImageNet,
     FeatTieredImageNet,
@@ -69,6 +70,15 @@ def get_mini_imagenet_set(args, split, training, bis=False):
 def get_aircraft_set(args, split, training):
     return Aircraft(
         root=Path(args.data_dir) / "fgvc-aircraft-2013b" / "data",
+        args=args,
+        split=split,
+        training=training,
+    )
+
+
+def get_fungi_set(args, split, training):
+    return Fungi(
+        root=Path(args.data_dir) / "fungi",
         args=args,
         split=split,
         training=training,
@@ -138,6 +148,8 @@ def get_dataset(dataset_name, args, split, training):
         dataset = get_cub_set(args, split, training)
     elif dataset_name == "aircraft":
         dataset = get_aircraft_set(args, split, training)
+    elif dataset_name == "fungi":
+        dataset = get_fungi_set(args, split, training)
     elif dataset_name == "imagenet_val":
         dataset = get_imagenet_val_set(args)
     else:

@@ -29,9 +29,9 @@ mkdir -p ${DATA_DIR}/features
 cp -Rv data/features/${DATASET} ${DATA_DIR}/features/
 
 METHODS=(LaplacianShot TIM_GD BDCSPN Finetune SimpleShot MAP)
-TRANSFORMS=("Pool BaseCentering L2norm" "Pool" "Pool" "Pool" "Pool" "Pool Power QRreduction L2norm MeanCentering")
+TRANSFORMS=("Pool BaseCentering L2norm" "Pool BaseCentering L2norm" "Pool BaseCentering L2norm" "Pool BaseCentering L2norm" "Pool BaseCentering L2norm" "Pool Power QRreduction L2norm MeanCentering")
 
-# for SLURM_ARRAY_TASK_ID in {2..5}; do
+
 method=${METHODS[$((SLURM_ARRAY_TASK_ID))]}
 transforms=${TRANSFORMS[$((SLURM_ARRAY_TASK_ID))]}
 make EXP=classifiers_wo_filtering \
@@ -43,6 +43,3 @@ make EXP=classifiers_wo_filtering \
      BACKBONE=resnet12 \
      CLASSIFIER=${method} \
      run_wo_filtering
-# done
-
-

@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -108,27 +108,29 @@ run:
 
 # ========== Extraction pipelines ===========
 
-extract_standard:
+extract_all:
 	# Extract for RN and WRN
 	for tgt_dataset in mini_imagenet tiered_imagenet; do \
 		for backbone in resnet12 wrn2810; do \
 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
-	# Extract for cross-domain
+	# Tiered-Imagenet -> *
 	for tgt_dataset in cub aircraft; do \
-		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+		for backbone in resnet12 wrn2810; do \
+			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
-
-extract_snatcher:
-	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=tiered_imagenet extract ;\
-	make TRAINING='feat' SRC_DATASET=tiered_imagenet TGT_DATASETS=cub extract ;\
-	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=cub extract ;\
-# 	make TRAINING='feat' SRC_DATASET=mini_imagenet TGT_DATASETS=mini_imagenet extract ;\
+	# Imagenet -> *
+# 	for tgt_dataset in cub aircraft; do \
+# 		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
 
 
 extract_bis:
@@ -280,6 +282,9 @@ import/results:
 import/archive:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/archive ./ ;\
 
+import/tiered:
+	rsync -avm $(SERVER_IP):${SERVER_PATH}/data/tiered_imagenet.tar.gz ./data/ ;\
+
 tar_data:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
 		tar -czvf  data/$${dataset}.tar.gz -C data/ $${dataset} ;\
@@ -313,6 +318,15 @@ aircraft:
 	wget http://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/archives/fgvc-aircraft-2013b.tar.gz
 	tar -xvf  fgvc-aircraft-2013b.tar.gz -C data ;\
 	rm fgvc-aircraft-2013b.tar.gz ;\
+
+fungi:
+	mkdir -p data/fungi ;\
+	wget https://labs.gbif.org/fgvcx/2018/fungi_train_val.tgz ;\
+	wget https://labs.gbif.org/fgvcx/2018/train_val_annotations.tgz ;\
+	tar -xvf fungi_train_val.tgz -C data/fungi ;\
+	tar -xvf train_val_annotations.tgz -C data/fungi ;\
+	rm fungi_train_val.tgz; rm train_val_annotations.tgz ;
+
 
 # ============= Archive results =============
 

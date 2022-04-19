@@ -5,3 +5,4 @@ from .tiered_imagenet import TieredImageNet, FeatTieredImageNet
 from .cub import CUB
 from .imagenet import ImageNet
 from .aircraft import Aircraft
+from .fungi import Fungi

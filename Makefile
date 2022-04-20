@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -60,7 +60,7 @@ MISC_VAL=1.0
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in test; do \
+		    for split in train test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -126,7 +126,7 @@ extract_all:
 # 	done ;\
 
 	# Imagenet -> *
-	for tgt_dataset in fungi; do \
+	for tgt_dataset in imagenet; do \
 		for backbone in resnet18 resnet50 resnet101 ssl_resnext101_32x16d; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
@@ -158,11 +158,11 @@ run_pyod:
 	done ;\
 
 run_best:
-	make run_snatcher ;\
 	make EXP=KNN CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=KNN run ;\
 	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering" CLASSIFIER=MAP PROBA_DETECTOR=EntropyDetector run ;\
 	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
 	make run_ottim ;\
+# 	make run_snatcher ;\
 
 run_classifiers:
 	for classifier in ICI TIM_GD BDCSPN Finetune; do \
@@ -232,23 +232,12 @@ spider_chart:
 
 # ========== 3) Scaling up ==========
 
-exhaustive_benchmark:
-	# Tiered -> CUB
-	for backbone in resnet12 wrn2810; do \
-		for tgt_dataset in fungi aircraft cub; do \
-			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
+run_resnets:
+	# Imagenet -> *
+	for backbone in resnet18 resnet50 resnet101 ssl_resnext101_32x16d; do \
+		for tgt_dataset in fungi; do \
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
 		done ; \
-	done ;\
-
-spider_chart:
-	for backbone in resnet12 wrn2810; do \
-		python -m src.plots.spider_plotter \
-			 --exp . \
-			 --groupby classifier feature_detector \
-			 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
-			 --plot_versus src_dataset tgt_dataset \
-			 --filters n_shot=1 \
-			 backbone=$${backbone} ;\
 	done ;\
 
 # ========== Plots ===========

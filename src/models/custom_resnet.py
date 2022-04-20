@@ -210,6 +210,7 @@ class ResNet(nn.Module):
         drop_rate=0.1,
         dropblock_size=5,
         num_classes=64,
+        **kwargs
     ):
         self.inplanes = 3
         super(ResNet, self).__init__()

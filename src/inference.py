@@ -433,58 +433,64 @@ def detect_outliers(
 
         # ====== Classification + OOD detection ======
 
-        outlier_scores = defaultdict(list)
+        outlier_scores = []
         soft_preds_q = []
 
         if feature_extractor is None:  # For methods that work on features directly
             for layer in support_features:
-                output = feature_detector(
-                    support_features=transformed_features["det_sup"][layer],
-                    query_features=transformed_features["det_query"][layer],
-                    train_mean=train_mean[layer],
-                    train_std=train_std[layer],
-                    support_labels=support_labels,
-                    query_labels=query_labels,
-                    outliers=outliers,
-                    intra_task_metrics=intra_task_metrics,
-                    figures=figures,
-                )
-                if (
-                    len(output) == 3
-                ):  # It means the method has simultaenously done the inference part
-                    probas_s, probas_q, scores = output
-                else:
-                    scores = output
-
-                    if args.use_filtering:  # Then we filter out before giving
-                        assert feature_detector is not None
-                        if args.threshold == "otsu":
-                            thresh = threshold_otsu(scores.numpy())
-                        else:
-                            thresh = float(args.threshold)
-                        believed_inliers = scores < thresh
-                        metrics["thresholding_accuracy"].append(
-                            (believed_inliers == ~outliers.bool()).float().mean().item()
-                        )
-                    else:
-                        believed_inliers = None
-
+                if feature_detector is None:
+                    assert proba_detector is not None
                     probas_s, probas_q = classifier(
                         support_features=transformed_features["cls_sup"][layer],
                         query_features=transformed_features["cls_query"][layer],
                         train_mean=train_mean[layer],
                         support_labels=support_labels,
                         intra_task_metrics=intra_task_metrics,
+                        use_transductively=None,
                         query_labels=query_labels,
-                        use_transductively=believed_inliers,
                         outliers=outliers,
                     )
-
-                outlier_scores["features"].append(scores)
-                if proba_detector is not None:
-                    outlier_scores["probas"].append(
-                        proba_detector(support_probas=probas_s, query_probas=probas_q)
+                    outlier_scores.append(proba_detector(support_probas=probas_s, query_probas=probas_q))
+                else:
+                    output = feature_detector(
+                        support_features=transformed_features["det_sup"][layer],
+                        query_features=transformed_features["det_query"][layer],
+                        train_mean=train_mean[layer],
+                        train_std=train_std[layer],
+                        support_labels=support_labels,
+                        query_labels=query_labels,
+                        outliers=outliers,
+                        intra_task_metrics=intra_task_metrics,
+                        figures=figures,
                     )
+                    if len(output) == 3:
+                        probas_s, probas_q, scores = output
+                    else:
+                        scores = output
+                        if args.use_filtering:  # Then we filter out before giving
+                            assert feature_detector is not None
+                            if args.threshold == "otsu":
+                                thresh = threshold_otsu(scores.numpy())
+                            else:
+                                thresh = float(args.threshold)
+                            believed_inliers = scores < thresh
+                            metrics["thresholding_accuracy"].append(
+                                (believed_inliers == ~outliers.bool()).float().mean().item()
+                            )
+                        else:
+                            believed_inliers = None
+
+                        probas_s, probas_q = classifier(
+                            support_features=transformed_features["cls_sup"][layer],
+                            query_features=transformed_features["cls_query"][layer],
+                            train_mean=train_mean[layer],
+                            support_labels=support_labels,
+                            intra_task_metrics=intra_task_metrics,
+                            query_labels=query_labels,
+                            use_transductively=believed_inliers,
+                            outliers=outliers,
+                        )
+                    outlier_scores.append(scores)
                 soft_preds_q.append(probas_q)
         else:  # For SSL methods
             output = feature_detector(
@@ -498,13 +504,13 @@ def detect_outliers(
             )
             probas_s, probas_q, scores = output
             soft_preds_q.append(probas_q)
-            outlier_scores["features"].append(scores)
+            outlier_scores.append(scores)
             feature_detector.clear()
 
         # ====== Aggregate scores and probas across layers ======
 
-        for score_type, scores in outlier_scores.items():
-            outlier_scores[score_type] = torch.stack(scores, 0).mean(0)
+        # for score_type, scores in outlier_scores.items():
+        outlier_scores = torch.stack(outlier_scores, 0).mean(0)
         all_probs = torch.stack(soft_preds_q, 0).mean(0)
         predictions = all_probs.argmax(-1)
 
@@ -518,16 +524,15 @@ def detect_outliers(
         )
         metrics["acc"].append(acc)
         if args.n_ood_query:
-            for score_type, scores in outlier_scores.items():
-                fp_rate, tp_rate, _ = roc_curve(outliers.numpy(), scores.numpy())
-                precision, recall, thresholds = precision_recall_curve(
-                    outliers.numpy(), scores.numpy()
-                )
-                precision_at_90 = precision[recall > 0.9][-1]
-                recall_at_90 = recall[precision > 0.9][0]
-                metrics[f"{score_type}_rocauc"].append(auc_fn(fp_rate, tp_rate))
-                metrics[f"{score_type}_prec_at_90"].append(precision_at_90)
-                metrics[f"{score_type}_rec_at_90"].append(recall_at_90)
+            fp_rate, tp_rate, _ = roc_curve(outliers.numpy(), outlier_scores.numpy())
+            precision, recall, thresholds = precision_recall_curve(
+                outliers.numpy(), outlier_scores.numpy()
+            )
+            precision_at_90 = precision[recall > 0.9][-1]
+            recall_at_90 = recall[precision > 0.9][0]
+            metrics["rocauc"].append(auc_fn(fp_rate, tp_rate))
+            metrics["prec_at_90"].append(precision_at_90)
+            metrics["rec_at_90"].append(recall_at_90)
             metrics["outlier_ratio"].append(outliers.sum().item() / outliers.size(0))
 
     # ====== Computing mean and std of metrics across tasks ======

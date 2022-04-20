@@ -25,8 +25,8 @@ TGT_DATASETS=$(SRC_DATASET)
 # Modules
 CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classifier
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
-FEATURE_DETECTOR=kNNDetector
-PROBA_DETECTOR=EntropyDetector # may be removed, was just curious to see how detection on proba was working --> very bad
+FEATURE_DETECTOR=none
+PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
 CLASSIFIER=SimpleShot
 FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
 
@@ -110,83 +110,32 @@ run:
 
 extract_all:
 	# Extract for RN and WRN
-	for tgt_dataset in mini_imagenet tiered_imagenet; do \
-		for backbone in resnet12 wrn2810; do \
+	for backbone in resnet12 wrn2810; do \
+		for tgt_dataset in mini_imagenet tiered_imagenet; do \
 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
 	# Tiered-Imagenet -> *
-	for tgt_dataset in cub aircraft; do \
-		for backbone in resnet12 wrn2810; do \
+	for backbone in resnet12 wrn2810; do \
+		for tgt_dataset in fungi cub aircraft; do \
 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
 	# Imagenet -> *
-# 	for tgt_dataset in cub aircraft; do \
-# 		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
-# 		done ;\
+	for tgt_dataset in cub aircraft; do \
+		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
 # 	done ;\
 
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \
 		make BACKBONE=$${backbone} SRC_DATASET=mini_imagenet MODEL_SRC='feat' TGT_DATASETS=mini_imagenet_bis extract ;\
-	done ;\
-
-# ===================== Base recipes =======================
-
-run_classifiers:
-	for dataset in mini_imagenet; do \
-		for backbone in resnet12; do \
-			for classifier in ICI TIM_GD BDCSPN Finetune; do \
-				make CLS_TRANSFORMS="Pool L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} CLASSIFIER=$${classifier} run ;\
-			done ;\
-			make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-				CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  BACKBONE=$${backbone} CLASSIFIER=MAP run ;\
-		done ;\
-	done ;\
-
-
-# ========== Evaluating OOD detectors in isolation ===========
-
-tune_pyod:
-	for dataset in mini_imagenet; do \
-		for backbone in resnet12; do \
-			for method in HBOS KNN PCA OCSVM IForest; do \
-				make EXP=tune_$${method} TUNE=feature_detector SPLIT=val N_TASKS=500 \
-				DET_TRANSFORMS="Pool BaseCentering L2norm" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} BACKBONE=$${backbone} FEATURE_DETECTOR=$${method} run ;\
-			done ;\
-		done ;\
-	done ;\
-
-benchmark_pyod_detectors:
-	for feature_detector in kNNDetector; do \
-		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${feature_detector} run ;\
-	done ;\
-
-# ========== Evaluating transductive methods ===========
-
-
-run_w_knn_filtering:
-	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 42 45 47 50; do \
-		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} \
-			DET_TRANSFORMS="Pool BaseCentering L2norm" FILTERING=True run ;\
-	done ;\
-
-run_wo_filtering:
-	for ood_query in 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 42 45 47 50; do \
-		make SIMU_PARAMS=n_ood_query OOD_QUERY=$${ood_query} run ;\
-	done ;\
-
-run_ood_tim:
-	for dataset in tiered_imagenet mini_imagenet; do \
-		make DET_TRANSFORMS="Pool" SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} \
-		EXP=ood_tim FEATURE_DETECTOR=OOD_TIM run ;\
 	done ;\
 
 # ========== Feature Investigation ==========
@@ -201,56 +150,94 @@ clustering_metrics:
 		done ;\
 	done ;\
 
-# ========== Evaluating SSL methods ===========
+# ========== Running pipelines ===========
 
-run_ssl_detectors:
-	for feature_detector in FixMatch; do \
-		make FEATURE_DETECTOR=$${feature_detector} run ;\
+run_pyod:
+	for method in HBOS KNN PCA OCSVM IForest; do \
+		make EXP=$${method} DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
+run_best:
+	make run_snatcher ;\
+	make EXP=KNN CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=KNN run ;\
+	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering" CLASSIFIER=MAP PROBA_DETECTOR=EntropyDetector run ;\
+	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
+	make run_ottim ;\
 
-# ========== Cross-domain experiments ===========
+run_classifiers:
+	for classifier in ICI TIM_GD BDCSPN Finetune; do \
+		make EXP=$${classifier} PROBA_DETECTOR=EntropyDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
+	done ;\
+	make EXP=FEAT PROBA_DETECTOR=EntropyDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
+	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=EntropyDetector CLASSIFIER=MAP run ;\
 
-cross_domain:
+run_snatcher:
+	make EXP=Snatcher MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
+
+run_ottim:
+	make EXP=OTTIM FEATURE_DETECTOR=OOD_TIM run ;\
+
+
+# ========== 1) Tuning + Running pipelines ===========
+
+tuning:
+	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
+	make TUNE=classifier SPLIT=val N_TASKS=500 run_classsifiers ;\
+	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
+	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
+
+log_best_conf:
+	for shot in 1 5; do \
+		for exp in Finetune LaplacianShot BDCSPN TIM_GD MAP; do \
+			python -m src.plots.csv_plotter \
+				 --exp $${exp} \
+				 --groupby classifier \
+				 --metrics mean_acc \
+				 --plot_versus backbone \
+				 --action log_best \
+				 --filters n_shot=$${shot} \
+				 backbone=$${backbone} ;\
+		done ;\
+	done ;\
+
+benchmark:
+	make run_classsifiers ;\
+	make run_pyod_detectors ;\
+	make run_snatcher ;\
+	make run_ottim ;\
+
+
+# ========== 2) Cross-domain experiments ===========
+
+exhaustive_benchmark:
 	# Tiered -> CUB
-	for backbone in resnet12 wrn2810; do \
-		for tgt_dataset in cub; do \
-			make EXP=cross_domain BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_pyod_detectors ;\
+	for backbone in wrn2810; do \
+		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
+		for tgt_dataset in tiered_imagenet fungi aircraft cub; do \
+			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
 		done ; \
 	done ;\
 
-	# ImageNet -> Aircraft with all kinds of models
-	for tgt_dataset in aircraft; do \
-		for backbone in deit_tiny_patch16_224 efficientnet_b4 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
-			make EXP=cross_domain BACKBONE=$${backbone} MODEL_SRC='url' \
-				SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_pyod_detectors ;\
-		done ;\
+spider_chart:
+	for backbone in resnet12; do \
+		python -m src.plots.spider_plotter \
+			 --exp . \
+			 --groupby classifier feature_detector \
+			 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
+			 --plot_versus src_dataset tgt_dataset \
+			 --filters n_shot=1 \
+			 backbone=$${backbone} ;\
 	done ;\
+
 
 # ========== Plots ===========
-
-log_best_conf:
-	for backbone in resnet12; do \
-		for shot in 1 5; do \
-			for exp in tune_Finetune tune_LaplacianShot tune_BDCSPN tune_TIM_GD tune_MAP; do \
-				python -m src.plots.csv_plotter \
-					 --exp $${exp} \
-					 --groupby classifier \
-					 --metrics mean_acc \
-					 --plot_versus backbone \
-					 --action log_best \
-					 --filters n_shot=$${shot} \
-					 backbone=$${backbone} ;\
-			done ;\
-		done ;\
-	done ;\
 
 plot_acc_vs_n_ood:
 	for backbone in resnet12; do \
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet tiered_imagenet; do \
 				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
-					 --metrics mean_acc mean_features_rocauc mean_probas_rocauc \
+					 --metrics mean_acc mean_rocauc \
 					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\
@@ -262,7 +249,7 @@ plot_acc_vs_threshold:
 		for shot in 1 5; do \
 			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
-				     --metrics mean_acc mean_features_rocauc mean_believed_inliers mean_thresholding_accuracy \
+				     --metrics mean_acc mean_rocauc mean_believed_inliers mean_thresholding_accuracy \
 					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
 			done ;\
 		done ;\

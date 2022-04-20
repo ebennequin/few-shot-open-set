@@ -34,12 +34,15 @@ class Fungi(VisionDataset):
         self.images, self.labels = [], []
 
         # class_splits = self.create_splits(root)
+
+        # Add all images and records
         for image_record, annot_record in zip(original_train['images'] + original_val['images'],
                                               original_train['annotations'] + original_val['annotations']):
 
             assert image_record['id'] == annot_record['image_id'], (image_record, annot_record)
             self.images.append(root / image_record['file_name'])
             self.labels.append(annot_record['category_id'])
+
         logger.info(f"Fungi {split} loaded. {len(self.images)} images found.")
 
     def __len__(self):

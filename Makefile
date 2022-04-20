@@ -60,7 +60,7 @@ MISC_VAL=1.0
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train val test; do \
+		    for split in test; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -109,28 +109,28 @@ run:
 # ========== Extraction pipelines ===========
 
 extract_all:
-	# Extract for RN and WRN
-	for backbone in resnet12 wrn2810; do \
-		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
+# 	# Extract for RN and WRN
+# 	for backbone in resnet12 wrn2810; do \
+# 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
+# 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
 
-	# Tiered-Imagenet -> *
-	for backbone in resnet12 wrn2810; do \
-		for tgt_dataset in fungi cub aircraft; do \
-			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
+# 	# Tiered-Imagenet -> *
+# 	for backbone in resnet12 wrn2810; do \
+# 		for tgt_dataset in fungi; do \
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
 
 	# Imagenet -> *
-	for tgt_dataset in cub aircraft; do \
-		for backbone in deit_tiny_patch16_224 ssl_resnext101_32x16d vit_base_patch16_224_in21k; do \
+	for tgt_dataset in fungi; do \
+		for backbone in resnet18 resnet50 resnet101 ssl_resnext101_32x16d; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
-# 	done ;\
+	done ;\
 
 
 extract_bis:
@@ -211,15 +211,15 @@ benchmark:
 
 exhaustive_benchmark:
 	# Tiered -> CUB
-	for backbone in wrn2810; do \
-		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
-		for tgt_dataset in tiered_imagenet fungi aircraft cub; do \
+	for backbone in resnet12 wrn2810; do \
+# 		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
+		for tgt_dataset in fungi aircraft cub; do \
 			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
 		done ; \
 	done ;\
 
 spider_chart:
-	for backbone in resnet12; do \
+	for backbone in resnet12 wrn2810; do \
 		python -m src.plots.spider_plotter \
 			 --exp . \
 			 --groupby classifier feature_detector \
@@ -229,6 +229,27 @@ spider_chart:
 			 backbone=$${backbone} ;\
 	done ;\
 
+
+# ========== 3) Scaling up ==========
+
+exhaustive_benchmark:
+	# Tiered -> CUB
+	for backbone in resnet12 wrn2810; do \
+		for tgt_dataset in fungi aircraft cub; do \
+			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
+		done ; \
+	done ;\
+
+spider_chart:
+	for backbone in resnet12 wrn2810; do \
+		python -m src.plots.spider_plotter \
+			 --exp . \
+			 --groupby classifier feature_detector \
+			 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
+			 --plot_versus src_dataset tgt_dataset \
+			 --filters n_shot=1 \
+			 backbone=$${backbone} ;\
+	done ;\
 
 # ========== Plots ===========
 

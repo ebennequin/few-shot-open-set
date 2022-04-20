@@ -13,15 +13,7 @@ class FeaturesDataset(Dataset):
         features_dict: Dict[int, ndarray],
     ):
         """
-        Build a dataset yielding feature vectors from a dictionary describing those vectors and
-        their labels.
-        Take numpy arrays as input, but yields torch tensors. Not very clean but fits our current
-        needs.
-        Args:
-            features_dict: each key is an integer label, each value is a
-                (n_samples, feature_dimension) numpy array containing the feature vectors for
-                images with this label
-            features_to_center_on: a 1-dim feature vector of length feature_dimension
+        features_dict[class][layer] = [tensor1, tensor2, ..., tensorN]
         """
         self.labels = []
         self.data = []
@@ -29,10 +21,13 @@ class FeaturesDataset(Dataset):
             all_features = list(features_dict[class_].values())
             n_samples = len(all_features[0])
             assert all([len(x) == n_samples for x in all_features])
-            self.labels += [class_] * n_samples
-            for sample_tuple in zip(*all_features):
-                sample_dic = {i: x for i, x in enumerate(sample_tuple)}
-                self.data.append(sample_dic)
+            if n_samples >= 11:  # filter out classes with too few samples
+                self.labels += [class_] * n_samples
+                for sample_tuple in zip(*all_features):
+                    sample_dic = {i: x for i, x in enumerate(sample_tuple)}
+                    self.data.append(sample_dic)
+            else:
+                logger.warning(f"Filtered out class {class_} because only contains {n_samples} samples")
 
     def __len__(self):
         return len(self.data)

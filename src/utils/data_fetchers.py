@@ -250,12 +250,13 @@ def get_test_features(
         data_dir
         / "features"
         / src_dataset
-        / tgt_dataset
+        / src_dataset
         / "train"
         / training_method
         / pickle_basename
     )
-    logger.info(f"Loading features from {features_path}")
+    logger.info(f"Loading train features from {avg_train_features_path}")
+    logger.info(f"Loading test features from {features_path}")
 
     with open(features_path, "rb") as stream:
         features = pickle.load(stream)

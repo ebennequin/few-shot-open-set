@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -126,11 +126,23 @@ extract_all:
 # 	done ;\
 
 	# Imagenet -> *
-	for tgt_dataset in imagenet; do \
-		for backbone in resnet18 resnet50 resnet101 ssl_resnext101_32x16d; do \
+	for tgt_dataset in imagenet fungi; do \
+		for backbone in resnet152; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
+
+# 	for tgt_dataset in fungi; do \
+# 		for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
+
+# 	for tgt_dataset in imagenet fungi; do \
+# 		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 		done ;\
+# 	done ;\
 
 
 extract_bis:
@@ -163,6 +175,10 @@ run_best:
 	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
 	make run_ottim ;\
 # 	make run_snatcher ;\
+
+run_finalists:
+	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
+	make run_ottim ;\
 
 run_classifiers:
 	for classifier in ICI TIM_GD BDCSPN Finetune; do \
@@ -234,11 +250,29 @@ spider_chart:
 
 run_resnets:
 	# Imagenet -> *
-	for backbone in resnet18 resnet50 resnet101 ssl_resnext101_32x16d; do \
+	for backbone in resnet18 resnet50 resnet101 resnet152; do \
 		for tgt_dataset in fungi; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\
+
+run_efficient:
+	# Imagenet -> *
+	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 ; do \
+		for tgt_dataset in fungi; do \
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
+		done ; \
+	done ;\
+
+barplots:
+	python -m src.plots.bar_plotter \
+		 --exp . \
+		 --groupby classifier feature_detector \
+		 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
+		 --latex True \
+		 --plot_versus backbone \
+		 --filters n_shot=1 ;\
+
 
 # ========== Plots ===========
 

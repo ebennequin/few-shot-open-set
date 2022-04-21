@@ -37,6 +37,18 @@ pretty['mean_rec_at_90'] = 'Rec@0.9'
 pretty['mean_prec_at_90'] = 'Prec@0.9'
 
 
+pretty['ssl_resnext101_32x16d'] = 'ResNext101'
+pretty['resnet101'] = 'ResNet101'
+pretty['resnet152'] = 'ResNet152'
+pretty['resnet50'] = 'ResNet50'
+pretty['resnet18'] = 'ResNet18'
+
+pretty['efficientnet_b0'] = 'EfficientNet-B0'
+pretty['efficientnet_b1'] = 'EfficientNet-B1'
+pretty['efficientnet_b2'] = 'EfficientNet-B2'
+pretty['efficientnet_b3'] = 'EfficientNet-B3'
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Plot training metrics')
     parser.add_argument('--exp', type=str, help='Name of the experiment')

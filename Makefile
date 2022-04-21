@@ -165,7 +165,7 @@ extract_bis:
 # ========== Feature Investigation ==========
 
 clustering_metrics:
-	for dataset in min_imagenet tiered_imagenet; do \
+	for dataset in mini_imagenet tiered_imagenet; do \
 			for split in train test; do \
 					python -m src.investigate_features \
 							data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\

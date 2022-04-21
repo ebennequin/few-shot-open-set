@@ -13,6 +13,7 @@ import numpy as np
 import os.path as osp
 from .utils import get_transforms
 
+
 class ImageNet(VisionDataset):
     """
     Placeholder for compatitiblity
@@ -30,11 +31,11 @@ class ImageNet(VisionDataset):
         self.target_transform = target_transform
         self.images = []
         self.labels = []
-        for class_id, class_name in enumerate(os.listdir(root / 'val')):
-            for _, _, files in os.walk(root / 'val' / class_name):
+        for class_id, class_name in enumerate(os.listdir(root / "val")):
+            for _, _, files in os.walk(root / "val" / class_name):
                 for file in files:
                     self.labels.append(class_id)
-                    self.images.append(root / 'val' / class_name / file)
+                    self.images.append(root / "val" / class_name / file)
 
     def __len__(self):
         return len(self.labels)

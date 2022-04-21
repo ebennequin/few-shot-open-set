@@ -137,19 +137,26 @@ def confidence_interval(standard_deviation, n_samples):
 
 
 def clustering_variances_ratio(features) -> Tuple[float, float, float]:
-    sigma_within = np.mean([np.linalg.norm(v.std(axis=0)) for k, v in features.items()])
+    sigma_within = (
+        np.mean([np.linalg.norm(v.std(axis=0)) for k, v in features.items()]) ** 2
+    )
 
-    sigma_between = np.linalg.norm(
-        np.stack([v.mean(axis=0) for v in features.values()]).std(axis=0)
+    sigma_between = (
+        np.linalg.norm(
+            np.stack([v.mean(axis=0) for v in features.values()]).std(axis=0)
+        )
+        ** 2
     )
 
     return sigma_within / sigma_between, sigma_within, sigma_between
 
 
-def compute_mean_auroc(features):
-
+def compute_mif_with_auroc(features):
+    """
+    Computes the MIF of the features using the area under the ROC curve.
+    This should give the same results as compute_mif_explicitely() but it is a tiny bit faster.
+    """
     aurocs = []
-    average_precisions = []
     for label in features.keys():
         ground_truth = []
         predictions = []
@@ -159,8 +166,30 @@ def compute_mean_auroc(features):
             distances = np.linalg.norm(v - centroid, axis=1)
             predictions += distances.tolist()
         aurocs.append(sklearn.metrics.roc_auc_score(ground_truth, predictions))
-        average_precisions.append(
-            sklearn.metrics.average_precision_score(ground_truth, predictions)
-        )
 
-    return mean(aurocs), mean(average_precisions)
+    return 1 - np.mean(aurocs)
+
+
+def compute_mif_explicitly(features):
+    """
+    Computes the MIF of the features using the explicit definition.
+    This should give the same results as compute_mif_with_auroc() but it is a tiny bit slower.
+    """
+    mean_imposture_factors = []
+    for label, label_features in features.items():
+        centroid = label_features.mean(axis=0)
+        distances_to_centroid = np.sort(
+            np.linalg.norm(label_features - centroid, axis=1)
+        )
+        class_imposture_factors = []
+        for second_label, v in features.items():
+            if second_label == label:
+                continue
+            distances = np.linalg.norm(v - centroid, axis=1)
+            imposture_factors = 1 - np.searchsorted(
+                distances_to_centroid, distances
+            ) / len(distances_to_centroid)
+            class_imposture_factors.append(imposture_factors)
+        mean_imposture_factors.append(np.mean(np.concatenate(class_imposture_factors)))
+
+    return np.mean(mean_imposture_factors)

@@ -25,10 +25,10 @@ class Fungi(VisionDataset):
     ):
         self.transform = get_transforms(args)
         self.target_transform = target_transform
-        
-        with open(root / f'train.json', 'r') as f:
+
+        with open(root / f"train.json", "r") as f:
             original_train = json.load(f)
-        with open(root / f'val.json', 'r') as f:
+        with open(root / f"val.json", "r") as f:
             original_val = json.load(f)
 
         self.images, self.labels = [], []
@@ -36,12 +36,17 @@ class Fungi(VisionDataset):
         # class_splits = self.create_splits(root)
 
         # Add all images and records
-        for image_record, annot_record in zip(original_train['images'] + original_val['images'],
-                                              original_train['annotations'] + original_val['annotations']):
+        for image_record, annot_record in zip(
+            original_train["images"] + original_val["images"],
+            original_train["annotations"] + original_val["annotations"],
+        ):
 
-            assert image_record['id'] == annot_record['image_id'], (image_record, annot_record)
-            self.images.append(root / image_record['file_name'])
-            self.labels.append(annot_record['category_id'])
+            assert image_record["id"] == annot_record["image_id"], (
+                image_record,
+                annot_record,
+            )
+            self.images.append(root / image_record["file_name"])
+            self.labels.append(annot_record["category_id"])
 
         logger.info(f"Fungi {split} loaded. {len(self.images)} images found.")
 
@@ -82,36 +87,34 @@ class Fungi(VisionDataset):
         """
         # We ignore the original train and validation splits (the test set cannot be
         # used since it is not labeled).
-        with open(root / 'train.json', 'r') as f:
+        with open(root / "train.json", "r") as f:
             original_train = json.load(f)
-        with open(root / 'val.json', 'r') as f:
+        with open(root / "val.json", "r") as f:
             original_val = json.load(f)
 
         # The categories (classes) for train and validation should be the same.
-        assert original_train['categories'] == original_val['categories']
+        assert original_train["categories"] == original_val["categories"]
         # Sort by category ID for reproducibility.
-        categories = sorted(
-            original_train['categories'], key=lambda x: x['id'])
+        categories = sorted(original_train["categories"], key=lambda x: x["id"])
 
         # Assert contiguous range [0:category_number]
-        assert ([category['id'] for category in categories] == list(range(len(categories))))
+        assert [category["id"] for category in categories] == list(
+            range(len(categories))
+        )
 
         # Some categories share the same name (see
         # https://github.com/visipedia/fgvcx_fungi_comp/issues/1)
         # so we include the category id in the label.
-        labels = [
-            category['id']
-            for category in categories
-        ]
+        labels = [category["id"] for category in categories]
 
         train_inds = np.arange(NUM_TRAIN_CLASSES)
         valid_inds = NUM_TRAIN_CLASSES + np.arange(NUM_VALID_CLASSES)
         test_inds = NUM_TRAIN_CLASSES + NUM_VALID_CLASSES + np.arange(NUM_TEST_CLASSES)
 
         splits = {
-            'train': [labels[i] for i in train_inds],
-            'val': [labels[i] for i in valid_inds],
-            'test': [labels[i] for i in test_inds]
+            "train": [labels[i] for i in train_inds],
+            "val": [labels[i] for i in valid_inds],
+            "test": [labels[i] for i in test_inds],
         }
-   
+
         return splits

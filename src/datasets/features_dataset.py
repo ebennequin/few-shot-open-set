@@ -27,7 +27,9 @@ class FeaturesDataset(Dataset):
                     sample_dic = {i: x for i, x in enumerate(sample_tuple)}
                     self.data.append(sample_dic)
             else:
-                logger.warning(f"Filtered out class {class_} because only contains {n_samples} samples")
+                logger.warning(
+                    f"Filtered out class {class_} because only contains {n_samples} samples"
+                )
 
     def __len__(self):
         return len(self.data)

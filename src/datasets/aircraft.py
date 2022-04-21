@@ -39,26 +39,25 @@ class Aircraft(VisionDataset):
         # 2) Raw images have a 20-pixel border at the bottom with copyright
         #    information which needs to be removed. Cropping to the bounding boxes
         #    has the side-effect that it removes the border.
-        bboxes_path = root / 'images_box.txt'
-        with open(bboxes_path, 'r') as f:
-            names_to_bboxes = [
-                line.split('\n')[0].split(' ') for line in f.readlines()
-            ]
+        bboxes_path = root / "images_box.txt"
+        with open(bboxes_path, "r") as f:
+            names_to_bboxes = [line.split("\n")[0].split(" ") for line in f.readlines()]
             names_to_bboxes = dict(
                 (name, map(int, (xmin, ymin, xmax, ymax)))
-                for name, xmin, ymin, xmax, ymax in names_to_bboxes)
+                for name, xmin, ymin, xmax, ymax in names_to_bboxes
+            )
 
         # Retrieve mapping from filename to variant
-        variant_trainval_path = root / 'images_variant_trainval.txt'
-        with open(variant_trainval_path, 'r') as f:
+        variant_trainval_path = root / "images_variant_trainval.txt"
+        with open(variant_trainval_path, "r") as f:
             names_to_variants = [
-                line.split('\n')[0].split(' ', 1) for line in f.readlines()
+                line.split("\n")[0].split(" ", 1) for line in f.readlines()
             ]
 
-        variant_test_path = root / 'images_variant_test.txt'
-        with open(variant_test_path, 'r') as f:
+        variant_test_path = root / "images_variant_test.txt"
+        with open(variant_test_path, "r") as f:
             names_to_variants += [
-                line.split('\n')[0].split(' ', 1) for line in f.readlines()
+                line.split("\n")[0].split(" ", 1) for line in f.readlines()
             ]
 
         names_to_variants = dict(names_to_variants)
@@ -76,13 +75,12 @@ class Aircraft(VisionDataset):
         self.labels = []
         for class_id, class_name in enumerate(all_classes):
             self.images += [
-                root / 'images' / '{}.jpg'.format(filename)
+                root / "images" / "{}.jpg".format(filename)
                 for filename in sorted(variants_to_names[class_name])
             ]
             self.labels += [class_id] * len(variants_to_names[class_name])
             self.bboxes += [
-                names_to_bboxes[name]
-                for name in sorted(variants_to_names[class_name])
+                names_to_bboxes[name] for name in sorted(variants_to_names[class_name])
             ]
 
     def __len__(self):
@@ -122,16 +120,17 @@ class Aircraft(VisionDataset):
         test_inds = NUM_TRAIN_CLASSES + NUM_val_CLASSES + np.arange(NUM_TEST_CLASSES)
         # "Variant" refers to the aircraft model variant (e.g., A330-200) and is
         # used as the class name in the dataset.
-        variants_path = (root / 'variants.txt')
-        with open(variants_path, 'r') as f:
+        variants_path = root / "variants.txt"
+        with open(variants_path, "r") as f:
             variants = [line.strip() for line in f.readlines() if line]
         variants = sorted(variants)
-        assert len(variants) == NUM_TRAIN_CLASSES + NUM_val_CLASSES + NUM_TEST_CLASSES,\
-            (len(variants), NUM_TRAIN_CLASSES + NUM_val_CLASSES + NUM_TEST_CLASSES)
+        assert (
+            len(variants) == NUM_TRAIN_CLASSES + NUM_val_CLASSES + NUM_TEST_CLASSES
+        ), (len(variants), NUM_TRAIN_CLASSES + NUM_val_CLASSES + NUM_TEST_CLASSES)
 
         splits = {
-            'train': [variants[i] for i in train_inds],
-            'val': [variants[i] for i in val_inds],
-            'test': [variants[i] for i in test_inds]
+            "train": [variants[i] for i in train_inds],
+            "val": [variants[i] for i in val_inds],
+            "test": [variants[i] for i in test_inds],
         }
         return splits, variants

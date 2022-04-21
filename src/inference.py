@@ -450,7 +450,9 @@ def detect_outliers(
                         query_labels=query_labels,
                         outliers=outliers,
                     )
-                    outlier_scores.append(proba_detector(support_probas=probas_s, query_probas=probas_q))
+                    outlier_scores.append(
+                        proba_detector(support_probas=probas_s, query_probas=probas_q)
+                    )
                 else:
                     output = feature_detector(
                         support_features=transformed_features["det_sup"][layer],
@@ -475,7 +477,10 @@ def detect_outliers(
                                 thresh = float(args.threshold)
                             believed_inliers = scores < thresh
                             metrics["thresholding_accuracy"].append(
-                                (believed_inliers == ~outliers.bool()).float().mean().item()
+                                (believed_inliers == ~outliers.bool())
+                                .float()
+                                .mean()
+                                .item()
                             )
                         else:
                             believed_inliers = None

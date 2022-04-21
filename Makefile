@@ -147,20 +147,40 @@ extract_all:
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \
-		make BACKBONE=$${backbone} SRC_DATASET=mini_imagenet MODEL_SRC='feat' TGT_DATASETS=mini_imagenet_bis extract ;\
+			for split in train val test; do \
+					python -m src.compute_features \
+							--backbone $${backbone} \
+							--src_dataset tiered_imagenet \
+							--tgt_dataset tiered_imagenet_bis \
+							--data_dir $(DATADIR) \
+							--model_source feat \
+							--training $(TRAINING) \
+							--split $${split} \
+							--layers $(LAYERS) \
+							--keep_all_train_features True ;\
+			done \
 	done ;\
+
 
 # ========== Feature Investigation ==========
 
 clustering_metrics:
-	for dataset in mini_imagenet; do \
-		for split in train test; do \
-			python -m src.investigate_features \
-				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\
-			python -m src.investigate_features \
-				data/features/$${dataset}/$${dataset}_bis/$${split}/standard/wrn2810_$${dataset}_feat_last.pickle ;\
-		done ;\
+	for dataset in min_imagenet tiered_imagenet; do \
+			for split in train test; do \
+					python -m src.investigate_features \
+							data/features/$${dataset}/$${dataset}_bis/$${split}/standard/resnet12_$${dataset}_feat_4_4.pickle ;\
+					python -m src.investigate_features \
+							data/features/$${dataset}/$${dataset}_bis/$${split}/standard/wrn2810_$${dataset}_feat_last.pickle ;\
+			done ;\
 	done ;\
+
+	for dataset in aircraft imagenet_val; do \
+			for feature in ssl_resnext101_32x16d_imagenet_url_4_3 vit_base_patch16_224_in21k_imagenet_url_last_cls deit_tiny_patch16_224_imagenet_url_last_cls; do \
+					python -m src.investigate_features \
+							data/features/imagenet/$${dataset}/test/standard/$${feature}.pickle ;\
+			done ;\
+	done ;\
+
 
 # ========== Running pipelines ===========
 

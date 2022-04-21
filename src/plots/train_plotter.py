@@ -12,12 +12,12 @@ from .Plotter import Plotter
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Plot training metrics')
-    parser.add_argument('--folder', type=str,
-                        help='Folder to search')
-    parser.add_argument('--reduce_by', type=str, default='random_seed')
-    parser.add_argument('--simu_params', type=str, nargs='+',
-                        default=['dataset', 'backbone'])
+    parser = argparse.ArgumentParser(description="Plot training metrics")
+    parser.add_argument("--folder", type=str, help="Folder to search")
+    parser.add_argument("--reduce_by", type=str, default="random_seed")
+    parser.add_argument(
+        "--simu_params", type=str, nargs="+", default=["dataset", "backbone"]
+    )
 
     args = parser.parse_args()
     return args
@@ -41,10 +41,12 @@ class NumpyPlotter(Plotter):
         """
         # Recover all files that match .npy pattern in folder/
         p = Path(folder)
-        all_files = list(p.glob('**/*.npy'))
+        all_files = list(p.glob("**/*.npy"))
 
         if not len(all_files):
-            print("No .pny files found in this subtree. Cancelling plotting operations.")
+            print(
+                "No .pny files found in this subtree. Cancelling plotting operations."
+            )
             return
 
         # Group files by metric name
@@ -52,22 +54,29 @@ class NumpyPlotter(Plotter):
         for path in all_files:
             root = path.parent
             metric = path.stem
-            with open(root / 'config.json') as f:
+            with open(root / "config.json") as f:
                 config = json.load(f)
-            fixed_key = tuple([config[key] for key in kwargs['simu_params']])
-            reduce_key = config[kwargs['reduce_by']]
-            filenames_dic[metric][fixed_key][reduce_key]['log_freq'] = config['log_freq']
-            filenames_dic[metric][fixed_key][reduce_key]['path'] = path
+            fixed_key = tuple([config[key] for key in kwargs["simu_params"]])
+            reduce_key = config[kwargs["reduce_by"]]
+            filenames_dic[metric][fixed_key][reduce_key]["log_freq"] = config[
+                "log_freq"
+            ]
+            filenames_dic[metric][fixed_key][reduce_key]["path"] = path
 
         # Do one plot per metric
         for metric in filenames_dic:
             for simu_args in filenames_dic[metric]:
                 values = []
                 for _, res_dic in filenames_dic[metric][simu_args].items():
-                    values.append(np.load(res_dic['path']))  # [N_iter]
+                    values.append(np.load(res_dic["path"]))  # [N_iter]
                 values = np.stack(values, axis=0)  # [#same_simu, N_iter]
-                self.metric_dic[metric][simu_args]['y'], self.metric_dic[metric][simu_args]['pm'] = self.compute_confidence_interval(values)
-                self.metric_dic[metric][simu_args]['x'] = np.arange(len(self.metric_dic[metric][simu_args]['y']))
+                (
+                    self.metric_dic[metric][simu_args]["y"],
+                    self.metric_dic[metric][simu_args]["pm"],
+                ) = self.compute_confidence_interval(values)
+                self.metric_dic[metric][simu_args]["x"] = np.arange(
+                    len(self.metric_dic[metric][simu_args]["y"])
+                )
 
 
 if __name__ == "__main__":

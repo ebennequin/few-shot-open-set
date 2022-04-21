@@ -17,19 +17,24 @@ class SpiderPlotter(CSVPlotter):
     """
     An abstract plotter.
     """
+
     def plot(self, **kwargs):
-        '''
+        """
         metric_dic[metric_name][method] = {
                                     'x': ndarray [n_points_found],
                                     'y': ndarray [n_points_found],
                                     'pm': Optional[ndarray],
                                    }
-        '''
+        """
         assert len(self.metric_dic)
 
-        fig, axes = plt.subplots(nrows=1, ncols=len(self.metric_dic),
-                                 subplot_kw=dict(projection="polar"),
-                                 figsize=(40, 13), squeeze=True)
+        fig, axes = plt.subplots(
+            nrows=1,
+            ncols=len(self.metric_dic),
+            subplot_kw=dict(projection="polar"),
+            figsize=(40, 13),
+            squeeze=True,
+        )
 
         for i, metric_name in enumerate(self.metric_dic):
             ax = axes[i]
@@ -39,14 +44,20 @@ class SpiderPlotter(CSVPlotter):
             GREY70 = "#b3b3b3"
             GREY_LIGHT = "#f2efe8"
 
-            min_val = min([min(arr['y']) for arr in self.metric_dic[metric_name].values()])
-            max_val = max([max(arr['y']) for arr in self.metric_dic[metric_name].values()])
-            max_avg_perf = max([np.mean(arr['y']) for arr in self.metric_dic[metric_name].values()])
+            min_val = min(
+                [min(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+            )
+            max_val = max(
+                [max(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+            )
+            max_avg_perf = max(
+                [np.mean(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+            )
             l = np.linspace(min_val - 0.02, max_val + 0.02, 5)
             angle = 2.2
 
             first_method = list(self.metric_dic[metric_name].keys())[0]
-            x_names = self.metric_dic[metric_name][first_method]['x']
+            x_names = self.metric_dic[metric_name][first_method]["x"]
             VARIABLES = x_names
             VARIABLES_N = len(VARIABLES)
 
@@ -104,43 +115,57 @@ class SpiderPlotter(CSVPlotter):
             ax.fill(HANGLES, H[-1], GREY_LIGHT)
 
             # Fill lines and dots --------------------------------------------
-            for idx, (method, method_result) in enumerate(self.metric_dic[metric_name].items()):
-                assert method_result['x'] == x_names, (method, method_result['x'], x_names)
-                values = method_result['y']
+            for idx, (method, method_result) in enumerate(
+                self.metric_dic[metric_name].items()
+            ):
+                assert method_result["x"] == x_names, (
+                    method,
+                    method_result["x"],
+                    x_names,
+                )
+                values = method_result["y"]
                 perf = np.mean(values)
                 values += values[:1]  # to close the spider
-                is_best = (max_avg_perf == perf)
+                is_best = max_avg_perf == perf
                 logger.warning((max_avg_perf, perf))
                 label = f"{method.split('(')[0]} ({np.round(100 * perf, 2)})"
-                ax.plot(ANGLES, values, linewidth=3, label=rf"\textbf{{{label}}}" if is_best else label)
+                ax.plot(
+                    ANGLES,
+                    values,
+                    linewidth=3,
+                    label=rf"\textbf{{{label}}}" if is_best else label,
+                )
                 ax.scatter(ANGLES, values, s=130, zorder=10)
                 # ax.plot(ANGLES, values, c=method2color[method], linewidth=3, label=,)
                 # ax.scatter(ANGLES, values, s=130, c=method2color[method], zorder=10)
 
-            ax.set_title(pretty[metric_name], fontdict={'fontsize': 30}, y=1.2)
+            ax.set_title(pretty[metric_name], fontdict={"fontsize": 30}, y=1.2)
             ax.legend(
-                loc='center',
-                bbox_to_anchor=[1.2, 1.06],       # bottom-right
+                loc="center",
+                bbox_to_anchor=[1.2, 1.06],  # bottom-right
                 ncol=1,
-                frameon=False,     # don't put a frame
-                prop={'size': 17}
+                frameon=False,  # don't put a frame
+                prop={"size": 17},
             )
 
         # ---- Save plots ----
         # plt.subplots_adjust(wspace=-0.1)
         fig.tight_layout()
         os.makedirs(self.out_dir, exist_ok=True)
-        fig.savefig(self.out_dir / f'spider.pdf', dpi=300, bbox_inches='tight')
+        fig.savefig(self.out_dir / f"spider.pdf", dpi=300, bbox_inches="tight")
 
 
 if __name__ == "__main__":
     args = parse_args()
     if args.latex:
         logger.info("Activating latex")
-        plt.rcParams.update({
-            "text.usetex": True,
-            "font.family": "sans-serif",
-            "font.sans-serif": ["Helvetica"]})
+        plt.rcParams.update(
+            {
+                "text.usetex": True,
+                "font.family": "sans-serif",
+                "font.sans-serif": ["Helvetica"],
+            }
+        )
         # for Palatino and other serif fonts use:
         # plt.rcParams.update({
         #     "text.usetex": True,

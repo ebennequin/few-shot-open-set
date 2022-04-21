@@ -4,7 +4,10 @@ import pickle
 import typer
 from loguru import logger
 
-from src.utils.plots_and_metrics import clustering_variances_ratio, compute_mean_auroc
+from src.utils.plots_and_metrics import (
+    clustering_variances_ratio,
+    compute_mif_with_auroc,
+)
 from src.utils.utils import normalize
 
 
@@ -24,13 +27,12 @@ def main(features_path: Path, normalize_features: bool = True):
     )
 
     ratio, sigma_within, sigma_between = clustering_variances_ratio(features)
-    mean_auroc, average_precision = compute_mean_auroc(features)
+    mean_imposture_factor = compute_mif_with_auroc(features)
     logger.info(f"Metrics:")
-    logger.info(f"Intra-class variance: {sigma_within}")
-    logger.info(f"Inter-class variance: {sigma_between}")
+    # logger.info(f"Intra-class variance: {sigma_within}")
+    # logger.info(f"Inter-class variance: {sigma_between}")
     logger.info(f"Variance ratio: {ratio}")
-    logger.info(f"Mean AUROC: {mean_auroc}")
-    logger.info(f"Average Precision: {average_precision}")
+    logger.info(f"MIF: {mean_imposture_factor}")
 
 
 if __name__ == "__main__":

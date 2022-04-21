@@ -10,7 +10,10 @@ from sklearn.manifold import TSNE
 import streamlit as st
 
 from src.utils.utils import normalize
-from src.utils.plots_and_metrics import clustering_variances_ratio, compute_mean_auroc
+from src.utils.plots_and_metrics import (
+    clustering_variances_ratio,
+    compute_mif_with_auroc,
+)
 from st_scripts.colors import COLORS_64, COLORS_20
 
 IMAGENET_WORDS_PATH = Path("data/mini_imagenet/specs/words.txt")
@@ -167,7 +170,7 @@ def plot_clusters(key):
         st.write("No features for this combination")
         return
 
-    mean_auroc = compute_mean_auroc(features=test_features)
+    mean_auroc = compute_mif_with_auroc(features=test_features)
     st.write(mean_auroc)
     class_names = get_class_names("mini_imagenet", split, key)
     selected_classes = select_classes(class_names, key)

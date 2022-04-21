@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -60,7 +60,7 @@ MISC_VAL=1.0
 
 extract:
 		for dataset in $(TGT_DATASETS); do \
-		    for split in train test; do \
+		    for split in train; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
 					--src_dataset $(SRC_DATASET) \
@@ -126,19 +126,19 @@ extract_all:
 # 	done ;\
 
 	# Imagenet -> *
-	for tgt_dataset in imagenet fungi; do \
-		for backbone in resnet152; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
-
-# 	for tgt_dataset in fungi; do \
-# 		for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
+# 	for tgt_dataset in aircraft; do \
+# 		for backbone in resnet18 resnet50 resnet101 resnet152; do \
 # 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
-# 	for tgt_dataset in imagenet fungi; do \
+	for tgt_dataset in imagenet; do \
+		for backbone in vit_large_patch16_384; do \
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
+	done ;\
+
+# 	for tgt_dataset in aircraft; do \
 # 		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
 # 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 # 		done ;\
@@ -248,10 +248,19 @@ spider_chart:
 
 # ========== 3) Scaling up ==========
 
+
+run_vits:
+	# Imagenet -> *
+	for backbone in vit_tiny_patch16_384 vit_small_patch16_384 vit_base_patch16_384 vit_large_patch16_384; do \
+		for tgt_dataset in aircraft; do \
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
+		done ; \
+	done ;\
+
 run_resnets:
 	# Imagenet -> *
 	for backbone in resnet18 resnet50 resnet101 resnet152; do \
-		for tgt_dataset in fungi; do \
+		for tgt_dataset in aircraft; do \
 			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\
@@ -259,7 +268,7 @@ run_resnets:
 run_efficient:
 	# Imagenet -> *
 	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 ; do \
-		for tgt_dataset in fungi; do \
+		for tgt_dataset in aircraft; do \
 			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\

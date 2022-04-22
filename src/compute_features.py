@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--training", type=str, default="standard")
     parser.add_argument("--layers", type=int)
     parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--keep_all_train_features", type=bool, default=False)
 

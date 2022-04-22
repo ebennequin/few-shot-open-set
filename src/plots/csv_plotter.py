@@ -47,6 +47,17 @@ pretty["efficientnet_b0"] = "EfficientNet-B0"
 pretty["efficientnet_b1"] = "EfficientNet-B1"
 pretty["efficientnet_b2"] = "EfficientNet-B2"
 pretty["efficientnet_b3"] = "EfficientNet-B3"
+pretty["efficientnet_b4"] = "EfficientNet-B4"
+pretty["efficientnet_b5"] = "EfficientNet-B5"
+pretty["efficientnet_b6"] = "EfficientNet-B6"
+pretty["efficientnet_b7"] = "EfficientNet-B7"
+pretty["efficientnet_b8"] = "EfficientNet-B8"
+pretty["efficientnet_l2"] = "EfficientNet-L2"
+
+pretty["vit_tiny_patch16_384"] = "ViT-tiny"
+pretty["vit_small_patch16_384"] = "ViT-small"
+pretty["vit_base_patch16_384"] = "ViT-base"
+pretty["vit_large_patch16_384"] = "ViT-large"
 
 
 def parse_args() -> argparse.Namespace:

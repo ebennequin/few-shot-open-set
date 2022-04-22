@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -132,17 +132,17 @@ extract_all:
 # 		done ;\
 # 	done ;\
 
-	for tgt_dataset in imagenet; do \
-		for backbone in vit_large_patch16_384; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
-		done ;\
-	done ;\
-
-# 	for tgt_dataset in aircraft; do \
-# 		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
+# 	for tgt_dataset in imagenet; do \
+# 		for backbone in vit_large_patch16_384; do \
 # 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
+
+	for tgt_dataset in imagenet; do \
+		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+		done ;\
+	done ;\
 
 
 extract_bis:
@@ -197,7 +197,7 @@ run_best:
 # 	make run_snatcher ;\
 
 run_finalists:
-	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
+	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make run_ottim ;\
 
 run_classifiers:
@@ -271,7 +271,7 @@ spider_chart:
 
 run_vits:
 	# Imagenet -> *
-	for backbone in vit_tiny_patch16_384 vit_small_patch16_384 vit_base_patch16_384 vit_large_patch16_384; do \
+	for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
 		for tgt_dataset in aircraft; do \
 			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
 		done ; \
@@ -287,7 +287,7 @@ run_resnets:
 
 run_efficient:
 	# Imagenet -> *
-	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 ; do \
+	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b4 ; do \
 		for tgt_dataset in aircraft; do \
 			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
 		done ; \

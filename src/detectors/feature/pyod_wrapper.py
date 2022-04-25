@@ -8,6 +8,8 @@ from pyod.models.pca import PCA
 from pyod.models.iforest import IForest
 from pyod.models.lof import LOF
 from pyod.models.mcd import MCD
+from pyod.models.copod import COPOD
+from pyod.models.mo_gaal import MO_GAAL
 from loguru import logger
 import inspect
 

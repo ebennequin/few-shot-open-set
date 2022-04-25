@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -185,27 +185,27 @@ clustering_metrics:
 # ========== Running pipelines ===========
 
 run_pyod:
-	for method in HBOS KNN PCA OCSVM IForest; do \
+	for method in HBOS KNN PCA OCSVM IForest COPOD MO_GAAL; do \
 		make EXP=$${method} DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
 run_best:
 	make EXP=KNN CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=KNN run ;\
-	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering" CLASSIFIER=MAP PROBA_DETECTOR=EntropyDetector run ;\
-	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=EntropyDetector run ;\
+	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering" CLASSIFIER=MAP PROBA_DETECTOR=MaxProbDetector run ;\
+	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot PROBA_DETECTOR=MaxProbDetector run ;\
 	make run_ottim ;\
-# 	make run_snatcher ;\
+	make run_snatcher ;\
 
 run_finalists:
 	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make run_ottim ;\
 
 run_classifiers:
-	for classifier in ICI TIM_GD BDCSPN Finetune; do \
-		make EXP=$${classifier} PROBA_DETECTOR=EntropyDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
+	for classifier in ICI TIM_GD BDCSPN Finetune LaplacianShot SimpleShot; do \
+		make EXP=$${classifier} PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
-	make EXP=FEAT PROBA_DETECTOR=EntropyDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
-	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=EntropyDetector CLASSIFIER=MAP run ;\
+	make EXP=FEAT PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
+	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
 
 run_snatcher:
 	make EXP=Snatcher MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\

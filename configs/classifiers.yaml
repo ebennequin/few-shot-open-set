@@ -10,8 +10,8 @@ classifiers:
            },
              }
     tuning:
-      hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr']
-      hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001]]}
+      hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr', 'loss_weights']
+      hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001], [[1.0, 1.0, 0.5], [1.0, 1.0, 0.75], [1.0, 1.0, 1.0]]]}
 
   Finetune:
     default: {

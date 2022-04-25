@@ -73,6 +73,35 @@ def plot_twin_hist(outliers_df: pd.DataFrame, title: str, plot: bool):
         st.pyplot(fig, clear_figure=True)
 
 
+def check_if_record_exists(args, path: str):
+    # Params part of the new record
+    group_by_args = args.general_hparams + args.simu_hparams
+    new_entry = {}
+    for param in group_by_args:
+        value = getattr(args, param)
+        if isinstance(value, list):
+            value = "-".join(value)
+        else:
+            value = str(value)
+        new_entry[param] = value
+    try:
+        res = pd.read_csv(path)
+    except FileNotFoundError:
+        res = pd.DataFrame({})
+
+    records = res.to_dict("records")
+    for existing_entry in records:
+        if any([param not in existing_entry for param in group_by_args]):
+            continue
+        matches = [
+            str(existing_entry[param]) == new_entry[param] for param in group_by_args
+        ]
+        match = sum(matches) == len(matches)
+        if match:
+            return True
+    return False
+
+
 def update_csv(args: argparse.Namespace, metrics: dict, path: str):
 
     # Load records

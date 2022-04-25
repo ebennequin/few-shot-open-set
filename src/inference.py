@@ -38,7 +38,7 @@ from src.robust_ssl import __dict__ as SSL_METHODS
 from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
 from src.transforms import FeatureTransform
-from src.utils.plots_and_metrics import update_csv
+from src.utils.plots_and_metrics import update_csv, check_if_record_exists
 from src.utils.data_fetchers import get_task_loader, get_test_features
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
@@ -316,6 +316,8 @@ def main(args):
         feature_dic,
     )  # If feature_dic is None, this loader will return raw PIL images !
 
+    res_root = Path("results") / args.exp_name
+    res_root.mkdir(exist_ok=True, parents=True)
     for feature_d, proba_d, classifier in itertools.product(
         feature_detectors, proba_detectors, classifiers
     ):
@@ -333,30 +335,28 @@ def main(args):
 
         set_random_seed(args.random_seed)
 
-        metrics = detect_outliers(
-            args=args,
-            layers=args.layers,
-            feature_extractor=feature_extractor,
-            detector_transforms=detector_transforms,
-            classifier_transforms=classifier_transforms,
-            train_mean=train_mean,
-            train_std=train_std,
-            classifier=classifier,
-            feature_detector=feature_d,
-            proba_detector=proba_d,
-            data_loader=data_loader,
-        )
-        # ==> Saving results
+        if not check_if_record_exists(args, res_root / "out.csv") or args.override:
+            metrics = detect_outliers(
+                args=args,
+                layers=args.layers,
+                feature_extractor=feature_extractor,
+                detector_transforms=detector_transforms,
+                classifier_transforms=classifier_transforms,
+                train_mean=train_mean,
+                train_std=train_std,
+                classifier=classifier,
+                feature_detector=feature_d,
+                proba_detector=proba_d,
+                data_loader=data_loader,
+            )
+            save_results(args, metrics, res_root)
+        else:
+            logger.warning("Experiment already done, and overriding not activated. Moving to the next.")
 
-        save_results(args, metrics)
 
-
-def save_results(args, metrics):
+def save_results(args, metrics, res_root):
     for metric_name in metrics:
         logger.info(f"{metric_name}: {np.round(100 * metrics[metric_name], 2)}")
-
-    res_root = Path("results") / args.exp_name
-    res_root.mkdir(exist_ok=True, parents=True)
     update_csv(args, metrics, path=res_root / "out.csv")
 
 
@@ -533,10 +533,13 @@ def detect_outliers(
             precision, recall, thresholds = precision_recall_curve(
                 outliers.numpy(), outlier_scores.numpy()
             )
+            aupr = auc_fn(recall, precision)
             precision_at_90 = precision[recall > 0.9][-1]
             recall_at_90 = recall[precision > 0.9][0]
             metrics["rocauc"].append(auc_fn(fp_rate, tp_rate))
             metrics["prec_at_90"].append(precision_at_90)
+            metrics["rec_at_90"].append(recall_at_90)
+            metrics["aupr"].append(aupr)
             metrics["rec_at_90"].append(recall_at_90)
             metrics["outlier_ratio"].append(outliers.sum().item() / outliers.size(0))
 

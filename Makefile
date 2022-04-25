@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -42,7 +42,7 @@ EXP=default# name of the folder in which results will be stored.
 DEBUG=False
 GPUS=0
 SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
-OVERRIDE=True # used to override existing entries in out.csv
+OVERRIDE=False # used to override existing entries in out.csv
 TUNE=""
 VISU=False
 THRESHOLD=otsu
@@ -185,7 +185,7 @@ clustering_metrics:
 # ========== Running pipelines ===========
 
 run_pyod:
-	for method in HBOS KNN PCA OCSVM IForest COPOD MO_GAAL; do \
+	for method in HBOS KNN PCA OCSVM IForest COPOD; do \
 		make EXP=$${method} DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
@@ -201,7 +201,7 @@ run_finalists:
 	make run_ottim ;\
 
 run_classifiers:
-	for classifier in ICI TIM_GD BDCSPN Finetune LaplacianShot SimpleShot; do \
+	for classifier in TIM_GD BDCSPN Finetune LaplacianShot SimpleShot; do \
 		make EXP=$${classifier} PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
 	make EXP=FEAT PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
@@ -218,26 +218,54 @@ run_ottim:
 
 tuning:
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
-	make TUNE=classifier SPLIT=val N_TASKS=500 run_classsifiers ;\
+	make TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
-log_best_conf:
+log_best_pyod:
+	for shot in 1 5; do \
+		for exp in HBOS KNN PCA OCSVM IForest COPOD MO_GAAL; do \
+			python -m src.plots.csv_plotter \
+				 --exp $${exp} \
+				 --groupby feature_detector \
+				 --metrics mean_rocauc \
+				 --use_pretty False \
+				 --plot_versus backbone \
+				 --action log_best \
+				 --filters n_shot=$${shot} ;\
+		done ;\
+	done ;\
+
+log_best_ottim:
+	for shot in 1 5; do \
+		for exp in OTTIM; do \
+			python -m src.plots.csv_plotter \
+				 --exp $${exp} \
+				 --groupby feature_detector \
+				 --metrics mean_acc mean_rocauc \
+				 --use_pretty False \
+				 --plot_versus backbone \
+				 --action log_best \
+				 --filters n_shot=$${shot} ;\
+		done ;\
+	done ;\
+
+log_best_classif:
 	for shot in 1 5; do \
 		for exp in Finetune LaplacianShot BDCSPN TIM_GD MAP; do \
 			python -m src.plots.csv_plotter \
 				 --exp $${exp} \
 				 --groupby classifier \
-				 --metrics mean_acc \
+				 --metrics mean_acc mean_rocauc \
+				 --use_pretty False \
 				 --plot_versus backbone \
 				 --action log_best \
-				 --filters n_shot=$${shot} \
-				 backbone=$${backbone} ;\
+				 --filters n_shot=$${shot} ;\
 		done ;\
 	done ;\
 
 benchmark:
-	make run_classsifiers ;\
+	make run_classifiers ;\
 	make run_pyod_detectors ;\
 	make run_snatcher ;\
 	make run_ottim ;\

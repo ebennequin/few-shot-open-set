@@ -47,7 +47,7 @@ pretty["efficientnet_b0"] = "EfficientNet-B0"
 pretty["efficientnet_b1"] = "EfficientNet-B1"
 pretty["efficientnet_b2"] = "EfficientNet-B2"
 pretty["efficientnet_b3"] = "EfficientNet-B3"
-pretty["efficientnet_b4"] = "EfficientNet-B4"
+pretty["efficientnet_b4"] = "EfficientNet- B4"
 pretty["efficientnet_b5"] = "EfficientNet-B5"
 pretty["efficientnet_b6"] = "EfficientNet-B6"
 pretty["efficientnet_b7"] = "EfficientNet-B7"
@@ -65,6 +65,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exp", type=str, help="Name of the experiment")
     parser.add_argument("--action", type=str, default="plot")
     parser.add_argument("--plot_versus", type=str, nargs="+")
+    parser.add_argument("--use_pretty", type=str2bool, default=True)
     parser.add_argument("--latex", type=str2bool, default=True)
     parser.add_argument(
         "--filters",
@@ -103,6 +104,12 @@ class CSVPlotter(Plotter):
                                                 'pm': Optional[ndarray],
                                                }
         """
+        if kwargs['use_pretty']:
+            process_dic = pretty
+        else:
+            process_dic = my_default_dict(lambda x: x)
+
+
         #  ===== Recover all csv result files =====
         p = Path("results") / kwargs["exp"]
         csv_files = list(
@@ -126,12 +133,17 @@ class CSVPlotter(Plotter):
             # Read remaining rows and add it to result_dir
             for index, row in df.iterrows():
                 for metric in kwargs["metrics"]:
-                    full_method_name = [
-                        pretty[row[x].split("(")[0]] for x in kwargs["groupby"]
-                    ]
+                    if kwargs['use_pretty']:
+                        full_method_name = [
+                            process_dic[row[x].split("(")[0]] for x in kwargs["groupby"]
+                        ]
+                    else:
+                        full_method_name = [
+                            process_dic[row[x]] for x in kwargs["groupby"]
+                        ]
                     full_method_name = list(filter(lambda x: len(x), full_method_name))
                     method_at_row = " + ".join(full_method_name)
-                    x_value = "\n".join([pretty[row[x]] for x in kwargs["plot_versus"]])
+                    x_value = "\n".join([process_dic[row[x]] for x in kwargs["plot_versus"]])
                     if metric in row:
                         result_dir[metric][method_at_row][x_value].append(row[metric])
 
@@ -164,21 +176,26 @@ class CSVPlotter(Plotter):
 class CSVPrinter(CSVPlotter):
     def log_best(self, **kwargs):
         assert hasattr(self, "metric_dic")
-        assert len(self.metric_dic) == 1, list(self.metric_dic.keys())
+        all_metrics = self.metric_dic.keys()
         for metric in self.metric_dic:
+            all_methods = self.metric_dic[metric].keys()
             for method, res in self.metric_dic[metric].items():
-                assert len(res["x"]) == 1, res
-            sorted_methods = list(
-                sorted(
-                    self.metric_dic[metric].items(),
-                    key=lambda res: res[1]["y"][0],
-                    reverse=True,
-                )
+                assert len(res["x"]) == len(res["y"]) == 1, res
+        all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) for method in all_methods]
+        sorted_methods = list(
+            sorted(
+                all_items,
+                key=lambda item: np.mean(item[1]),
+                reverse=True,
             )
-            best_method = sorted_methods[0]
-            logger.info(
-                f"Best method {best_method[0]} achieved {best_method[1]['y'][0]} {metric}"
-            )
+        )
+        best_method = sorted_methods[0]
+        msg = f"Best method {best_method[0]} achieved overall : {best_method[1]}"
+        for metric in all_metrics:
+            msg += f" and {metric}={self.metric_dic[metric][best_method[0]]['y'][0]}"
+        logger.info(
+            msg
+        )
 
 
 if __name__ == "__main__":

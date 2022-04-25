@@ -11,7 +11,7 @@ from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 
 
-class OOD_TIM(AllInOne):
+class OTTIM(AllInOne):
     def __init__(
         self,
         softmax_temperature: float,
@@ -217,8 +217,3 @@ class OOD_TIM(AllInOne):
                 logits_q.softmax(-1).detach(),
                 outlier_scores.detach(),
             )
-
-
-def find_farthest_point(support_features, query_features):
-    distances = torch.cdist(query_features, support_features).mean(-1)
-    return distances.argmax()

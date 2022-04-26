@@ -3,10 +3,16 @@ classifiers:
   TIM_GD:
     default: {
         1: {
-          'softmax_temperature': 10.0,
+          'softmax_temperature': 5.0,
           'inference_steps': 300,
+          'inference_lr': 0.0001,
+          'loss_weights': [1.0, 1.0, 0.5]
+           },
+        5: {
+          'softmax_temperature': 5.0,
+          'inference_steps': 200,
           'inference_lr': 0.001,
-          'loss_weights': [1.0, 1.0, 1.0]
+          'loss_weights': [1.0, 1.0, 0.5]
            },
              }
     tuning:
@@ -16,7 +22,12 @@ classifiers:
   Finetune:
     default: {
         1: {
-          'softmax_temperature': 5.0,
+          'softmax_temperature': 1.0,
+          'inference_steps': 200,
+          'inference_lr': 0.0001,
+           },
+        5: {
+          'softmax_temperature': 10.0,
           'inference_steps': 100,
           'inference_lr': 0.0001,
            },
@@ -32,6 +43,11 @@ classifiers:
             'inference_steps': 10,
             'lam': 15,
            },
+        5: {
+            'alpha': 0.2,
+            'inference_steps': 10,
+            'lam': 10,
+           },
              }
     tuning:
       hparams2tune: ['alpha', 'inference_steps', 'lam']
@@ -40,6 +56,13 @@ classifiers:
   LaplacianShot:
     default: {
         1: {
+            'lambda_': 0.5,
+            'inference_steps': 20,
+            'knn': 3,
+            'softmax_temperature': 1,
+            'proto_rect': True
+           },
+        5: {
             'lambda_': 0.1,
             'inference_steps': 20,
             'knn': 3,

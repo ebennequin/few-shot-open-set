@@ -211,12 +211,18 @@ run_snatcher:
 	make EXP=Snatcher MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
 
 run_ottim:
-	make EXP=OTTIM FEATURE_DETECTOR=OOD_TIM run ;\
+	make EXP=OTTIM FEATURE_DETECTOR=OTTIM run ;\
+
+run_open_set:
+	for method in PROSER OpenMax; do \
+		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=$${method} FEATURE_DETECTOR=$${method} run ;\
+	done \
 
 
 # ========== 1) Tuning + Running pipelines ===========
 
 tuning:
+	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
 	make TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
@@ -224,7 +230,7 @@ tuning:
 
 log_best_pyod:
 	for shot in 1 5; do \
-		for exp in HBOS KNN PCA OCSVM IForest COPOD MO_GAAL; do \
+		for exp in HBOS KNN PCA OCSVM IForest COPOD; do \
 			python -m src.plots.csv_plotter \
 				 --exp $${exp} \
 				 --groupby feature_detector \
@@ -256,7 +262,7 @@ log_best_classif:
 			python -m src.plots.csv_plotter \
 				 --exp $${exp} \
 				 --groupby classifier \
-				 --metrics mean_acc mean_rocauc \
+				 --metrics mean_acc \
 				 --use_pretty False \
 				 --plot_versus backbone \
 				 --action log_best \
@@ -265,10 +271,14 @@ log_best_classif:
 	done ;\
 
 benchmark:
-	make run_classifiers ;\
-	make run_pyod_detectors ;\
-	make run_snatcher ;\
-	make run_ottim ;\
+	for dataset in mini_imagenet tiered_imagenet; do \
+		make DATASET=$${dataset} run_classifiers ;\
+		make DATASET=$${dataset} run_pyod_detectors ;\
+		make DATASET=$${dataset} run_snatcher ;\
+		make DATASET=$${dataset} run_ottim ;\
+		make DATASET=$${dataset} run_open_set ;\
+	done ;\
+
 
 
 # ========== 2) Cross-domain experiments ===========

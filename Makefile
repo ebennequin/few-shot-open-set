@@ -27,7 +27,7 @@ CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classi
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
 FEATURE_DETECTOR=none
 PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
-CLASSIFIER=none
+CLASSIFIER=SimpleShot
 FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
 
 
@@ -271,10 +271,10 @@ benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 log_latex:
 	for dataset in mini_imagenet tiered_imagenet; do \

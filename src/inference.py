@@ -139,6 +139,8 @@ def parse_args() -> argparse.Namespace:
             "classifier",
             "n_way",
             "n_shot",
+            "n_id_query",
+            "n_ood_query"
         ],
         help="Important params that will appear in .csv result file.",
     )

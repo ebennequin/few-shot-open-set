@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -27,7 +27,7 @@ CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classi
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
 FEATURE_DETECTOR=none
 PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
-CLASSIFIER=SimpleShot
+CLASSIFIER=none
 FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
 
 
@@ -49,7 +49,7 @@ THRESHOLD=otsu
 
 # Tasks
 SPLIT=test
-OOD_QUERY=10
+OOD_QUERY=15
 N_TASKS=1000
 SHOTS=1 5 # will iterate over these values
 BALANCED=True
@@ -59,24 +59,23 @@ MISC_VAL=1.0
 # === Base recipes ===
 
 extract:
-		for dataset in $(TGT_DATASET); do \
-		    for split in train; do \
-				python -m src.compute_features \
-					--backbone $(BACKBONE) \
-					--src_dataset $(SRC_DATASET) \
-					--tgt_dataset $${dataset} \
-					--data_dir $(DATADIR) \
-			        --model_source $(MODEL_SRC) \
-			        --training $(TRAINING) \
-					--split $${split} \
-					--layers $(LAYERS) ;\
-		    done \
-		done \
+	    for split in train val test; do \
+			python -m src.compute_features \
+				--backbone $(BACKBONE) \
+				--src_dataset $(SRC_DATASET) \
+				--tgt_dataset $(TGT_DATASET) \
+				--data_dir $(DATADIR) \
+		        --model_source $(MODEL_SRC) \
+		        --training $(TRAINING) \
+				--split $${split} \
+				--layers $(LAYERS) ;\
+	    done ;\
+
 
 run:
 	for shot in $(SHOTS); do \
 	    python3 -m src.inference \
-	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${TGT_DATASET}/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
+	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$(TGT_DATASET)/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
 	        --data_dir $(DATADIR) \
 	        --classifier $(CLASSIFIER) \
 	        --n_tasks $(N_TASKS) \
@@ -96,7 +95,7 @@ run:
 	        --threshold $(THRESHOLD) \
 			--src_dataset $(SRC_DATASET) \
 			--n_ood_query $(OOD_QUERY) \
-			--tgt_dataset $${TGT_DATASET} \
+			--tgt_dataset $(TGT_DATASET) \
 	        --simu_hparams $(SIMU_PARAMS) \
 	        --$(MISC_ARG) $(MISC_VAL) \
 	        --override $(OVERRIDE) \
@@ -110,35 +109,35 @@ extract_all:
 # 	# Extract for RN and WRN
 # 	for backbone in resnet12 wrn2810; do \
 # 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
 # 		done ;\
 # 	done ;\
 
 # 	# Tiered-Imagenet -> *
 # 	for backbone in resnet12 wrn2810; do \
 # 		for tgt_dataset in fungi; do \
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
-# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
 # 		done ;\
 # 	done ;\
 
 	# Imagenet -> *
 # 	for tgt_dataset in aircraft; do \
 # 		for backbone in resnet18 resnet50 resnet101 resnet152; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
 # 		done ;\
 # 	done ;\
 
 # 	for tgt_dataset in imagenet; do \
 # 		for backbone in vit_large_patch16_384; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
 # 		done ;\
 # 	done ;\
 
 	for tgt_dataset in imagenet; do \
 		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
 		done ;\
 	done ;\
 
@@ -184,7 +183,7 @@ clustering_metrics:
 
 run_pyod:
 	for method in HBOS KNN PCA OCSVM IForest COPOD; do \
-		make EXP=$${method} DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
+		make EXP=$${method} CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
 run_best:
@@ -212,7 +211,7 @@ run_ottim:
 	make EXP=OTTIM FEATURE_DETECTOR=OTTIM run ;\
 
 run_open_set:
-	for method in PROSER OpenMax; do \
+	for method in RPL PROSER OpenMax; do \
 		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=$${method} FEATURE_DETECTOR=$${method} run ;\
 	done \
 
@@ -270,10 +269,10 @@ log_best_classif:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
 	done ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod_detectors ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
 # 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
 # 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
@@ -283,7 +282,7 @@ log_latex:
 			python -m src.plots.csv_plotter \
 				 --exp . \
 				 --groupby classifier feature_detector \
-				 --metrics mean_acc mean_rocauc mean_aupr \
+				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
 				 --use_pretty True \
 				 --plot_versus backbone \
 				 --action log_latex \
@@ -299,7 +298,7 @@ exhaustive_benchmark:
 	for backbone in resnet12 wrn2810; do \
 # 		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
 		for tgt_dataset in fungi aircraft cub; do \
-			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${tgt_dataset} run_best ;\
+			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$(TGT_DATASET) run_best ;\
 		done ; \
 	done ;\
 
@@ -322,7 +321,7 @@ run_vits:
 	# Imagenet -> *
 	for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
 		done ; \
 	done ;\
 
@@ -330,7 +329,7 @@ run_resnets:
 	# Imagenet -> *
 	for backbone in resnet18 resnet50 resnet101 resnet152; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
 		done ; \
 	done ;\
 
@@ -338,7 +337,7 @@ run_efficient:
 	# Imagenet -> *
 	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b4 ; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
 		done ; \
 	done ;\
 
@@ -360,7 +359,7 @@ plot_acc_vs_n_ood:
 			for tgt_dataset in mini_imagenet tiered_imagenet; do \
 				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
 					 --metrics mean_acc mean_rocauc \
-					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$(TGT_DATASET) ;\
 			done ;\
 		done ;\
 	done ;\
@@ -372,7 +371,7 @@ plot_acc_vs_threshold:
 			for tgt_dataset in mini_imagenet; do \
 				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
 				     --metrics mean_acc mean_rocauc mean_believed_inliers mean_thresholding_accuracy \
-					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$${tgt_dataset} ;\
+					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$(TGT_DATASET) ;\
 			done ;\
 		done ;\
 	done ;\

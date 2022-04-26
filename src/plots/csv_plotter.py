@@ -202,10 +202,10 @@ class CSVPrinter(CSVPlotter):
         for metric in self.metric_dic:
             all_methods = self.metric_dic[metric].keys()
         for method in all_methods:
-            msg = f"{method} &"
+            msg = f"{method} & "
             for metric in kwargs['metrics']:
                 value = self.metric_dic[metric][method]["y"][0]
-                msg += f"{value} & "
+                msg += f"{np.round(100 * value, 2)} & "
 
             logger.info(
                 msg
@@ -244,4 +244,3 @@ if __name__ == "__main__":
         plotter = CSVPrinter()
         plotter.fit(**vars(args))
         plotter.log_latex(**vars(args))
-

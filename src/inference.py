@@ -236,10 +236,12 @@ def main(args):
 
     else:
         # ==== Prepare few-shot classifier ====
-
-        classifiers: List[FewShotMethod] = get_modules_to_try(
-            args, "classifiers", args.classifier, CLASSIFIERS, "classifier" in args.tune
-        )
+        if args.classifier == 'none':
+            classifiers = [None]
+        else:
+            classifiers: List[FewShotMethod] = get_modules_to_try(
+                args, "classifiers", args.classifier, CLASSIFIERS, "classifier" in args.tune
+            )
 
         # ==== Prepare feature detector ====
 

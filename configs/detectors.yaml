@@ -18,6 +18,14 @@ feature_detectors:
       hparams2tune: ['alpha']
       hparam_values: {1: [[1, 2, 3, 4, 5]]}
 
+  RPL:
+    default: {1: {'inference_lr': 0.001, 'inference_steps': 100, 'num_rp_per_cls': 1, 'gamma': 5, 'lamb': 0.1}
+              }
+
+    tuning:
+      hparams2tune: ['inference_lr', 'inference_steps', 'num_rp_per_cls', 'gamma', 'lamb']
+      hparam_values: {1: [[0.001, 0.0001], [50, 100, 150], [1, 3], [1, 5, 10], [0.1, 0.5, 1.0]]}
+
   PROSER:
     default: {1: {'inference_lr': 0.001, 'inference_steps': 50, 'beta': 0.1, 'n_dummies': 1},
               }

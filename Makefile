@@ -19,7 +19,7 @@ DATADIR=data
 
 # Simu options
 SRC_DATASET=mini_imagenet
-TGT_DATASETS=$(SRC_DATASET)
+TGT_DATASET=$(SRC_DATASET)
 
 
 # Modules
@@ -59,7 +59,7 @@ MISC_VAL=1.0
 # === Base recipes ===
 
 extract:
-		for dataset in $(TGT_DATASETS); do \
+		for dataset in $(TGT_DATASET); do \
 		    for split in train; do \
 				python -m src.compute_features \
 					--backbone $(BACKBONE) \
@@ -74,37 +74,35 @@ extract:
 		done \
 
 run:
-	for dataset in $(TGT_DATASETS); do \
-		for shot in $(SHOTS); do \
-		    python3 -m src.inference \
-		        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${dataset}/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
-		        --data_dir $(DATADIR) \
-		        --classifier $(CLASSIFIER) \
-		        --n_tasks $(N_TASKS) \
-		        --n_shot $${shot} \
-		        --layers $(LAYERS) \
-		        --feature_detector $(FEATURE_DETECTOR) \
-		        --use_filtering $(FILTERING) \
-		        --proba_detector $(PROBA_DETECTOR) \
-		        --detector_transforms  $(DET_TRANSFORMS) \
-		        --classifier_transforms  $(CLS_TRANSFORMS) \
-		        --visu_episode $(VISU) \
-		        --backbone $(BACKBONE) \
-		        --model_source $(MODEL_SRC) \
-		        --balanced $(BALANCED) \
-		        --training $(TRAINING) \
-		        --split $(SPLIT) \
-		        --threshold $(THRESHOLD) \
-				--src_dataset $(SRC_DATASET) \
-				--n_ood_query $(OOD_QUERY) \
-				--tgt_dataset $${dataset} \
-		        --simu_hparams $(SIMU_PARAMS) \
-		        --$(MISC_ARG) $(MISC_VAL) \
-		        --override $(OVERRIDE) \
-		        --tune $(TUNE) \
-		        --debug $(DEBUG) ;\
-	    done ;\
-	done ;\
+	for shot in $(SHOTS); do \
+	    python3 -m src.inference \
+	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$${TGT_DATASET}/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
+	        --data_dir $(DATADIR) \
+	        --classifier $(CLASSIFIER) \
+	        --n_tasks $(N_TASKS) \
+	        --n_shot $${shot} \
+	        --layers $(LAYERS) \
+	        --feature_detector $(FEATURE_DETECTOR) \
+	        --use_filtering $(FILTERING) \
+	        --proba_detector $(PROBA_DETECTOR) \
+	        --detector_transforms  $(DET_TRANSFORMS) \
+	        --classifier_transforms  $(CLS_TRANSFORMS) \
+	        --visu_episode $(VISU) \
+	        --backbone $(BACKBONE) \
+	        --model_source $(MODEL_SRC) \
+	        --balanced $(BALANCED) \
+	        --training $(TRAINING) \
+	        --split $(SPLIT) \
+	        --threshold $(THRESHOLD) \
+			--src_dataset $(SRC_DATASET) \
+			--n_ood_query $(OOD_QUERY) \
+			--tgt_dataset $${TGT_DATASET} \
+	        --simu_hparams $(SIMU_PARAMS) \
+	        --$(MISC_ARG) $(MISC_VAL) \
+	        --override $(OVERRIDE) \
+	        --tune $(TUNE) \
+	        --debug $(DEBUG) ;\
+    done ;\
 
 # ========== Extraction pipelines ===========
 
@@ -112,35 +110,35 @@ extract_all:
 # 	# Extract for RN and WRN
 # 	for backbone in resnet12 wrn2810; do \
 # 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${tgt_dataset} MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 # 	# Tiered-Imagenet -> *
 # 	for backbone in resnet12 wrn2810; do \
 # 		for tgt_dataset in fungi; do \
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
-# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 	# Imagenet -> *
 # 	for tgt_dataset in aircraft; do \
 # 		for backbone in resnet18 resnet50 resnet101 resnet152; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 # 	for tgt_dataset in imagenet; do \
 # 		for backbone in vit_large_patch16_384; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 	for tgt_dataset in imagenet; do \
 		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASETS=$${tgt_dataset} extract ;\
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${tgt_dataset} extract ;\
 		done ;\
 	done ;\
 
@@ -272,13 +270,26 @@ log_best_classif:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make DATASET=$${dataset} run_classifiers ;\
-		make DATASET=$${dataset} run_pyod_detectors ;\
-		make DATASET=$${dataset} run_snatcher ;\
-		make DATASET=$${dataset} run_ottim ;\
-		make DATASET=$${dataset} run_open_set ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
 	done ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod_detectors ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
+log_latex:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for shot in 1 5 ; do \
+			python -m src.plots.csv_plotter \
+				 --exp . \
+				 --groupby classifier feature_detector \
+				 --metrics mean_acc mean_rocauc mean_aupr \
+				 --use_pretty True \
+				 --plot_versus backbone \
+				 --action log_latex \
+				 --filters n_shot=$${shot} src_dataset=$${dataset} ;\
+		done \
+	done \
 
 
 # ========== 2) Cross-domain experiments ===========
@@ -288,7 +299,7 @@ exhaustive_benchmark:
 	for backbone in resnet12 wrn2810; do \
 # 		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
 		for tgt_dataset in fungi aircraft cub; do \
-			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASETS=$${tgt_dataset} run_best ;\
+			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${tgt_dataset} run_best ;\
 		done ; \
 	done ;\
 
@@ -311,7 +322,7 @@ run_vits:
 	# Imagenet -> *
 	for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\
 
@@ -319,7 +330,7 @@ run_resnets:
 	# Imagenet -> *
 	for backbone in resnet18 resnet50 resnet101 resnet152; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\
 
@@ -327,7 +338,7 @@ run_efficient:
 	# Imagenet -> *
 	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b4 ; do \
 		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASETS=$${tgt_dataset} run_finalists ;\
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${tgt_dataset} run_finalists ;\
 		done ; \
 	done ;\
 

@@ -534,8 +534,8 @@ def detect_outliers(
                 outliers.numpy(), outlier_scores.numpy()
             )
             aupr = auc_fn(recall, precision)
-            precision_at_90 = precision[recall > 0.9][-1]
-            recall_at_90 = recall[precision > 0.9][0]
+            precision_at_90 = precision[recall >= 0.9][-1]
+            recall_at_90 = recall[precision >= 0.9][0]
             metrics["rocauc"].append(auc_fn(fp_rate, tp_rate))
             metrics["prec_at_90"].append(precision_at_90)
             metrics["rec_at_90"].append(recall_at_90)

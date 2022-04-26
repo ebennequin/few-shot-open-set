@@ -29,7 +29,7 @@ pretty["aircraft"] = "Aircraft"
 pretty["fungi"] = "Fungi"
 pretty["None"] = ""
 
-pretty["OOD_TIM"] = "OTTIM"
+pretty["OTTIM"] = "OTTIM"
 
 pretty["mean_acc"] = "Accuracy"
 pretty["mean_rocauc"] = "AUROC"
@@ -197,6 +197,20 @@ class CSVPrinter(CSVPlotter):
             msg
         )
 
+    def log_latex(self, **kwargs):
+        assert hasattr(self, "metric_dic")
+        for metric in self.metric_dic:
+            all_methods = self.metric_dic[metric].keys()
+        for method in all_methods:
+            msg = f"{method} &"
+            for metric in kwargs['metrics']:
+                value = self.metric_dic[metric][method]["y"][0]
+                msg += f"{value} & "
+
+            logger.info(
+                msg
+            )
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -222,7 +236,12 @@ if __name__ == "__main__":
         plotter = CSVPlotter()
         plotter.fit(**vars(args))
         plotter.plot()
-    else:
+    elif args.action == "log_best":
         plotter = CSVPrinter()
         plotter.fit(**vars(args))
         plotter.log_best()
+    elif args.action == "log_latex":
+        plotter = CSVPrinter()
+        plotter.fit(**vars(args))
+        plotter.log_latex(**vars(args))
+

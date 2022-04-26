@@ -100,7 +100,7 @@ feature_detectors:
     default: {
         1: {
           'softmax_temperature': 10.0,
-          'inference_steps': 100,
+          'inference_steps': 200,
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
@@ -111,7 +111,7 @@ feature_detectors:
            },
         5: {
           'softmax_temperature': 10.0,
-          'inference_steps': 100,
+          'inference_steps': 200,
           'inference_lr': 0.0001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,

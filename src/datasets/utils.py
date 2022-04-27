@@ -3,6 +3,10 @@ from torchvision import transforms
 from src.models import BACKBONE_CONFIGS
 from src.robust_ssl import __dict__ as SSL_METHODS
 from loguru import logger
+from torchvision.transforms import InterpolationMode
+
+INTERPOLATIONS = {'bilinear': InterpolationMode.BILINEAR,
+                  'bicubic': InterpolationMode.BICUBIC}
 
 
 def get_transforms(args):
@@ -16,6 +20,8 @@ def get_transforms(args):
     else:
         mean = BACKBONE_CONFIGS[args.backbone]["mean"]
         std = BACKBONE_CONFIGS[args.backbone]["std"]
+        interp = INTERPOLATIONS[BACKBONE_CONFIGS[args.backbone]["interpolation"]]
+        crop_pct = BACKBONE_CONFIGS[args.backbone]["crop_pct"]
         NORMALIZE = transforms.Normalize(mean, std)
         image_size = BACKBONE_CONFIGS[args.backbone]["input_size"][-1]
 
@@ -32,7 +38,7 @@ def get_transforms(args):
         else:
             res = transforms.Compose(
                 [
-                    transforms.Resize(int(image_size * 256 / 224)),
+                    transforms.Resize(int(image_size / crop_pct), interpolation=interp),
                     transforms.CenterCrop(image_size),
                     transforms.ToTensor(),
                     NORMALIZE,

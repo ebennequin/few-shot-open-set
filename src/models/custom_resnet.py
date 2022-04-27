@@ -19,6 +19,8 @@ def _cfg(url="", **kwargs):
             [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
         ),
         "std": np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]),
+        "interpolation": 'bilinear',
+        "crop_pct": 256 / 224,
         **kwargs,
     }
 

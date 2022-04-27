@@ -40,9 +40,11 @@ pretty["fungi"] = "Fungi"
 pretty["None"] = ""
 
 pretty["OTTIM"] = "OTTIM"
+pretty["TIM_GD"] = "TIM"
 
 pretty["mean_acc"] = "Accuracy"
 pretty["mean_rocauc"] = "AUROC"
+pretty["mean_aupr"] = "AUPR"
 pretty["mean_rec_at_90"] = "Rec@0.9"
 pretty["mean_prec_at_90"] = "Prec@0.9"
 

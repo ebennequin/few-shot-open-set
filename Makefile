@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -189,6 +189,7 @@ run_pyod:
 run_best:
 	make EXP=SimpleShot_KNN CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make EXP=TIM_GD CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
+	make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=OpenMax FEATURE_DETECTOR=OpenMax run ;\
 	make run_ottim ;\
 	make run_snatcher ;\
 
@@ -294,7 +295,7 @@ log_latex:
 
 exhaustive_benchmark:
 	# Tiered -> CUB
-	for backbone in resnet12; do \
+	for backbone in wrn2810 resnet12; do \
 		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
 		for dataset in tiered_imagenet fungi aircraft cub; do \
 			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
@@ -306,6 +307,7 @@ spider_chart:
 		python -m src.plots.spider_plotter \
 			 --exp . \
 			 --groupby classifier feature_detector \
+			 --use_pretty True \
 			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
 			 --plot_versus src_dataset tgt_dataset \
 			 --filters n_shot=1 \

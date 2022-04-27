@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -302,11 +302,11 @@ exhaustive_benchmark:
 	done ;\
 
 spider_chart:
-	for backbone in resnet12 wrn2810; do \
+	for backbone in resnet12; do \
 		python -m src.plots.spider_plotter \
 			 --exp . \
 			 --groupby classifier feature_detector \
-			 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
+			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
 			 --plot_versus src_dataset tgt_dataset \
 			 --filters n_shot=1 \
 			 backbone=$${backbone} ;\

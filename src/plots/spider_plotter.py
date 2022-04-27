@@ -38,10 +38,13 @@ class SpiderPlotter(CSVPlotter):
 
         # Form the differences instead of absolute values
         baseline_values = {}
-        for metric in self.metric_dic:
+        for i, metric in enumerate(self.metric_dic):
             methods = list(self.metric_dic[metric].keys())
-            x_names = self.metric_dic[metric][kwargs['baseline_method']]["x"]
-            y_baseline = np.array(self.metric_dic[metric][kwargs['baseline_method']]["y"])
+            if i == 0:
+                print(f"Methods detected : {methods} \n  Which one to use as a baseline ?")
+                baseline_method = methods[int(input())]
+            x_names = self.metric_dic[metric][baseline_method]["x"]
+            y_baseline = np.array(self.metric_dic[metric][baseline_method]["y"])
             baseline_values[metric] = y_baseline
             for method in methods:
                 assert self.metric_dic[metric][method]["x"] == x_names, (self.metric_dic[metric][method]["x"], x_names)
@@ -64,7 +67,7 @@ class SpiderPlotter(CSVPlotter):
             max_avg_perf = max(
                 [np.mean(arr["y"]) for arr in self.metric_dic[metric_name].values()]
             )
-            l = np.linspace(min_val - 0.02, max_val + 0.02, 5)
+            yticks = np.linspace(min_val - 0.005, max_val + 0.005, 5)
             angle = 2.2
 
             first_method = list(self.metric_dic[metric_name].keys())[0]
@@ -85,7 +88,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Used for the equivalent of horizontal lines in cartesian coordinates plots
             # The last one is also used to add a fill which acts a background color.
-            H = [np.ones(len(HANGLES)) * li for li in l]
+            H = [np.ones(len(HANGLES)) * li for li in yticks]
 
             # fig.patch.set_facecolor(BG_WHITE)
             # ax.set_facecolor(BG_WHITE)
@@ -97,7 +100,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Setting lower limit to negative value reduces overlap
             # for values that are 0 (the minimums)
-            ax.set_ylim(l[0] - 0.02, l[-1])
+            ax.set_ylim(yticks[0] - 0.01, yticks[-1])
 
             # Set values for the angular axis (x)
             ax.set_xticks(ANGLES[:-1])
@@ -119,7 +122,7 @@ class SpiderPlotter(CSVPlotter):
             # These labels indicate the values of the radial axis
             PAD = 0.005
             size = 15
-            _ = [ax.text(angle, li + PAD, f"{int(li * 100)}", size=size) for li in l]
+            _ = [ax.text(angle, li + PAD, f"{np.round(li * 100, 1)}", size=size) for li in yticks]
 
             # Now fill the area of the circle with radius 1.
             # This create the effect of gray background.
@@ -136,9 +139,8 @@ class SpiderPlotter(CSVPlotter):
                 )
                 values = method_result["y"]
                 perf = np.mean(values)
-                values += values[:1]  # to close the spider
+                values = np.concatenate([values, [values[0]]])  # to close the spider
                 is_best = max_avg_perf == perf
-                logger.warning((max_avg_perf, perf))
                 label = f"{method.split('(')[0]} ({np.round(100 * perf, 2)})"
                 ax.plot(
                     ANGLES,

@@ -108,27 +108,27 @@ run:
 extract_all:
 # 	# Extract for RN and WRN
 # 	for backbone in resnet12 wrn2810; do \
-# 		for tgt_dataset in mini_imagenet tiered_imagenet; do \
+# 		for dataset in mini_imagenet tiered_imagenet; do \
 # 			make BACKBONE=$${backbone} SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 # 	# Tiered-Imagenet -> *
 # 	for backbone in resnet12 wrn2810; do \
-# 		for tgt_dataset in fungi; do \
+# 		for dataset in fungi; do \
 # 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 # 		done ;\
 # 	done ;\
 
 	# Imagenet -> *
-	for tgt_dataset in aircraft; do \
-# 		for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
-		for backbone in mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
+	for dataset in fungi; do \
+		for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
+# 		for backbone in mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 
 
 extract_bis:

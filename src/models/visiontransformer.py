@@ -837,7 +837,7 @@ def _create_vision_transformer(variant, pretrained=False, default_cfg=None, **kw
         VisionTransformer,
         variant,
         pretrained,
-        default_cfg=default_cfg,
+        default_cfg,
         representation_size=repr_size,
         pretrained_filter_fn=checkpoint_filter_fn,
         pretrained_custom_load="npz" in default_cfg["url"],

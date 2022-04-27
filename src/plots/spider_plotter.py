@@ -36,6 +36,17 @@ class SpiderPlotter(CSVPlotter):
             squeeze=True,
         )
 
+        # Form the differences instead of absolute values
+        baseline_values = {}
+        for metric in self.metric_dic:
+            methods = list(self.metric_dic[metric].keys())
+            x_names = self.metric_dic[metric][kwargs['baseline_method']]["x"]
+            y_baseline = np.array(self.metric_dic[metric][kwargs['baseline_method']]["y"])
+            baseline_values[metric] = y_baseline
+            for method in methods:
+                assert self.metric_dic[metric][method]["x"] == x_names, (self.metric_dic[metric][method]["x"], x_names)
+                self.metric_dic[metric][method]["y"] = np.array(self.metric_dic[metric][method]["y"]) - y_baseline
+
         for i, metric_name in enumerate(self.metric_dic):
             ax = axes[i]
 

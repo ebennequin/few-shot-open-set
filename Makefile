@@ -1,13 +1,13 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+DATADIR=../Open-Set/open-query-set/data/
+USER=malik
 
 
 # SERVER_IP=shannon
@@ -123,20 +123,9 @@ extract_all:
 # 	done ;\
 
 	# Imagenet -> *
-# 	for tgt_dataset in aircraft; do \
-# 		for backbone in resnet18 resnet50 resnet101 resnet152; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 		done ;\
-# 	done ;\
-
-# 	for tgt_dataset in imagenet; do \
-# 		for backbone in vit_large_patch16_384; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 		done ;\
-# 	done ;\
-
-	for tgt_dataset in imagenet; do \
-		for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b3 efficientnet_b4; do \
+	for tgt_dataset in aircraft; do \
+# 		for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
+		for backbone in mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$(TGT_DATASET) extract ;\
 		done ;\
 	done ;\
@@ -347,6 +336,15 @@ barplots:
 		 --exp . \
 		 --groupby classifier feature_detector \
 		 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
+		 --latex True \
+		 --plot_versus backbone \
+		 --filters n_shot=1 ;\
+
+hbarplots:
+	python -m src.plots.bar_plotter \
+		 --exp . \
+		 --groupby classifier feature_detector \
+		 --metrics mean_acc mean_rocauc \
 		 --latex True \
 		 --plot_versus backbone \
 		 --filters n_shot=1 ;\

@@ -84,6 +84,11 @@ default_cfgs = {
         interpolation="bicubic",
         crop_pct=0.95,
     ),
+    "dino_resnet50": _cfg(
+        url="https://dl.fbaipublicfiles.com/dino/dino_resnet50_pretrain/dino_resnet50_pretrain.pth",
+        interpolation="bicubic",
+        crop_pct=0.95,
+    ),
     "resnet50d": _cfg(
         url="https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/resnet50d_ra2-464e36ba.pth",
         interpolation="bicubic",
@@ -1039,9 +1044,9 @@ class ResNet(nn.Module):
         return all_feats
 
 
-def _create_resnet(variant, pretrained=False, **kwargs):
+def _create_resnet(variant, pretrained=False, pretrained_strict=True, **kwargs):
     return build_model_with_cfg(
-        ResNet, variant, pretrained, default_cfg=default_cfgs[variant], **kwargs
+        ResNet, variant, pretrained, pretrained_strict=pretrained_strict, default_cfg=default_cfgs[variant], **kwargs
     )
 
 
@@ -1119,6 +1124,12 @@ def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model."""
     model_args = dict(block=Bottleneck, layers=[3, 4, 6, 3], **kwargs)
     return _create_resnet("resnet50", pretrained, **model_args)
+
+
+def dino_resnet50(pretrained=False, **kwargs):
+    """Constructs a ResNet-50 model."""
+    model_args = dict(block=Bottleneck, layers=[3, 4, 6, 3], **kwargs)
+    return _create_resnet("dino_resnet50", pretrained, False, **model_args)
 
 
 def resnet50d(pretrained=False, **kwargs):

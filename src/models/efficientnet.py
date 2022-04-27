@@ -49,7 +49,7 @@ from timm.models.efficientnet_builder import (
     BN_EPS_TF_DEFAULT,
 )
 from timm.models.features import FeatureInfo, FeatureHooks
-from timm.models.helpers import build_model_with_cfg, default_cfg_for_features
+from timm.models.helpers import build_model_with_cfg
 from timm.models.layers import create_conv2d, create_classifier
 
 

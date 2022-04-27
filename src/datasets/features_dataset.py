@@ -21,7 +21,7 @@ class FeaturesDataset(Dataset):
             all_features = list(features_dict[class_].values())
             n_samples = len(all_features[0])
             assert all([len(x) == n_samples for x in all_features])
-            if n_samples >= 11:  # filter out classes with too few samples
+            if n_samples >= 15:  # filter out classes with too few samples
                 self.labels += [class_] * n_samples
                 for sample_tuple in zip(*all_features):
                     sample_dic = {i: x for i, x in enumerate(sample_tuple)}

@@ -9,6 +9,7 @@ from skimage.filters import threshold_otsu
 import math
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
+from copy import deepcopy
 
 
 class OTTIM(AllInOne):
@@ -47,7 +48,6 @@ class OTTIM(AllInOne):
             )  # [Nq, Ns]
         return logits
 
-
     def __call__(
         self,
         support_features: Tensor,
@@ -63,7 +63,7 @@ class OTTIM(AllInOne):
 
         # Initialize weights
         if self.init == "base":
-            self.mu = kwargs["train_mean"].squeeze()
+            self.mu = deepcopy(kwargs["train_mean"].squeeze())
         # elif self.init == "zeros":
         #     self.mu = torch.zeros(support_features.size(-1))
         # elif self.init == "rand":
@@ -164,10 +164,10 @@ class OTTIM(AllInOne):
         )
         kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
         kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
-        # kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
-        # kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
-        # kwargs["intra_task_metrics"]["main_metrics"]["prec_at_90"].append(precs)
-        # kwargs["intra_task_metrics"]["main_metrics"]["rec_at_90"].append(recalls)
+        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
+        kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
+        kwargs["intra_task_metrics"]["main_metrics"]["prec_at_90"].append(precs)
+        kwargs["intra_task_metrics"]["main_metrics"]["rec_at_90"].append(recalls)
         kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
             inlier_entropy
         )

@@ -18,7 +18,8 @@ class OTTIM(AllInOne):
         softmax_temperature: float,
         inference_steps: int,
         inference_lr: float,
-        init: str,
+        mu_init: str,
+        bias_init: str,
         params2adapt: str,
         lambda_ce: float,
         lambda_marg: float,
@@ -33,11 +34,17 @@ class OTTIM(AllInOne):
         self.inference_lr = inference_lr
         self.softmax_temperature = softmax_temperature
         self.params2adapt = params2adapt
-        self.init = init
+        self.mu_init = mu_init
+        self.bias_init = bias_init
         self.use_explicit_prototype = use_explicit_prototype
 
     def cosine(self, X, Y):
         return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
+
+    def clear(self):
+        delattr(self, 'prototypes')
+        delattr(self, 'mu')
+        delattr(self, 'biases')
 
     def get_logits(self, prototypes, query_features, bias=True):
 
@@ -46,6 +53,11 @@ class OTTIM(AllInOne):
             logits = torch.cat(
                 [logits, -logits.mean(-1, keepdim=True)], dim=1
             )  # [Nq, Ns]
+
+        if bias:
+            return self.softmax_temperature * logits - self.biases
+        else:
+            return self.softmax_temperature * logits
         return logits
 
     def __call__(
@@ -62,21 +74,29 @@ class OTTIM(AllInOne):
         num_classes = support_labels.unique().size(0)
 
         # Initialize weights
-        if self.init == "base":
+        if self.mu_init == "base":
             self.mu = deepcopy(kwargs["train_mean"].squeeze())
-        # elif self.init == "zeros":
-        #     self.mu = torch.zeros(support_features.size(-1))
-        # elif self.init == "rand":
-        #     self.mu = 0.1 * torch.randn(1, support_features.size(-1))
-        # elif self.init == "mean":
-        #     self.mu = torch.cat([support_features, query_features], 0).mean(
-        #         0, keepdim=True
-        #     )
+        elif self.mu_init == "zeros":
+            self.mu = torch.zeros(support_features.size(-1))
+        elif self.mu_init == "rand":
+            self.mu = 0.1 * torch.randn(1, support_features.size(-1))
+        elif self.mu_init == "mean":
+            self.mu = torch.cat([support_features, query_features], 0).mean(
+                0, keepdim=True
+            )
+        else:
+            raise ValueError(f"Mu init {self.mu_init} not recognized.")
 
         with torch.no_grad():
             self.prototypes = compute_prototypes(support_features, support_labels)
             if self.use_explicit_prototype:
                 self.prototypes = torch.cat([self.prototypes, torch.zeros(1, support_features.size(1))], 0)
+            if self.bias_init == "zeros":
+                self.biases = torch.zeros(num_classes + 1)
+            elif self.bias_init == "mean":
+                self.biases = self.get_logits(self.prototypes, torch.cat([support_features, query_features], dim=0), bias=False).mean(dim=0)
+            else:
+                raise ValueError(f"Bias init {self.bias_init} not recognized.")
 
         params_list = []
         if "mu" in self.params2adapt:
@@ -85,6 +105,9 @@ class OTTIM(AllInOne):
         if "prototypes" in self.params2adapt:
             self.prototypes.requires_grad_()
             params_list.append(self.prototypes)
+        if "bias" in self.params2adapt:
+            self.biases.requires_grad_()
+            params_list.append(self.biases)
 
         # Run adaptation
         optimizer = torch.optim.Adam(params_list, lr=self.inference_lr)
@@ -191,7 +214,9 @@ class OTTIM(AllInOne):
             logits_s = self.get_logits(self.prototypes, support_features)
             logits_q = self.get_logits(self.prototypes, query_features)
             outlier_scores = logits_q.softmax(-1)[:, -1]
-
+        
+        # Ensure that nothing persists after
+        self.clear()
         return (
             logits_s[:, :-1].softmax(-1).detach(),
             logits_q[:, :-1].softmax(-1).detach(),

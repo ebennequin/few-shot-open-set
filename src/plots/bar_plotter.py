@@ -164,8 +164,9 @@ class BarPlotter(CSVPlotter):
             else:
                 ax.set(yticks=range(len(labels)))
                 ax.set_yticklabels([pretty[x] for x in labels],
-                                   ha='center', va='center', position=(-0.15, 0), fontsize=12)
+                                   ha='center', va='center', position=(-0.2, 0), fontsize=12)
                 # ax.yaxis.tick_left()
+            ax.set_ylim(-0.5, len(labels))
 
             # Hide the right and top spines
             if i == 1:

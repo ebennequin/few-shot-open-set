@@ -25,6 +25,9 @@ class AllInOne:
         )
         return auc_fn(fp_rate, tp_rate)
 
+    def clear(self):
+        pass
+
     def __call__(
         self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
     ) -> Tuple[Tensor, Tensor, Tensor]:

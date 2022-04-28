@@ -408,8 +408,8 @@ def detect_outliers(
                 ) = classifier_transforms(
                     raw_feat_s=support_features[layer],
                     raw_feat_q=query_features[layer],
-                    train_mean=train_mean[layer],
-                    train_std=train_std[layer],
+                    train_mean=deepcopy(train_mean[layer]),
+                    train_std=deepcopy(train_std[layer]),
                     support_labels=support_labels,
                     query_labels=query_labels,
                     outliers=outliers,
@@ -447,7 +447,7 @@ def detect_outliers(
                     probas_s, probas_q = classifier(
                         support_features=transformed_features["cls_sup"][layer],
                         query_features=transformed_features["cls_query"][layer],
-                        train_mean=train_mean[layer],
+                        train_mean=deepcopy(train_mean[layer]),
                         support_labels=support_labels,
                         intra_task_metrics=intra_task_metrics,
                         use_transductively=None,
@@ -461,8 +461,7 @@ def detect_outliers(
                     output = feature_detector(
                         support_features=transformed_features["det_sup"][layer],
                         query_features=transformed_features["det_query"][layer],
-                        train_mean=train_mean[layer],
-                        train_std=train_std[layer],
+                        train_mean=deepcopy(train_mean[layer]),
                         support_labels=support_labels,
                         query_labels=query_labels,
                         outliers=outliers,
@@ -559,7 +558,7 @@ def detect_outliers(
 
     # ====== Plotting intra-task metrics ======
 
-    res_root = Path("results") / args.exp_name
+    res_root = Path("results") / args.exp_name / "+".join(args.classifier, args.feature_detector) 
     res_root.mkdir(exist_ok=True, parents=True)
     for title in intra_task_metrics.keys():
         fig = plt.Figure((10, 10), dpi=200)

@@ -172,47 +172,47 @@ clustering_metrics:
 
 run_pyod:
 	for method in HBOS KNN PCA OCSVM IForest COPOD; do \
-		make EXP=$${method} CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
+		make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done ;\
 
 run_best:
-	make EXP=SimpleShot_KNN CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
-	make EXP=TIM_GD CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
-	make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=OpenMax FEATURE_DETECTOR=OpenMax run ;\
 	make run_ottim ;\
-	make run_snatcher ;\
+# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
+# 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
+# 	make run_snatcher ;\
 
 run_finalists:
-	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make run_ottim ;\
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
 	for classifier in TIM_GD BDCSPN Finetune LaplacianShot SimpleShot; do \
-		make EXP=$${classifier} PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
+		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
-	make EXP=FEAT PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
-	make EXP=MAP CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
+	make PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
+	make CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
 
 run_snatcher:
-	make EXP=Snatcher MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
+	make MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
 
 run_ottim:
-	make EXP=OTTIM FEATURE_DETECTOR=OTTIM run ;\
+	make FEATURE_DETECTOR=OTTIM run ;\
 
 run_open_set:
 	for method in RPL PROSER OpenMax; do \
-		make DET_TRANSFORMS="Pool BaseCentering L2norm" EXP=$${method} FEATURE_DETECTOR=$${method} run ;\
+		make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done \
 
 
 # ========== 1) Tuning + Running pipelines ===========
 
 tuning:
-	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
-	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
-	make TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
-	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
+# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
+# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
+# 	make TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
+# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
 log_best_pyod:
 	for shot in 1 5; do \
@@ -258,12 +258,12 @@ log_best_classif:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
 	done ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 log_latex:
 	for dataset in mini_imagenet tiered_imagenet; do \
@@ -284,10 +284,10 @@ log_latex:
 
 exhaustive_benchmark:
 	# Tiered -> CUB
-	for backbone in wrn2810 resnet12; do \
-		make SHOTS=1 BACKBONE=$${backbone} run_best ;\
+	for backbone in resnet12; do \
+		make EXP=spider SHOTS=1 BACKBONE=$${backbone} run_best ;\
 		for dataset in tiered_imagenet fungi aircraft cub; do \
-			make SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
+			make EXP=spider SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
 		done ; \
 	done ;\
 
@@ -311,7 +311,7 @@ run_archs:
 	# Imagenet -> *
 	for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 		for dataset in fungi; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${dataset} run_finalists ;\
+			make EXP=barplots SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${dataset} run_finalists ;\
 		done ; \
 	done ;\
 

@@ -1,5 +1,5 @@
 from typing import Tuple
-
+from loguru import logger
 from torch import Tensor
 
 from .abstract import FewShotMethod
@@ -24,11 +24,12 @@ class SimpleShot(FewShotMethod):
         # print(support_features.size(), support_labels.size())
         self.prototypes = compute_prototypes(support_features, support_labels)
 
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+        inliers = ~kwargs["outliers"].bool()
+        acc = (probs_q.argmax(-1) == kwargs["query_labels"])[inliers].float().mean().item()
         return (
             self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             ).softmax(-1),
-            self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(
-                -1
-            ),
+            probs_q
         )

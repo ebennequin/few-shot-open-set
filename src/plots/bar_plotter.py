@@ -20,8 +20,8 @@ CB91_Purple = "#9D2EC5"
 CB91_Violet = "#661D98"
 CB91_Amber = "#F5B14C"
 colors = [
-    CB91_Blue,
     CB91_Pink,
+    CB91_Blue,
     CB91_Green,
     CB91_Amber,
     CB91_Purple,
@@ -133,7 +133,7 @@ class BarPlotter(CSVPlotter):
             bottoms = defaultdict(float)
             sorted_items = sorted(metric_dic.items(), key=lambda x: np.mean(x[1]["y"]))
             assert len(metric_dic) == 2, "Currently only support 2 methods at a time."
-            for method_index, (method, method_dic) in enumerate(sorted_items):
+            for index, (method, method_dic) in enumerate(sorted_items):
                 sorted_tuples = sorted(
                     zip(method_dic["x"], method_dic["y"]), key=lambda x: x[0]
                 )
@@ -143,12 +143,19 @@ class BarPlotter(CSVPlotter):
                         [j],
                         [value],
                         edgecolor="white",
-                        color=colors[method_index],
+                        color=colors[methods.index(method)],
                         height=0.15,
                         left=[bottoms[label]],
                         label=method,
                     )
                     bottoms[label] += value
+                    if index == 1:
+                        ax.text(bottoms[label] + 0.05, j - 0.1, f"+{np.round(100 * value, 1)}",
+                                color=colors[methods.index(method)])
+                        # ax.text(max(0.45, bottoms[label]) + 0.05, j + 0.1, f"+{np.round(100 * value, 1)}",
+                        #         color=colors[methods.index(method)])
+            ax.set_xticks(np.arange(4, 9) / 10)
+            ax.set_xlim(0.4, 0.8)
             ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=15)
 
             if i == 0:
@@ -156,7 +163,8 @@ class BarPlotter(CSVPlotter):
                 ax.yaxis.tick_right()
             else:
                 ax.set(yticks=range(len(labels)))
-                ax.set_yticklabels([pretty[x] for x in labels], ha='center', va='center', position=(-0.12, 0))
+                ax.set_yticklabels([pretty[x] for x in labels],
+                                   ha='center', va='center', position=(-0.15, 0), fontsize=12)
                 # ax.yaxis.tick_left()
 
             # Hide the right and top spines

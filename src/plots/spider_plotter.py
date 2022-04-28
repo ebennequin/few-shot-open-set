@@ -11,7 +11,7 @@ import argparse
 from .csv_plotter import CSVPlotter, parse_args, pretty
 import matplotlib.pyplot as plt
 import os
-
+from copy import deepcopy
 
 class SpiderPlotter(CSVPlotter):
     """
@@ -43,12 +43,14 @@ class SpiderPlotter(CSVPlotter):
             if i == 0:
                 print(f"Methods detected : {methods} \n  Which one to use as a baseline ?")
                 baseline_method = methods[int(input())]
-            x_names = self.metric_dic[metric][baseline_method]["x"]
+            x_names = deepcopy(self.metric_dic[metric][baseline_method]["x"])
             y_baseline = np.array(self.metric_dic[metric][baseline_method]["y"])
             baseline_values[metric] = y_baseline
             for method in methods:
                 assert self.metric_dic[metric][method]["x"] == x_names, (self.metric_dic[metric][method]["x"], x_names)
                 self.metric_dic[metric][method]["y"] = np.array(self.metric_dic[metric][method]["y"]) - y_baseline
+            del self.metric_dic[metric][baseline_method]
+
 
         for i, metric_name in enumerate(self.metric_dic):
             ax = axes[i]
@@ -68,11 +70,15 @@ class SpiderPlotter(CSVPlotter):
                 [np.mean(arr["y"]) for arr in self.metric_dic[metric_name].values()]
             )
             yticks = np.linspace(min_val - 0.005, max_val + 0.005, 5)
-            angle = 2.2
+            cloest_to_0 = np.abs(yticks).argmin()
+            yticks = np.delete(yticks, cloest_to_0)
+
+            PAD = ((max_val - min_val) / 5) * 0.5
+            angle = 3.14
 
             first_method = list(self.metric_dic[metric_name].keys())[0]
             x_names = self.metric_dic[metric_name][first_method]["x"]
-            VARIABLES = x_names
+            VARIABLES = [f"{x} \n ({np.round(100 * y, 1)})" for x, y in zip(x_names, baseline_values[metric_name])]
             VARIABLES_N = len(VARIABLES)
 
             # The angles at which the values of the numeric variables are placed
@@ -104,7 +110,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Set values for the angular axis (x)
             ax.set_xticks(ANGLES[:-1])
-            ax.set_xticklabels(VARIABLES, size=17, y=-0.1)
+            ax.set_xticklabels(VARIABLES, size=25, y=-0.17)
 
             # Remove lines for radial axis (y)
             ax.set_yticks([])
@@ -117,12 +123,14 @@ class SpiderPlotter(CSVPlotter):
 
             # Add custom lines for radial axis (y) at 0, 0.5 and 1.
             _ = [ax.plot(HANGLES, h, ls=(0, (6, 6)), c=GREY70) for h in H]
+            _ = ax.plot(HANGLES, [0.] * len(HANGLES), ls=(0, (6, 6)), c='black', label="Baseline", linewidth=2)
 
             # Add levels -----------------------------------------------------
             # These labels indicate the values of the radial axis
-            PAD = 0.005
-            size = 15
-            _ = [ax.text(angle, li + PAD, f"{np.round(li * 100, 1)}", size=size) for li in yticks]
+            size = 18
+            _ = [ax.text(angle, li + PAD, f"+{np.round(li * 100, 1)}" if li > 0 \
+                 else np.round(li * 100, 1), size=size) for li in yticks]
+            ax.text(angle, 0. + PAD, 0., size=size)
 
             # Now fill the area of the circle with radius 1.
             # This create the effect of gray background.
@@ -152,13 +160,13 @@ class SpiderPlotter(CSVPlotter):
                 # ax.plot(ANGLES, values, c=method2color[method], linewidth=3, label=,)
                 # ax.scatter(ANGLES, values, s=130, c=method2color[method], zorder=10)
 
-            ax.set_title(pretty[metric_name], fontdict={"fontsize": 30}, y=1.2)
+            ax.set_title(pretty[metric_name], fontdict={"fontsize": 30}, y=1.3)
             ax.legend(
                 loc="center",
-                bbox_to_anchor=[1.2, 1.06],  # bottom-right
+                bbox_to_anchor=[1.1, 1.1],  # bottom-right
                 ncol=1,
                 frameon=False,  # don't put a frame
-                prop={"size": 17},
+                prop={"size": 22},
             )
 
         # ---- Save plots ----

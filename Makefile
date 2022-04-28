@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -59,7 +59,7 @@ MISC_VAL=1.0
 # === Base recipes ===
 
 extract:
-	    for split in train val test; do \
+	    for split in train test; do \
 			python -m src.compute_features \
 				--backbone $(BACKBONE) \
 				--src_dataset $(SRC_DATASET) \
@@ -123,12 +123,12 @@ extract_all:
 # 	done ;\
 
 	# Imagenet -> *
-	for dataset in fungi; do \
-		for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
+	for dataset in fungi imagenet; do \
+# 		for backbone in clip_vit_base_patch16 vit_base_patch16_224 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
+		for backbone in resnet50 ssl_resnet50 swsl_resnet50; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
-# 		for backbone in mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 
 
 extract_bis:
@@ -183,7 +183,7 @@ run_best:
 	make run_snatcher ;\
 
 run_finalists:
-	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+	make EXP=SimpleShot CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make run_ottim ;\
 
 run_classifiers:
@@ -271,7 +271,7 @@ log_latex:
 			python -m src.plots.csv_plotter \
 				 --exp . \
 				 --groupby classifier feature_detector \
-				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
+				 --metrics mean_acc std_acc mean_rocauc std_rocauc mean_aupr std_aupr mean_prec_at_90 std_prec_at_90 \
 				 --use_pretty True \
 				 --plot_versus backbone \
 				 --action log_latex \
@@ -307,29 +307,14 @@ spider_chart:
 # ========== 3) Scaling up ==========
 
 
-run_vits:
+run_archs:
 	# Imagenet -> *
-	for backbone in vit_base_patch16_384 vit_large_patch16_384; do \
-		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
+	for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
+		for dataset in fungi; do \
+			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${dataset} run_finalists ;\
 		done ; \
 	done ;\
 
-run_resnets:
-	# Imagenet -> *
-	for backbone in resnet18 resnet50 resnet101 resnet152; do \
-		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
-		done ; \
-	done ;\
-
-run_efficient:
-	# Imagenet -> *
-	for backbone in efficientnet_b0 efficientnet_b1 efficientnet_b2 efficientnet_b4 ; do \
-		for tgt_dataset in aircraft; do \
-			make SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$(TGT_DATASET) run_finalists ;\
-		done ; \
-	done ;\
 
 barplots:
 	python -m src.plots.bar_plotter \
@@ -349,6 +334,13 @@ hbarplots:
 		 --plot_versus backbone \
 		 --filters n_shot=1 ;\
 
+
+# ========== 4) Ablation study ==========
+
+
+ablate_ottim:
+	# Imagenet -> *
+	make TUNE=feature_detector run_ottim ;\
 
 # ========== Plots ===========
 

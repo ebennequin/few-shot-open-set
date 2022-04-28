@@ -50,6 +50,7 @@ def _cfg(url="", **kwargs):
         "num_classes": 1000,
         "input_size": (3, 224, 224),
         "interpolation": "bicubic",
+        "crop_pct": 0.875,
         "mean": (0.48145466, 0.4578275, 0.40821073),
         "std": (0.26862954, 0.26130258, 0.27577711),
         **kwargs,
@@ -607,7 +608,7 @@ class CLIP(nn.Module):
         return x
 
     def forward(self, image, layers: List[str]):
-        image_features = self.encode_image(image)
+        image_features = self.encode_image(image).to(torch.float32)
         return {'last': image_features}
         # text_features = self.encode_text(text)
 

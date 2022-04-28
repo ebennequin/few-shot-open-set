@@ -32,15 +32,24 @@ class my_default_dict(dict):
 
 pretty = my_default_dict(lambda x: x)
 
-pretty["mini_imagenet"] = r"\textit{Mini}"
-pretty["tiered_imagenet"] = r"\textit{Tiered}"
+# ---------- Datasets
+
+pretty["mini_imagenet"] = r"\textit{mini}"
+pretty["tiered_imagenet"] = r"\textit{tiered}"
 pretty["cub"] = "CUB"
 pretty["aircraft"] = "Aircraft"
 pretty["fungi"] = "Fungi"
 pretty["None"] = ""
 
+
+# ---------- Methods
+
 pretty["OTTIM"] = "OTTIM"
 pretty["TIM_GD"] = "TIM"
+pretty["kNNDetector"] = "kNN"
+
+
+# ---------- Metrics
 
 pretty["mean_acc"] = "Accuracy"
 pretty["mean_rocauc"] = "AUROC"
@@ -49,11 +58,13 @@ pretty["mean_rec_at_90"] = "Rec@0.9"
 pretty["mean_prec_at_90"] = "Prec@0.9"
 
 
+# ---------- Architectures
+
 pretty["ssl_resnext101_32x16d"] = "ResNext101"
 pretty["resnet101"] = "ResNet101"
 pretty["resnet152"] = "ResNet152"
-pretty["resnet50"] = "ResNet50"
 pretty["resnet18"] = "ResNet18"
+
 
 pretty["efficientnet_b0"] = "EfficientNet-B0"
 pretty["efficientnet_b1"] = "EfficientNet-B1"
@@ -66,10 +77,22 @@ pretty["efficientnet_b7"] = "EfficientNet-B7"
 pretty["efficientnet_b8"] = "EfficientNet-B8"
 pretty["efficientnet_l2"] = "EfficientNet-L2"
 
+pretty["resnet50"] = "ResNet50 \n Supervised"
+pretty["ssl_resnet50"] = "ResNet50 \n Semi-Supervised"
+pretty["swsl_resnet50"] = "ResNet50 \n SW-Supervised"
+
 pretty["vit_tiny_patch16_384"] = "ViT-tiny"
 pretty["vit_small_patch16_384"] = "ViT-small"
 pretty["vit_base_patch16_384"] = "ViT-base"
 pretty["vit_large_patch16_384"] = "ViT-large"
+
+pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"Supervised"
+pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\textsc{SAM}"
+pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\textsc{DINO}"
+pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\textsc{CLIP}"
+
+pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\textsc{MIIL}"
+pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"Supervised"
 
 
 def parse_args() -> argparse.Namespace:
@@ -213,15 +236,23 @@ class CSVPrinter(CSVPlotter):
         assert hasattr(self, "metric_dic")
         for metric in self.metric_dic:
             all_methods = self.metric_dic[metric].keys()
-        for method in all_methods:
-            msg = f"{method} & "
-            for metric in kwargs['metrics']:
-                value = self.metric_dic[metric][method]["y"][0]
-                msg += f"{np.round(100 * value, 2)} & "
 
-            logger.info(
-                msg
-            )
+        # for method in all_methods:
+        #     msg = f"{method} & "
+        #     for metric in kwargs['metrics']:
+        #         value = self.metric_dic[metric][method]["y"][0]
+        #         msg += f"{np.round(100 * value, 2)} & "
+
+        #     logger.info(
+        #         msg
+        #     )
+        df = defaultdict(list)
+        for method in all_methods:
+            df["method"].append(method)
+            for metric in kwargs["metrics"]:
+                df[metric].append(self.metric_dic[metric][method]["y"][0])
+        df = pd.DataFrame(df)
+        print(df.to_markdown())
 
 
 if __name__ == "__main__":

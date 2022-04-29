@@ -112,34 +112,34 @@ feature_detectors:
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.5,
+          'lambda_em': 0.1,
           "use_explicit_prototype": False,
-          'params2adapt': 'prototypes',
+          'params2adapt': 'prototypes-mu',
           'mu_init': 'mean',
           'bias_init': 'zeros',
            },
-
         5: {
           'softmax_temperature': 10.0,
-          'inference_steps': 200,
-          'inference_lr': 0.0001,
+          'inference_steps': 50,
+          'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.5,
+          'lambda_em': 0.1,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes-mu',
-          'init': 'base',
+          'mu_init': 'mean',
+          'bias_init': 'zeros',
            },
              }
     # For Grid Search
-    tuning:
-      hparams2tune: ['params2adapt', 'inference_steps', 'inference_lr', 'lambda_em', 'mu_init', "bias_init"]
-      hparam_values: {1: [['prototypes', 'mu', 'mu-prototypes', 'mu-prototypes-bias'], [100, 200, 300], [0.001, 0.0001], [0.5, 0.75, 1.0], ['base', 'mean'], ['zeros', 'mean']]}
+    # tuning:
+    #   hparams2tune: ['params2adapt', 'inference_steps', 'inference_lr', 'lambda_em', 'mu_init', "bias_init"]
+    #   hparam_values: {1: [['prototypes', 'mu', 'mu-prototypes', 'mu-prototypes-bias'], [100, 200, 300], [0.001, 0.0001], [0.5, 0.75, 1.0], ['base', 'mean'], ['zeros', 'mean']]}
 
     # For ablation study
     tuning:
-      hparams2tune: ['bias_init', 'params2adapt']
-      hparam_values: {1: [['zeros', 'mean'], ['prototypes', 'prototypes-mu', 'prototypes-mu-bias']]}
+      hparams2tune: ['params2adapt', 'mu_init']
+      hparam_values: {1: [['mu', 'prototypes', 'prototypes-mu'], ['zeros', 'base', 'mean']]}
 
 
 # === Detectors that work on probas ===

@@ -77,22 +77,23 @@ pretty["efficientnet_b7"] = "EfficientNet-B7"
 pretty["efficientnet_b8"] = "EfficientNet-B8"
 pretty["efficientnet_l2"] = "EfficientNet-L2"
 
-pretty["resnet50"] = "ResNet50 \n Supervised"
-pretty["ssl_resnet50"] = "ResNet50 \n Semi-Supervised"
-pretty["swsl_resnet50"] = "ResNet50 \n SW-Supervised"
 
 pretty["vit_tiny_patch16_384"] = "ViT-tiny"
 pretty["vit_small_patch16_384"] = "ViT-small"
 pretty["vit_base_patch16_384"] = "ViT-base"
 pretty["vit_large_patch16_384"] = "ViT-large"
 
-pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"Supervised"
-pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\textsc{SAM}"
-pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\textsc{DINO}"
-pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\textsc{CLIP}"
+pretty["resnet50"] = r"ResNet50" "\n" r"\small Supervised"
+pretty["ssl_resnet50"] = r"ResNet50" "\n" r"\small Semi-Supervised"
+pretty["swsl_resnet50"] = r"ResNet50" "\n" r"\small SW-Supervised"
 
-pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\textsc{MIIL}"
-pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"Supervised"
+pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"\small{Supervised}"
+pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\small \textsc{SAM}"
+pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\small\textsc{DINO}"
+pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\small\textsc{CLIP}"
+
+pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\small\textsc{MIIL}"
+pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"\small Supervised"
 
 
 def parse_args() -> argparse.Namespace:
@@ -143,7 +144,6 @@ class CSVPlotter(Plotter):
             process_dic = pretty
         else:
             process_dic = my_default_dict(lambda x: x)
-
 
         #  ===== Recover all csv result files =====
         p = Path("results") / kwargs["exp"]
@@ -211,12 +211,14 @@ class CSVPlotter(Plotter):
 class CSVPrinter(CSVPlotter):
     def log_best(self, **kwargs):
         assert hasattr(self, "metric_dic")
+        assert len(self.metric_dic)
         all_metrics = self.metric_dic.keys()
         for metric in self.metric_dic:
             all_methods = self.metric_dic[metric].keys()
             for method, res in self.metric_dic[metric].items():
                 assert len(res["x"]) == len(res["y"]) == 1, res
-        all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) for method in all_methods]
+        all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) \
+            for method in all_methods]
         sorted_methods = list(
             sorted(
                 all_items,

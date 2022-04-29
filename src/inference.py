@@ -422,8 +422,8 @@ def detect_outliers(
                 ) = detector_transforms(
                     raw_feat_s=support_features[layer],
                     raw_feat_q=query_features[layer],
-                    train_mean=train_mean[layer],
-                    train_std=train_std[layer],
+                    train_mean=deepcopy(train_mean[layer]),
+                    train_std=deepcopy(train_std[layer]),
                     support_labels=support_labels,
                     query_labels=query_labels,
                     outliers=outliers,
@@ -558,7 +558,7 @@ def detect_outliers(
 
     # ====== Plotting intra-task metrics ======
 
-    res_root = Path("results") / args.exp_name / "+".join(args.classifier, args.feature_detector) 
+    res_root = Path("results") / args.exp_name / (str(args.classifier) + str(args.feature_detector))
     res_root.mkdir(exist_ok=True, parents=True)
     for title in intra_task_metrics.keys():
         fig = plt.Figure((10, 10), dpi=200)

@@ -1,13 +1,13 @@
 # Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
+SERVER_IP=narval
+SERVER_PATH=~/scratch/open-set
+USER=mboudiaf
+DATADIR=data
 
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-DATADIR=../Open-Set/open-query-set/data/
-USER=malik
+# SERVER_IP=shannon
+# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
+# DATADIR=../Open-Set/open-query-set/data/
+# USER=malik
 
 
 # SERVER_IP=shannon
@@ -208,11 +208,11 @@ run_open_set:
 # ========== 1) Tuning + Running pipelines ===========
 
 tuning:
-	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
-# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
-# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
-# 	make TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
-# 	make TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
+# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
+# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
+# 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
+# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
 log_best_pyod:
 	for shot in 1 5; do \
@@ -230,16 +230,14 @@ log_best_pyod:
 
 log_best_ottim:
 	for shot in 1 5; do \
-		for exp in OTTIM; do \
-			python -m src.plots.csv_plotter \
-				 --exp $${exp} \
-				 --groupby feature_detector \
-				 --metrics mean_acc mean_rocauc \
-				 --use_pretty False \
-				 --plot_versus backbone \
-				 --action log_best \
-				 --filters n_shot=$${shot} ;\
-		done ;\
+		python -m src.plots.csv_plotter \
+			 --exp tuning \
+			 --groupby feature_detector \
+			 --metrics mean_acc mean_rocauc \
+			 --use_pretty False \
+			 --plot_versus backbone \
+			 --action log_best \
+			 --filters n_shot=$${shot} ;\
 	done ;\
 
 log_best_classif:
@@ -294,7 +292,7 @@ exhaustive_benchmark:
 spider_chart:
 	for backbone in resnet12; do \
 		python -m src.plots.spider_plotter \
-			 --exp . \
+			 --exp spider \
 			 --groupby classifier feature_detector \
 			 --use_pretty True \
 			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
@@ -318,7 +316,7 @@ run_archs:
 
 barplots:
 	python -m src.plots.bar_plotter \
-		 --exp . \
+		 --exp barplots \
 		 --groupby classifier feature_detector \
 		 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
 		 --latex True \
@@ -327,7 +325,7 @@ barplots:
 
 hbarplots:
 	python -m src.plots.bar_plotter \
-		 --exp . \
+		 --exp barplots \
 		 --groupby classifier feature_detector \
 		 --metrics mean_acc mean_rocauc \
 		 --latex True \

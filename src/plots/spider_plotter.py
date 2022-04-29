@@ -163,10 +163,10 @@ class SpiderPlotter(CSVPlotter):
             ax.set_title(pretty[metric_name], fontdict={"fontsize": 30}, y=1.3)
             ax.legend(
                 loc="center",
-                bbox_to_anchor=[1.1, 1.1],  # bottom-right
+                bbox_to_anchor=[1.1, 1.14],  # bottom-right
                 ncol=1,
                 frameon=False,  # don't put a frame
-                prop={"size": 22},
+                prop={"size": 25},
             )
 
         # ---- Save plots ----

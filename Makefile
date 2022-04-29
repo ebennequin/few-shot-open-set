@@ -1,8 +1,8 @@
 # Server options
-SERVER_IP=narval
-SERVER_PATH=~/scratch/open-set
-USER=mboudiaf
-DATADIR=data
+# SERVER_IP=narval
+# SERVER_PATH=~/scratch/open-set
+# USER=mboudiaf
+# DATADIR=data
 
 # SERVER_IP=shannon
 # SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
@@ -10,10 +10,10 @@ DATADIR=data
 # USER=malik
 
 
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-# DATADIR=data
-# USER=malik
+SERVER_IP=shannon
+SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
+DATADIR=data
+USER=malik
 
 
 

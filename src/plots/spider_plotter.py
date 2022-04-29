@@ -12,6 +12,8 @@ from .csv_plotter import CSVPlotter, parse_args, pretty
 import matplotlib.pyplot as plt
 import os
 from copy import deepcopy
+from .bar_plotter import spider_colors
+
 
 class SpiderPlotter(CSVPlotter):
     """
@@ -110,7 +112,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Set values for the angular axis (x)
             ax.set_xticks(ANGLES[:-1])
-            ax.set_xticklabels(VARIABLES, size=25, y=-0.17)
+            ax.set_xticklabels(VARIABLES, size=30, y=-0.25)
 
             # Remove lines for radial axis (y)
             ax.set_yticks([])
@@ -123,7 +125,8 @@ class SpiderPlotter(CSVPlotter):
 
             # Add custom lines for radial axis (y) at 0, 0.5 and 1.
             _ = [ax.plot(HANGLES, h, ls=(0, (6, 6)), c=GREY70) for h in H]
-            _ = ax.plot(HANGLES, [0.] * len(HANGLES), ls=(0, (6, 6)), c='black', label="Baseline", linewidth=2)
+            _ = ax.plot(HANGLES, [0.] * len(HANGLES), ls=(0, (6, 6)), c='black',
+                        label="Strong baseline", linewidth=2)
 
             # Add levels -----------------------------------------------------
             # These labels indicate the values of the radial axis
@@ -153,17 +156,18 @@ class SpiderPlotter(CSVPlotter):
                 ax.plot(
                     ANGLES,
                     values,
-                    linewidth=3,
+                    linewidth=4 if 'OTTIM' in method else 2,
+                    c=spider_colors[idx],
                     label=rf"\textbf{{{label}}}" if is_best else label,
                 )
-                ax.scatter(ANGLES, values, s=130, zorder=10)
+                ax.scatter(ANGLES, values, c=spider_colors[idx], s=130, zorder=10)
                 # ax.plot(ANGLES, values, c=method2color[method], linewidth=3, label=,)
                 # ax.scatter(ANGLES, values, s=130, c=method2color[method], zorder=10)
 
-            ax.set_title(pretty[metric_name], fontdict={"fontsize": 30}, y=1.3)
+            ax.set_title(fr"\textbf{{{pretty[metric_name]}}}", fontdict={"fontsize": 30}, y=1.4)
             ax.legend(
                 loc="center",
-                bbox_to_anchor=[1.1, 1.14],  # bottom-right
+                bbox_to_anchor=[1.15, 1.25],  # bottom-right
                 ncol=1,
                 frameon=False,  # don't put a frame
                 prop={"size": 25},

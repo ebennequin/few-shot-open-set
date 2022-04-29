@@ -19,7 +19,7 @@ CB91_Pink = "#F3A0F2"
 CB91_Purple = "#9D2EC5"
 CB91_Violet = "#661D98"
 CB91_Amber = "#F5B14C"
-colors = [
+barplot_colors = [
     CB91_Pink,
     CB91_Blue,
     CB91_Green,
@@ -29,6 +29,19 @@ colors = [
     "r",
     "m",
 ]
+
+spider_colors = ["#ab62c0",
+                 "#72a555",
+                 "#c9556f",
+                 "#638ccc",
+                 "#c57d3d"
+                 ]
+# spider_colors = ["#02d8ea",
+# "#706ab7",
+# "#095f35",
+# "#F3A0F2",
+# "#fa4940",
+# ]
 
 
 # class BarPlotter(CSVPlotter):
@@ -119,7 +132,7 @@ class BarPlotter(CSVPlotter):
                                     'pm': Optional[ndarray],
                                    }
         """
-        fig, axes = plt.subplots(figsize=(10, 5), ncols=2)
+        fig, axes = plt.subplots(figsize=(10, 7), ncols=2)
 
         metric_names = list(self.metric_dic.keys())
         assert len(metric_names) == 2, 'Mirror BarPlotter only supports 2 metrics (one on each side)'
@@ -143,19 +156,18 @@ class BarPlotter(CSVPlotter):
                         [j],
                         [value],
                         edgecolor="white",
-                        color=colors[methods.index(method)],
+                        color=barplot_colors[methods.index(method)],
                         height=0.15,
                         left=[bottoms[label]],
-                        label=method,
+                        label=r"Strong baseline" if index == 0 else method,
                     )
                     bottoms[label] += value
                     if index == 1:
-                        ax.text(bottoms[label] + 0.05, j - 0.1, f"+{np.round(100 * value, 1)}",
-                                color=colors[methods.index(method)])
-                        # ax.text(max(0.45, bottoms[label]) + 0.05, j + 0.1, f"+{np.round(100 * value, 1)}",
-                        #         color=colors[methods.index(method)])
+                        ax.text(bottoms[label] + 0.01, j, rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
+                                color=barplot_colors[methods.index(method)], va='center', ha='right' if i == 0 else 'left', fontsize=15)
             ax.set_xticks(np.arange(4, 9) / 10)
-            ax.set_xlim(0.4, 0.8)
+            ax.set_xlim(0.4, 0.85)
+            ax.set_xticklabels([rf"${10 * x}$" for x in range(4, 9)])
             ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=15)
 
             if i == 0:
@@ -164,8 +176,9 @@ class BarPlotter(CSVPlotter):
             else:
                 ax.set(yticks=range(len(labels)))
                 ax.set_yticklabels([pretty[x] for x in labels],
-                                   ha='center', va='center', position=(-0.2, 0), fontsize=12)
+                                   ha='center', va='center', position=(-0.32, 0), fontsize=12)
                 # ax.yaxis.tick_left()
+            plt.subplots_adjust(wspace=0.7)
             ax.set_ylim(-0.5, len(labels) - 0.5)
 
             # Hide the right and top spines
@@ -191,7 +204,7 @@ class BarPlotter(CSVPlotter):
                 by_label = dict(zip(labels, handles))
                 fig.legend(by_label.values(), by_label.keys(),
                            loc="center",
-                           bbox_to_anchor=[0.5, 1.06],  # bottom-right
+                           bbox_to_anchor=[0.5, 1.01],  # bottom-right
                            ncol=2,
                            frameon=False,  # don't put a frame)
                            )
@@ -201,9 +214,9 @@ class BarPlotter(CSVPlotter):
 
                 # # To show data from highest to lowest
                 # ax.invert_yaxis()
-                    
+        # plt.subplots_adjust(wspace=None)
         os.makedirs(self.out_dir, exist_ok=True)
-        fig.tight_layout()
+        # fig.tight_layout()
         fig.savefig(self.out_dir / f"barplot.pdf", dpi=300, bbox_inches="tight")
 
 

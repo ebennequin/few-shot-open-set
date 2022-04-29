@@ -44,9 +44,9 @@ pretty["None"] = ""
 
 # ---------- Methods
 
-pretty["OTTIM"] = "OTTIM"
-pretty["TIM_GD"] = "TIM"
-pretty["kNNDetector"] = "kNN"
+pretty["OTTIM"] = r"\textsc{OTTIM}"
+pretty["TIM_GD"] = r"\textsc{TIM}"
+pretty["kNNDetector"] = r"$k$-NN"
 
 
 # ---------- Metrics
@@ -83,17 +83,17 @@ pretty["vit_small_patch16_384"] = "ViT-small"
 pretty["vit_base_patch16_384"] = "ViT-base"
 pretty["vit_large_patch16_384"] = "ViT-large"
 
-pretty["resnet50"] = r"ResNet50" "\n" r"\small Supervised"
-pretty["ssl_resnet50"] = r"ResNet50" "\n" r"\small Semi-Supervised"
-pretty["swsl_resnet50"] = r"ResNet50" "\n" r"\small SW-Supervised"
+pretty["resnet50"] = r"ResNet50" "\n" r"\small{Sup. (IN1k)}"
+pretty["ssl_resnet50"] = r"ResNet50" "\n" r"\small{Semi-Sup.(YFCC100M +IN1k)}"
+pretty["swsl_resnet50"] = r"ResNet50" "\n" r"\small{SW-Sup. (IG-1B-Targeted+ IN1k)}"
 
-pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"\small{Supervised}"
-pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\small \textsc{SAM}"
-pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\small\textsc{DINO}"
-pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\small\textsc{CLIP}"
+pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"\small{Sup.} (IN21k+IN1k)"
+pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\small \textsc{SAM (IN1k)} "
+pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\small\textsc{DINO (IN1k)}"
+pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\small\textsc{CLIP (LAION-400M)} "
 
-pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\small\textsc{MIIL}"
-pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"\small Supervised"
+pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\small\textsc{MIIL (IN21k)}"
+pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"\small{Sup. (IN21k)}"
 
 
 def parse_args() -> argparse.Namespace:

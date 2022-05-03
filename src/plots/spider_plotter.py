@@ -8,11 +8,10 @@ from typing import Any, List, Tuple
 from .plotter import Plotter
 import pandas as pd
 import argparse
-from .csv_plotter import CSVPlotter, parse_args, pretty
+from .csv_plotter import CSVPlotter, parse_args, pretty, spider_colors
 import matplotlib.pyplot as plt
 import os
 from copy import deepcopy
-from .bar_plotter import spider_colors
 
 
 class SpiderPlotter(CSVPlotter):
@@ -140,9 +139,12 @@ class SpiderPlotter(CSVPlotter):
             ax.fill(HANGLES, H[-1], GREY_LIGHT)
 
             # Fill lines and dots --------------------------------------------
-            for idx, (method, method_result) in enumerate(
-                self.metric_dic[metric_name].items()
+            methods = list(self.metric_dic[metric_name].keys())
+            methods.sort()
+            for idx, method in enumerate(
+                methods
             ):
+                method_result = self.metric_dic[metric_name][method]
                 assert method_result["x"] == x_names, (
                     method,
                     method_result["x"],

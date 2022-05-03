@@ -125,6 +125,7 @@ def parse_args() -> argparse.Namespace:
         help="Name the experiment for easy grouping.",
     )
     parser.add_argument("--visu_episode", type=str2bool, default="default")
+    parser.add_argument("--save_predictions", type=str2bool, default="default")
     parser.add_argument(
         "--general_hparams",
         type=str,
@@ -178,17 +179,19 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def main(args):
-
-    save_dir = Path(os.path.join("results", args.exp_name))
-    save_dir.mkdir(exist_ok=True, parents=True)
-    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers :]
-
-    logger.info(f"Dropping config file at {save_dir / 'config.json'}")
-    with open(save_dir / "config.json", "w") as f:
+def dump_config(args):
+    path = Path(args.res_dir) / 'config.json'
+    logger.info(f"Dropping config file at {path}")
+    with open(path, "w") as f:
         arg_dict = vars(args)
         json.dump(arg_dict, f)
-    args.data_dir = Path(args.data_dir)
+
+
+def main(args):
+
+    args.res_root = os.path.join("results", args.exp_name)
+    os.makedirs(args.res_root, exist_ok=True)
+    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers :]
 
     # ================ Prepare Transforms + Detector + Classifier ===================
 
@@ -320,8 +323,6 @@ def main(args):
         feature_dic,
     )  # If feature_dic is None, this loader will return raw PIL images !
 
-    res_root = Path("results") / args.exp_name
-    res_root.mkdir(exist_ok=True, parents=True)
     for feature_d, proba_d, classifier in itertools.product(
         feature_detectors, proba_detectors, classifiers
     ):
@@ -337,9 +338,16 @@ def main(args):
         args.proba_detector = str(proba_d)
         args.classifier = str(classifier)
 
+        sub_exp = (str(args.classifier) + str(args.feature_detector)) if args.classifier != 'None' \
+            else str(args.feature_detector)
+        args.res_dir = os.path.join(args.res_root, sub_exp)
+        os.makedirs(args.res_dir, exist_ok=True)
+
+        dump_config(args)
+
         set_random_seed(args.random_seed)
 
-        if not check_if_record_exists(args, res_root / "out.csv") or args.override:
+        if not check_if_record_exists(args, Path(args.res_root) / "out.csv") or args.override:
             metrics = detect_outliers(
                 args=args,
                 layers=args.layers,
@@ -353,7 +361,7 @@ def main(args):
                 proba_detector=proba_d,
                 data_loader=data_loader,
             )
-            save_results(args, metrics, res_root)
+            save_results(args, metrics, args.res_root)
         else:
             logger.warning("Experiment already done, and overriding not activated. Moving to the next.")
 
@@ -361,7 +369,7 @@ def main(args):
 def save_results(args, metrics, res_root):
     for metric_name in metrics:
         logger.info(f"{metric_name}: {np.round(100 * metrics[metric_name], 2)}")
-    update_csv(args, metrics, path=res_root / "out.csv")
+    update_csv(args, metrics, path=Path(res_root) / "out.csv")
 
 
 def detect_outliers(
@@ -378,6 +386,7 @@ def detect_outliers(
     feature_extractor=None,
 ):
 
+    tensors2save: Dict[str, List[torch.Tensor]] = defaultdict(list)
     metrics: Dict[str, List[float]] = defaultdict(list)
     intra_task_metrics = defaultdict(
         lambda: defaultdict(list)
@@ -517,10 +526,15 @@ def detect_outliers(
 
         # ====== Aggregate scores and probas across layers ======
 
-        # for score_type, scores in outlier_scores.items():
         outlier_scores = torch.stack(outlier_scores, 0).mean(0)
         all_probs = torch.stack(soft_preds_q, 0).mean(0)
         predictions = all_probs.argmax(-1)
+
+        # ====== Store predictions in case it needs saving ====
+
+        if args.save_predictions:
+            for array_name in ['probas_q', 'outliers', 'query_labels', 'outlier_scores']:
+                tensors2save[array_name].append(eval(array_name))
 
         # ====== Tracking metrics ======
 
@@ -556,10 +570,8 @@ def detect_outliers(
         final_metrics[f"mean_{metric_name}"] = np.round(mean, 4)
         final_metrics[f"std_{metric_name}"] = np.round(std, 4)
 
-    # ====== Plotting intra-task metrics ======
+    # ====== Quick intra-task metrics ======
 
-    res_root = Path("results") / args.exp_name / (str(args.classifier) + str(args.feature_detector))
-    res_root.mkdir(exist_ok=True, parents=True)
     for title in intra_task_metrics.keys():
         fig = plt.Figure((10, 10), dpi=200)
         for legend, values in intra_task_metrics[title].items():
@@ -574,12 +586,17 @@ def detect_outliers(
                 ax.plot(m, label=legend)
                 ax.fill_between(x, m - pm, m + pm, alpha=0.5)
         plt.legend()
-        plt.savefig(res_root / f"{title}.png")
+        plt.savefig(Path(args.res_dir) / f"{title}.png")
         plt.clf()
 
-    # Save figures
-    for title, fig in figures.items():
-        fig.savefig(res_root / f"{title}.png")
+    # ====== Save predictions and gts in case ====
+
+    if args.save_predictions:
+        for array_name, tensor_list in tensors2save.items():
+            tensor = torch.stack(tensor_list, 0)
+            torch.save(tensor, Path(args.res_dir) / f'{array_name}.pt')
+            logger.info(f"Saved {Path(args.res_dir) / array_name}.pt'")
+
     return final_metrics
 
 

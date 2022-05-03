@@ -27,7 +27,7 @@ CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classi
 DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
 FEATURE_DETECTOR=none
 PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
-CLASSIFIER=SimpleShot
+CLASSIFIER=none
 FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
 
 
@@ -46,6 +46,7 @@ OVERRIDE=False # used to override existing entries in out.csv
 TUNE=""
 VISU=False
 THRESHOLD=otsu
+SAVE_PREDICTIONS=False
 
 # Tasks
 SPLIT=test
@@ -100,7 +101,8 @@ run:
 	        --$(MISC_ARG) $(MISC_VAL) \
 	        --override $(OVERRIDE) \
 	        --tune $(TUNE) \
-	        --debug $(DEBUG) ;\
+	        --debug $(DEBUG) \
+	        --save_predictions $(SAVE_PREDICTIONS) ;\
     done ;\
 
 # ========== Extraction pipelines ===========
@@ -177,10 +179,10 @@ run_pyod:
 
 run_best:
 	make run_ottim ;\
-# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
-# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
-# 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
-# 	make run_snatcher ;\
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
+	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
+	make run_snatcher ;\
 
 run_finalists:
 	make run_ottim ;\
@@ -205,6 +207,25 @@ run_open_set:
 	done \
 
 
+# ========== 0) Nice visu ==========
+
+simu_maxprob_hist:
+	make EXP=maxprob_hist SHOTS=5 SAVE_PREDICTIONS=True run_ottim
+	make EXP=maxprob_hist SHOTS=5 SAVE_PREDICTIONS=True run_classifiers
+
+
+maxprob_hist:
+	for shot in 1 5; do \
+		python -m src.plots.torch_plotter \
+			 --exp maxprob_hist \
+			 --groupby feature_detector \
+			 --use_pretty False \
+			 --filters n_shot=$${shot} ;\
+	done ;\
+
+
+
+
 # ========== 1) Tuning + Running pipelines ===========
 
 tuning:
@@ -214,21 +235,7 @@ tuning:
 # 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 # 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
-log_best_pyod:
-	for shot in 1 5; do \
-		for exp in HBOS KNN PCA OCSVM IForest COPOD; do \
-			python -m src.plots.csv_plotter \
-				 --exp $${exp} \
-				 --groupby feature_detector \
-				 --metrics mean_rocauc \
-				 --use_pretty False \
-				 --plot_versus backbone \
-				 --action log_best \
-				 --filters n_shot=$${shot} ;\
-		done ;\
-	done ;\
-
-log_best_ottim:
+log_best:
 	for shot in 1 5; do \
 		python -m src.plots.csv_plotter \
 			 --exp tuning \
@@ -238,20 +245,6 @@ log_best_ottim:
 			 --plot_versus backbone \
 			 --action log_best \
 			 --filters n_shot=$${shot} ;\
-	done ;\
-
-log_best_classif:
-	for shot in 1 5; do \
-		for exp in Finetune LaplacianShot BDCSPN TIM_GD MAP; do \
-			python -m src.plots.csv_plotter \
-				 --exp $${exp} \
-				 --groupby classifier \
-				 --metrics mean_acc \
-				 --use_pretty False \
-				 --plot_versus backbone \
-				 --action log_best \
-				 --filters n_shot=$${shot} ;\
-		done ;\
 	done ;\
 
 benchmark:
@@ -283,22 +276,24 @@ log_latex:
 exhaustive_benchmark:
 	# Tiered -> CUB
 	for backbone in resnet12; do \
-		make EXP=spider SHOTS=1 BACKBONE=$${backbone} run_best ;\
+		make EXP=spider BACKBONE=$${backbone} run_best ;\
 		for dataset in tiered_imagenet fungi aircraft cub; do \
-			make EXP=spider SHOTS=1 BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
+			make EXP=spider BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
 		done ; \
 	done ;\
 
 spider_chart:
-	for backbone in resnet12; do \
-		python -m src.plots.spider_plotter \
-			 --exp spider \
-			 --groupby classifier feature_detector \
-			 --use_pretty True \
-			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
-			 --plot_versus src_dataset tgt_dataset \
-			 --filters n_shot=1 \
-			 backbone=$${backbone} ;\
+	for shot in 1 5; do \
+		for backbone in resnet12; do \
+			python -m src.plots.spider_plotter \
+				 --exp spider \
+				 --groupby classifier feature_detector \
+				 --use_pretty True \
+				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
+				 --plot_versus src_dataset tgt_dataset \
+				 --filters n_shot=$${shot} \
+				 backbone=$${backbone} ;\
+		done ;\
 	done ;\
 
 

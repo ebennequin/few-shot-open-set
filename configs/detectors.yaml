@@ -120,14 +120,14 @@ feature_detectors:
            },
         5: {
           'softmax_temperature': 10.0,
-          'inference_steps': 50,
+          'inference_steps': 200,
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
           'lambda_em': 0.1,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes',
-          'mu_init': 'mean',
+          'mu_init': 'base',
           'bias_init': 'zeros',
            },
              }

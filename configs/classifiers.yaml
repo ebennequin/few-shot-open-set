@@ -9,10 +9,10 @@ classifiers:
           'loss_weights': [1.0, 1.0, 0.5]
            },
         5: {
-          'softmax_temperature': 5.0,
+          'softmax_temperature': 1.0,
           'inference_steps': 200,
           'inference_lr': 0.001,
-          'loss_weights': [1.0, 1.0, 0.5]
+          'loss_weights': [1.0, 1.0, 1.0]
            },
              }
     tuning:

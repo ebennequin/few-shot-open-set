@@ -134,7 +134,7 @@ def parse_args() -> argparse.Namespace:
             "backbone",
             "src_dataset",
             "tgt_dataset",
-            "balanced_tasks",
+            "split",
             "feature_detector",
             "proba_detector",
             "classifier",
@@ -338,8 +338,8 @@ def main(args):
         args.proba_detector = str(proba_d)
         args.classifier = str(classifier)
 
-        sub_exp = (str(args.classifier) + str(args.feature_detector)) if args.classifier != 'None' \
-            else str(args.feature_detector)
+
+        sub_exp = (str(args.classifier) + str(args.feature_detector)).replace("None", "")
         args.res_dir = os.path.join(args.res_root, sub_exp)
         os.makedirs(args.res_dir, exist_ok=True)
 

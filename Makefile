@@ -76,7 +76,7 @@ extract:
 run:
 	for shot in $(SHOTS); do \
 	    python3 -m src.inference \
-	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$(TGT_DATASET)/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
+	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$(TGT_DATASET)'('$(SPLIT)')'/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
 	        --data_dir $(DATADIR) \
 	        --classifier $(CLASSIFIER) \
 	        --n_tasks $(N_TASKS) \
@@ -138,8 +138,8 @@ extract_bis:
 			for split in train val test; do \
 					python -m src.compute_features \
 							--backbone $${backbone} \
-							--src_dataset tiered_imagenet \
-							--tgt_dataset tiered_imagenet_bis \
+							--src_dataset mini_imagenet \
+							--tgt_dataset mini_imagenet_bis \
 							--data_dir $(DATADIR) \
 							--model_source feat \
 							--training $(TRAINING) \
@@ -207,20 +207,38 @@ run_open_set:
 	done \
 
 
-# ========== 0) Nice visu ==========
+
+# ========== 0) Observing Deltas between  ==========
+
+perf_deltas:
+	for shot in 1 5; do \
+		for arch in resnet12 wrn2810; do \
+			make EXP=performance_deltas SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis BACKBONE=$${arch} SPLIT=train run_classifiers ;\
+		done ;\
+	done ;\
+
+
+# ========== 0) Separation histogram ==========
 
 simu_maxprob_hist:
-	make EXP=maxprob_hist SHOTS=5 SAVE_PREDICTIONS=True run_ottim
-	make EXP=maxprob_hist SHOTS=5 SAVE_PREDICTIONS=True run_classifiers
+	for split in train test; do \
+		for classifier in TIM_GD SimpleShot; do \
+			make EXP=maxprob_hist SAVE_PREDICTIONS=True PROBA_DETECTOR=MaxProbDetector \
+				CLS_TRANSFORMS="Pool BaseCentering L2norm" SPLIT=$${split} \
+				SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis CLASSIFIER=$${classifier} run ;\
+		done ;\
+# 		make EXP=maxprob_hist SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis SPLIT=$${split} SAVE_PREDICTIONS=True run_ottim;\
+	done ;\
 
 
 maxprob_hist:
-	for shot in 1 5; do \
-		python -m src.plots.torch_plotter \
-			 --exp maxprob_hist \
-			 --groupby feature_detector \
-			 --use_pretty False \
-			 --filters n_shot=$${shot} ;\
+	for shot in 5; do \
+		for split in train test; do \
+			python -m src.plots.torch_plotter \
+				 --exp maxprob_hist \
+				 --use_pretty False \
+				 --filters n_shot=$${shot} split=$${split} ;\
+		done ;\
 	done ;\
 
 
@@ -418,6 +436,9 @@ fungi:
 	tar -xvf fungi_train_val.tgz -C data/fungi ;\
 	tar -xvf train_val_annotations.tgz -C data/fungi ;\
 	rm fungi_train_val.tgz; rm train_val_annotations.tgz ;
+
+mini_imagenet_bis:
+	python -m scripts.generate_mini_imagenet_bis
 
 
 # ============= Archive results =============

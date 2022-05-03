@@ -5,6 +5,7 @@ from torch import Tensor
 from loguru import logger
 from easyfsl.utils import compute_prototypes
 import numpy as np
+from pathlib import Path
 
 from .abstract import FewShotMethod
 from src.models import __dict__ as BACKBONES
@@ -31,7 +32,7 @@ class FEAT(FewShotMethod):
             args, 1, hdim, hdim, hdim, dropout=0.5
         )
         weights = (
-            args.data_dir
+            Path(args.data_dir)
             / "models"
             / args.training
             / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"

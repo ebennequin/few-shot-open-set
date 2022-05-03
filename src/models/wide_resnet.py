@@ -13,6 +13,7 @@ def _cfg(url="", **kwargs):
         "input_size": (3, 84, 84),
         "mean": IMAGENET_DEFAULT_MEAN,
         "std": IMAGENET_DEFAULT_STD,
+        "crop_pct": 0.875,
         "interpolation": 'bilinear',
         **kwargs,
     }

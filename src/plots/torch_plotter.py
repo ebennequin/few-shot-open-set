@@ -114,7 +114,8 @@ class TorchPlotter(Plotter):
             plt.hist(flat_maxprobs[~all_inliers].numpy(), color='red', density=True, bins=100, alpha=0.4)
             fp_rate, tp_rate, _ = roc_curve((~all_inliers).numpy(), flat_maxprobs.numpy())
             plt.title(f"ROCAUC={np.round(auc_fn(fp_rate, tp_rate), 2)}")
-            plt.ylim(0, 40)
+            plt.ylim(0, 10)
+            plt.xlim(0, 1.6)
 
 
             self.out_dir.mkdir(exist_ok=True, parents=True)

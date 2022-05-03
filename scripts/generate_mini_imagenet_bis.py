@@ -12,9 +12,11 @@ from src.utils.imagenet_val_utils import list_imagenet_val
 
 MINI_IMAGENET_SPECS_ROOT = Path("data/mini_imagenet/specs")
 MINI_IMAGENET_BIS_ROOT = Path("data/mini_imagenet/bis/")
+# ILSVC_ROOT_DIR: Path = Path("/data/etienneb/ILSVRC2015/")
+ILSVC_ROOT_DIR: Path = Path("/ssd/dataset/natural/original/ilsvrc12")
 
 
-def main(ilsvrc_root_dir: Path = Path("/data/etienneb/ILSVRC2015/")):
+def main():
 
     logger.info("Reading specs...")
     mini_imagenet_classes = pd.concat(
@@ -31,7 +33,7 @@ def main(ilsvrc_root_dir: Path = Path("/data/etienneb/ILSVRC2015/")):
         ]
     )
 
-    image_paths, class_names = list_imagenet_val(ilsvrc_root_dir)
+    image_paths, class_names = list_imagenet_val(ILSVC_ROOT_DIR)
 
     logger.info("Copying miniImageNet bis images")
     image_names_by_class = {}

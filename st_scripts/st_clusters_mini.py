@@ -1,4 +1,6 @@
+import itertools
 import pickle
+from random import shuffle
 from typing import Dict, List
 
 import numpy as np
@@ -76,7 +78,7 @@ def compute_2d_features(features: Dict[int, ndarray]) -> pd.DataFrame:
     ).assign(x=reduced_features[:, 0], y=reduced_features[:, 1])
 
 
-def compute_or_retrieve_2d_features(features_path, features=None):
+def compute_or_retrieve_2d_features(features_path, features=None, only_20=False):
     # TODO : if features change or the method changes, this will not recompute 2d features
     reduced_features_file_name = features_path.with_name(f"{features_path.stem}_2d.csv")
     if reduced_features_file_name.is_file():
@@ -86,7 +88,10 @@ def compute_or_retrieve_2d_features(features_path, features=None):
         if features is None:
             with open(features_path, "rb") as stream:
                 features = pickle.load(stream)
-        reduced_features = compute_2d_features(features)
+
+        reduced_features = compute_2d_features(
+            {k: v for k, v in features.items() if k < 20} if only_20 else features
+        )
         reduced_features.to_csv(reduced_features_file_name, index=False)
     return reduced_features
 
@@ -96,16 +101,25 @@ def plot_2d_features(features, classes_to_plot):
     ax = fig.add_subplot(1, 1, 1)
 
     colors = COLORS_64 if len(classes_to_plot) > 40 else COLORS_20
+    st.button(
+        "Shuffle colors", on_click=lambda: shuffle(colors), key=len(classes_to_plot)
+    )
+    width = st.slider(
+        "Point size", min_value=0.1, max_value=20.0, value=3.5, key=len(classes_to_plot)
+    )
+
+    colors_cycle = itertools.cycle(colors)
+
     for label, group in features.loc[lambda df: df.label.isin(classes_to_plot)].groupby(
         "label"
     ):
         ax.scatter(
             group.x,
             group.y,
-            s=3.5,
+            s=width,
             marker="o",
             label=label,
-            color=next(colors),
+            color=next(colors_cycle),
         )
     plt.axis("off")
     if len(classes_to_plot) < 10:
@@ -180,8 +194,9 @@ def plot_clusters(key):
         f"Test set stats: sigma_within={sigma_within}, sigma_between={sig_between}, ratio={ratio}"
     )
 
+    only_20 = st.checkbox("Only 20 classes", key=key)
     reduced_features = compute_or_retrieve_2d_features(
-        test_features_path, test_features
+        test_features_path, test_features, only_20=only_20
     )
     reduced_features = map_label(reduced_features, class_names)
     plot_2d_features(reduced_features, selected_classes)

@@ -180,8 +180,8 @@ run_pyod:
 run_best:
 	make run_ottim ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
-	make CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
+	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 	make run_snatcher ;\
 
 run_finalists:
@@ -189,8 +189,8 @@ run_finalists:
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
-	for classifier in TIM_GD BDCSPN Finetune LaplacianShot SimpleShot; do \
-		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
+	for classifier in LaplacianShot TIM_GD BDCSPN Finetune SimpleShot; do \
+		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
 	make PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
 	make CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
@@ -221,23 +221,23 @@ perf_deltas:
 # ========== 0) Separation histogram ==========
 
 simu_maxprob_hist:
-	for split in train test; do \
+	for split in test; do \
 		for classifier in TIM_GD SimpleShot; do \
-			make EXP=maxprob_hist SAVE_PREDICTIONS=True PROBA_DETECTOR=MaxProbDetector \
+			make SHOTS=5 EXP=maxprob_hist SAVE_PREDICTIONS=True PROBA_DETECTOR=MaxProbDetector \
 				CLS_TRANSFORMS="Pool BaseCentering L2norm" SPLIT=$${split} \
 				SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis CLASSIFIER=$${classifier} run ;\
 		done ;\
-# 		make EXP=maxprob_hist SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis SPLIT=$${split} SAVE_PREDICTIONS=True run_ottim;\
+		make SHOTS=5 EXP=maxprob_hist SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis SPLIT=$${split} SAVE_PREDICTIONS=True run_ottim;\
 	done ;\
 
 
 maxprob_hist:
 	for shot in 5; do \
-		for split in train test; do \
+		for split in test; do \
 			python -m src.plots.torch_plotter \
 				 --exp maxprob_hist \
 				 --use_pretty False \
-				 --filters n_shot=$${shot} split=$${split} ;\
+				 --filters n_shot=$${shot} split=$${split};\
 		done ;\
 	done ;\
 
@@ -248,16 +248,16 @@ maxprob_hist:
 
 tuning:
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
-# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
-# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
-# 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
-# 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
+	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
 log_best:
 	for shot in 1 5; do \
 		python -m src.plots.csv_plotter \
 			 --exp tuning \
-			 --groupby feature_detector \
+			 --groupby classifier feature_detector \
 			 --metrics mean_acc mean_rocauc \
 			 --use_pretty False \
 			 --plot_versus backbone \
@@ -268,17 +268,17 @@ log_best:
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
 	done ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 log_latex:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for shot in 1 5 ; do \
 			python -m src.plots.csv_plotter \
-				 --exp . \
+				 --exp benchmark \
 				 --groupby classifier feature_detector \
 				 --metrics mean_acc std_acc mean_rocauc std_rocauc mean_aupr std_aupr mean_prec_at_90 std_prec_at_90 \
 				 --use_pretty True \

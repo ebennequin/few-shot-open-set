@@ -69,7 +69,7 @@ pretty["None"] = ""
 
 # ---------- Methods
 
-pretty["OTTIM"] = r"\textsc{OTTIM}"
+pretty["OTTIM"] = r"\textsc{OSTIM}"
 pretty["TIM_GD"] = r"\textsc{TIM}"
 pretty["kNNDetector"] = r"$k$-NN"
 
@@ -198,10 +198,10 @@ class CSVPlotter(Plotter):
                             process_dic[row[x].split("(")[0]] for x in kwargs["groupby"]
                         ]
                     else:
-                        full_method_name = [
-                            process_dic[row[x]] for x in kwargs["groupby"]
-                        ]
+                        full_method_name = [row[x] for x in kwargs["groupby"]]
+
                     full_method_name = list(filter(lambda x: len(x), full_method_name))
+                    # full_method_name = list(filter(lambda x: x != 'None', full_method_name))
                     method_at_row = " + ".join(full_method_name)
                     x_value = "\n".join([process_dic[row[x]] for x in kwargs["plot_versus"]])
                     if metric in row:
@@ -240,24 +240,28 @@ class CSVPrinter(CSVPlotter):
         all_metrics = self.metric_dic.keys()
         for metric in self.metric_dic:
             all_methods = self.metric_dic[metric].keys()
+            all_methods_stems = [remove_args_from_name(full_name) for full_name in all_methods]
+            stem2methods = {stem: [meth for meth in all_methods if remove_args_from_name(meth) == stem] for stem in all_methods_stems}
+            # logger.warning(all_methods)
             for method, res in self.metric_dic[metric].items():
                 assert len(res["x"]) == len(res["y"]) == 1, res
-        all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) \
-            for method in all_methods]
-        sorted_methods = list(
-            sorted(
-                all_items,
-                key=lambda item: np.mean(item[1]),
-                reverse=True,
+        for method_stem in stem2methods:
+            revelant_methods = stem2methods[method_stem]
+            all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) for method in revelant_methods]
+            sorted_methods = list(
+                sorted(
+                    all_items,
+                    key=lambda item: np.mean(item[1]),
+                    reverse=True,
+                )
             )
-        )
-        best_method = sorted_methods[0]
-        msg = f"Best method {best_method[0]} achieved overall : {best_method[1]}"
-        for metric in all_metrics:
-            msg += f" and {metric}={self.metric_dic[metric][best_method[0]]['y'][0]}"
-        logger.info(
-            msg
-        )
+            best_method = sorted_methods[0]
+            msg = f"Best method {best_method[0]} achieved overall : {best_method[1]}"
+            for metric in all_metrics:
+                msg += f" and {metric}={self.metric_dic[metric][best_method[0]]['y'][0]}"
+            logger.info(
+                msg
+            )
 
     def log_latex(self, **kwargs):
         assert hasattr(self, "metric_dic")
@@ -280,6 +284,14 @@ class CSVPrinter(CSVPlotter):
                 df[metric].append(self.metric_dic[metric][method]["y"][0])
         df = pd.DataFrame(df)
         print(df.to_markdown())
+
+
+def remove_args_from_name(full_name: str):
+    '''
+    Args:
+        A full method name will be in the form Classifier_name(args_cls) + Detector_name(args_det)
+    '''
+    return '+'.join([part.split('(')[0] for part in full_name.split('+')])
 
 
 if __name__ == "__main__":

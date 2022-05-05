@@ -8,7 +8,7 @@ from loguru import logger
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.style.use("ggplot")
+# plt.style.use("ggplot")
 
 colors = [
     "g",

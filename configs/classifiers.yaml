@@ -13,24 +13,24 @@ classifiers:
     default: {
         1: {
           'softmax_temperature': 10.0,
-          'inference_steps': 300,
+          'inference_steps': 50,
           'inference_lr': 0.0001,
           'loss_weights': [1.0, 1.0, 0.1]
            },
         5: {
           'softmax_temperature': 10.0,
-          'inference_steps': 300,
-          'inference_lr': 0.001,
+          'inference_steps': 50,
+          'inference_lr': 0.0001,
           'loss_weights': [1.0, 1.0, 0.1]
            },
              }
 
-    tuning: # For visualisation
-        hparams2tune: ['softmax_temperature']
-        hparam_values: {1: [[10]]}
-    # tuning:
-    #   hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr', 'loss_weights']
-    #   hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001], [[1.0, 1.0, 0.1], [1.0, 1.0, 0.5], [1.0, 1.0, 1.0]]]}
+    tuning:
+      hparams2tune: ['inference_steps', 'inference_lr', 'loss_weights']
+      hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [[1.0, 1.0, 0.1], [1.0, 1.0, 0.5], [1.0, 1.0, 1.0]]]}
+    # tuning: # For visualisation
+    #     hparams2tune: ['loss_weights']
+    #     hparam_values: {1: [[[1.0, 1.0, 0.1], [1.0, 1.0, 0.5]]]}
 
   Finetune:
     default: {
@@ -47,7 +47,7 @@ classifiers:
              }
     tuning:
       hparams2tune: ['softmax_temperature', 'inference_steps', 'inference_lr']
-      hparam_values: {1: [[1, 5, 10], [100, 200, 300], [0.001, 0.0001]]}
+      hparam_values: {1: [[1, 5, 10], [50, 100, 200, 300], [0.001, 0.0001]]}
 
   MAP:
     default: {
@@ -69,26 +69,22 @@ classifiers:
   LaplacianShot:
     default: {
         1: {
-            'lambda_': 0.5,
+            'lambda_': 0.7,
             'inference_steps': 20,
             'knn': 3,
             'softmax_temperature': 1,
-            'proto_rect': True
            },
         5: {
             'lambda_': 0.1,
-            'inference_steps': 30,
-            'knn': 5,
+            'inference_steps': 20,
+            'knn': 3,
             'softmax_temperature': 1,
-            'proto_rect': True
            },
              }
-    tuning: # for histogram experiments
-      hparams2tune: ['lambda_', 'proto_rect']
-      hparam_values: {1: [[0., 0.1, 0.3, 0.5, 0.7, 0.8], [False]]}
-    # tuning:
-    #   hparams2tune: ['knn', 'lambda_', 'proto_rect']
-    #   hparam_values: {1: [[3, 5, 10], [0.1, 0.3, 0.5, 0.7, 0.8, 1.0, 1.2, 1.5], [True, False]]}
+    tuning:
+      hparams2tune: ['softmax_temperature', 'knn', 'lambda_']
+      hparam_values: {1: [[1, 5, 10], [1, 3, 5, 7], [0.1, 0.3, 0.5, 0.7, 0.8]]}
+
 
   FEAT:
     default: {

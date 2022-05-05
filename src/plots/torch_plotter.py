@@ -7,6 +7,7 @@ from loguru import logger
 from typing import Any, List, Tuple
 from .csv_plotter import pretty, Plotter, my_default_dict
 import torch
+import seaborn as sns
 import matplotlib.pyplot as plt
 import argparse
 import json
@@ -14,7 +15,8 @@ import os
 from sklearn.metrics import roc_curve, precision_recall_curve
 from sklearn.metrics import auc as auc_fn
 
-
+colors = ["#0f6300",
+"#bd0d9e"]
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -74,6 +76,8 @@ class TorchPlotter(Plotter):
         torch_files.sort()
         assert len(torch_files)
 
+        self.baseline = {}
+
         for file in torch_files:
 
             # ==== Make sure this is a relevant experiment ====
@@ -93,34 +97,66 @@ class TorchPlotter(Plotter):
                 # method = config[args.group_by]
                 method = str(file.parts[-2])
                 tensor = torch.load(file)
-                self.metric_dic[method][array_name] = tensor
+                if 'SimpleShot' in method:
+                    self.baseline[array_name] = tensor
+                else:
+                    self.metric_dic[method][array_name] = tensor
 
         self.out_dir = Path("plots") / kwargs["exp"] / "-".join(kwargs["filters"])
 
     def plot(self, **kwargs):
 
-        for method in self.metric_dic:
+        inliers = ~ self.baseline['outliers'].bool()
+        n_tasks, n_q, K = self.baseline['probas_q'].size()
+        flat_probs = self.baseline['probas_q'].view(-1, K)
+        baseline_maxprobs = - (flat_probs * torch.log(flat_probs)).sum(-1)
+        all_inliers = inliers.view(-1)
+        fp_rate, tp_rate, _ = roc_curve((~all_inliers).numpy(), baseline_maxprobs.numpy())
+        baseline_auroc = np.round(100 * auc_fn(fp_rate, tp_rate), 1)
+
+        fig, axes = plt.subplots(figsize=(6, 3), ncols=len(self.metric_dic), sharey=True)
+        methods = list(self.metric_dic.keys())
+        methods.sort(reverse=True)
+        for i, (method, ax) in enumerate(zip(methods, axes)):
+
             inliers = ~ self.metric_dic[method]['outliers'].bool()
             n_tasks, n_q, K = self.metric_dic[method]['probas_q'].size()
 
             flat_probs = self.metric_dic[method]['probas_q'].view(-1, K)
             # flat_maxprobs = flat_probs.max(-1).values
+
             flat_maxprobs = - (flat_probs * torch.log(flat_probs)).sum(-1)
-            all_inliers = inliers.view(-1)
 
-            # fig = plt.Figure()
+            sns.kdeplot(baseline_maxprobs[all_inliers].numpy(), color=colors[0], alpha=1.0, linestyle='--', ax=ax, label="Inliers at initialization")
+            sns.kdeplot(flat_maxprobs[all_inliers].numpy(), fill=True,  color=colors[0], alpha=0.4, label='Inliers after inference', ax=ax)
 
-            plt.hist(flat_maxprobs[all_inliers].numpy(), color='green', density=True, bins=100, alpha=0.4)
-            plt.hist(flat_maxprobs[~all_inliers].numpy(), color='red', density=True, bins=100, alpha=0.4)
+            sns.kdeplot(baseline_maxprobs[~all_inliers].numpy(), color=colors[1], alpha=1.0, linestyle='--', ax=ax, label="Outliers at initialization")
+            sns.kdeplot(flat_maxprobs[~all_inliers].numpy(), fill=True,  color=colors[1], alpha=0.4, label='Outliers after inference', ax=ax)
+
             fp_rate, tp_rate, _ = roc_curve((~all_inliers).numpy(), flat_maxprobs.numpy())
-            plt.title(f"ROCAUC={np.round(auc_fn(fp_rate, tp_rate), 2)}")
-            plt.ylim(0, 10)
-            plt.xlim(0, 1.6)
+            # ax.set_xlim(0, 1.7)
+            # ax.set_ylim(0, 2.1)
+            ax.set_xlabel(r"Closed-set entropy (nats)")
+            ax.set_ylabel(r"Normalized frequency")
+            # else:
+            res = np.round(100 * auc_fn(fp_rate, tp_rate), 1)
+            delta = np.round(res - baseline_auroc, 1)
+            sign = r"\uparrow" if delta >= 0 else r"\downarrow"
+            ax.set_title(rf'\textbf{{{pretty[method.split("(")[0]]}}}' "\n" fr"AUROC=${res}$ (${sign} {delta}$)", y=0.97)
+            ax.spines["right"].set_visible(False)
+            ax.spines["top"].set_visible(False)
+            if i == 1:
+                ax.spines["left"].set_visible(False)
+                ax.set_yticks([])
+        plt.subplots_adjust(wspace=0.05)
+        plt.legend(frameon=False,
+                   loc="center",
+                   bbox_to_anchor=[0., 1.3],  # bottom-right
+                   ncol=2,)
 
-
-            self.out_dir.mkdir(exist_ok=True, parents=True)
-            plt.savefig(self.out_dir / f"{method}.pdf", dpi=300, bbox_inches="tight")
-            plt.clf()
+        self.out_dir.mkdir(exist_ok=True, parents=True)
+        plt.savefig(self.out_dir / f"entropy_histograms.pdf", dpi=300, bbox_inches="tight")
+        plt.clf()
 
 
 if __name__ == "__main__":

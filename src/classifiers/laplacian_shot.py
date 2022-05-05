@@ -14,9 +14,8 @@ from easyfsl.utils import compute_prototypes
 
 
 class LaplacianShot(FewShotMethod):
-    def __init__(self, inference_steps, knn, lambda_, softmax_temperature, proto_rect):
+    def __init__(self, inference_steps, knn, lambda_, softmax_temperature):
         super().__init__()
-        self.proto_rect = proto_rect
         self.knn = knn
         self.inference_steps = inference_steps
         self.lambda_ = lambda_
@@ -110,16 +109,13 @@ class LaplacianShot(FewShotMethod):
 
         # Perform normalizations required
 
-        if self.proto_rect:
-            rectifier = BDCSPN(self.softmax_temperature)
-            rectifier.prototypes = compute_prototypes(support_features, support_labels)
-            support = rectifier.rectify_prototypes(
-                support_features=support_features,
-                query_features=query_features,
-                support_labels=support_labels,
-            )
-        else:
-            support = compute_prototypes(support_features, support_labels)
+        rectifier = BDCSPN(self.softmax_temperature)
+        rectifier.prototypes = compute_prototypes(support_features, support_labels)
+        support = rectifier.rectify_prototypes(
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
+        )
 
         unary = torch.cdist(query_features, support) ** 2
         W = self.create_affinity(query_features.numpy())

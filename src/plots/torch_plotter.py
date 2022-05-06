@@ -142,7 +142,7 @@ class TorchPlotter(Plotter):
             res = np.round(100 * auc_fn(fp_rate, tp_rate), 1)
             delta = np.round(res - baseline_auroc, 1)
             sign = r"\uparrow" if delta >= 0 else r"\downarrow"
-            ax.set_title(rf'\textbf{{{pretty[method.split("(")[0]]}}}' "\n" fr"AUROC=${res}$ (${sign} {delta}$)", y=0.97)
+            ax.set_title(rf'\textbf{{{pretty[method.split("(")[0]]}}}' "\n" fr"AUROC=${res}$ (${sign} {abs(delta)}$)", y=0.97)
             ax.spines["right"].set_visible(False)
             ax.spines["top"].set_visible(False)
             if i == 1:

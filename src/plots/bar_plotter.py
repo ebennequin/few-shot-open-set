@@ -8,11 +8,30 @@ from typing import Any, List, Tuple
 from .plotter import Plotter
 import pandas as pd
 import argparse
-from .csv_plotter import CSVPlotter, parse_args, pretty
+from .csv_plotter import CSVPlotter, parse_args, pretty, pretty_training, pretty_arch
 import matplotlib.pyplot as plt
 import os
 from src.inference import str2bool
 
+
+CB91_Blue = "#2CBDFE"
+CB91_Green = "#47DBCD"
+CB91_Pink = "#F3A0F2"
+CB91_Purple = "#9D2EC5"
+CB91_Violet = "#661D98"
+CB91_Amber = "#F5B14C"
+
+
+barplot_colors = [
+    CB91_Pink,
+    CB91_Blue,
+    CB91_Green,
+    CB91_Amber,
+    CB91_Purple,
+    CB91_Violet,
+    "r",
+    "m",
+]
 
 
 class BarPlotter(CSVPlotter):
@@ -28,57 +47,75 @@ class BarPlotter(CSVPlotter):
                                     'pm': Optional[ndarray],
                                    }
         """
-        fig, axes = plt.subplots(figsize=(10, 7), ncols=2)
+        fig, axes = plt.subplots(figsize=(10, 6), ncols=2)
 
         metric_names = list(self.metric_dic.keys())
         assert len(metric_names) == 2, 'Mirror BarPlotter only supports 2 metrics (one on each side)'
 
-        for i, (metric_name, metric_dic) in enumerate(self.metric_dic.items()):
+        for metric_index, (metric_name, metric_dic) in enumerate(self.metric_dic.items()):
 
-            ax = axes[i]
+            ax = axes[metric_index]
 
             methods = list(metric_dic.keys())
+
+            # ==== Recover all architectures ======
             labels = metric_dic[methods[0]]["x"]
-            bottoms = defaultdict(float)
+
+            # ==== Suu-group by architecture ======
             sorted_items = sorted(metric_dic.items(), key=lambda x: np.mean(x[1]["y"]))
             assert len(metric_dic) == 2, "Currently only support 2 methods at a time."
-            for index, (method, method_dic) in enumerate(sorted_items):
-                sorted_tuples = sorted(
-                    zip(method_dic["x"], method_dic["y"]), key=lambda x: x[0]
-                )
-                for j, (label, value) in enumerate(sorted_tuples):
-                    value = value - bottoms[label]
-                    ax.barh(
-                        [j],
-                        [value],
-                        edgecolor="white",
-                        color=barplot_colors[methods.index(method)],
-                        height=0.15,
-                        left=[bottoms[label]],
-                        label=r"Strong baseline" if index == 0 else method,
-                    )
-                    bottoms[label] += value
-                    if index == 1:
-                        ax.text(bottoms[label] + 0.01, j, rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
-                                color=barplot_colors[methods.index(method)], va='center', ha='right' if i == 0 else 'left', fontsize=15)
+            bottoms = defaultdict(float)
+            for method_index, (method, method_dic) in enumerate(sorted_items):
+
+                grouped_items = defaultdict(list)
+                for arch, result in zip(method_dic["x"], method_dic["y"]):
+                    grouped_items[pretty_arch[arch]].append((pretty_training[arch], result))
+
+                current_height = 0
+                yticks = []
+                yticks_labels = []
+                for arch in grouped_items:
+                    for training_index, (training, value) in enumerate(grouped_items[arch]):
+                        value = value - bottoms[training]
+                        ax.barh(
+                            [current_height],
+                            [value],
+                            edgecolor="white",
+                            color=barplot_colors[methods.index(method)],
+                            height=0.02,
+                            left=[bottoms[training]],
+                            label=r"Strong baseline" if method_index == 0 else method,
+                        )
+                        bottoms[training] += value
+                        if method_index == 1:
+                            ax.text(bottoms[training] + 0.01, current_height, rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
+                                    color=barplot_colors[methods.index(method)], va='center', ha='right' if metric_index == 0 else 'left', fontsize=15)
+                        if (metric_index == 1) and (training_index == len(grouped_items[arch]) - 1):
+                            ax.text(0.24, current_height + 0.02, arch, va='center', ha='center', fontsize=14)
+                        yticks_labels.append(rf"{training}")
+                        yticks.append(current_height)
+                        current_height += 0.03
+                    current_height += 0.07
+
+            current_height -= 0.07
             ax.set_xticks(np.arange(4, 9) / 10)
             ax.set_xlim(0.4, 0.85)
             ax.set_xticklabels([rf"${10 * x}$" for x in range(4, 9)])
             ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=15)
 
-            if i == 0:
-                ax.set(yticks=range(len(labels)), yticklabels=["" for x in labels])
+            if metric_index == 0:
+                ax.set(yticks=yticks, yticklabels=["" for x in labels])
                 ax.yaxis.tick_right()
             else:
-                ax.set(yticks=range(len(labels)))
-                ax.set_yticklabels([pretty[x] for x in labels],
+                ax.set(yticks=yticks)
+                ax.set_yticklabels(yticks_labels,
                                    ha='center', va='center', position=(-0.32, 0), fontsize=12)
                 # ax.yaxis.tick_left()
             plt.subplots_adjust(wspace=0.7)
-            ax.set_ylim(-0.5, len(labels) - 0.5)
+            ax.set_ylim(-0.03, current_height)
 
             # Hide the right and top spines
-            if i == 1:
+            if metric_index == 1:
                 ax.spines["right"].set_visible(False)
                 ax.spines["top"].set_visible(False)
 
@@ -95,16 +132,16 @@ class BarPlotter(CSVPlotter):
 
             ax.xaxis.set_tick_params(labelsize=15)
 
-            if i == 1:
+            if metric_index == 1:
                 handles, labels = ax.get_legend_handles_labels()
                 by_label = dict(zip(labels, handles))
                 fig.legend(by_label.values(), by_label.keys(),
                            loc="center",
-                           bbox_to_anchor=[0.5, 1.01],  # bottom-right
+                           bbox_to_anchor=[0.53, 0.97],  # bottom-right
                            ncol=2,
                            frameon=False,  # don't put a frame)
                            )
-            if i == 0:
+            if metric_index == 0:
                 # If you have positive numbers and want to invert the x-axis of the left plot
                 ax.invert_xaxis() 
 

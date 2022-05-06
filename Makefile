@@ -189,8 +189,11 @@ run_finalists:
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
-	for classifier in LaplacianShot TIM_GD BDCSPN Finetune SimpleShot; do \
+	for classifier in LaplacianShot TIM_GD BDCSPN; do \
 		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
+	done ;\
+	for classifier in Finetune SimpleShot; do \
+		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
 	make PROBA_DETECTOR=MaxProbDetector MODEL_SRC=feat TRAINING=feat CLASSIFIER=FEAT run ;\
 	make CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
@@ -269,9 +272,9 @@ benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
 	done ;\
 # 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
 # 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 log_latex:
@@ -280,7 +283,7 @@ log_latex:
 			python -m src.plots.csv_plotter \
 				 --exp benchmark \
 				 --groupby classifier feature_detector \
-				 --metrics mean_acc std_acc mean_rocauc std_rocauc mean_aupr std_aupr mean_prec_at_90 std_prec_at_90 \
+				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
 				 --use_pretty True \
 				 --plot_versus backbone \
 				 --action log_latex \
@@ -293,7 +296,7 @@ log_latex:
 
 exhaustive_benchmark:
 	# Tiered -> CUB
-	for backbone in resnet12; do \
+	for backbone in resnet12 wrn2810; do \
 		make EXP=spider BACKBONE=$${backbone} run_best ;\
 		for dataset in tiered_imagenet fungi aircraft cub; do \
 			make EXP=spider BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_best ;\
@@ -302,12 +305,12 @@ exhaustive_benchmark:
 
 spider_chart:
 	for shot in 1 5; do \
-		for backbone in resnet12; do \
+		for backbone in resnet12 wrn2810; do \
 			python -m src.plots.spider_plotter \
 				 --exp spider \
 				 --groupby classifier feature_detector \
 				 --use_pretty True \
-				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
+				 --metrics mean_acc mean_rocauc mean_aupr \
 				 --plot_versus src_dataset tgt_dataset \
 				 --filters n_shot=$${shot} \
 				 backbone=$${backbone} ;\
@@ -326,15 +329,6 @@ run_archs:
 		done ; \
 	done ;\
 
-
-barplots:
-	python -m src.plots.bar_plotter \
-		 --exp barplots \
-		 --groupby classifier feature_detector \
-		 --metrics mean_acc mean_rocauc mean_rec_at_90 mean_prec_at_90 \
-		 --latex True \
-		 --plot_versus backbone \
-		 --filters n_shot=1 ;\
 
 hbarplots:
 	python -m src.plots.bar_plotter \

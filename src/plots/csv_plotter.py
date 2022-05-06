@@ -31,24 +31,9 @@ class my_default_dict(dict):
 
 
 pretty = my_default_dict(lambda x: x)
+pretty_arch = my_default_dict(lambda x: x)
+pretty_training = my_default_dict(lambda x: x)
 
-CB91_Blue = "#2CBDFE"
-CB91_Green = "#47DBCD"
-CB91_Pink = "#F3A0F2"
-CB91_Purple = "#9D2EC5"
-CB91_Violet = "#661D98"
-CB91_Amber = "#F5B14C"
-
-barplot_colors = [
-    CB91_Pink,
-    CB91_Blue,
-    CB91_Green,
-    CB91_Amber,
-    CB91_Purple,
-    CB91_Violet,
-    "r",
-    "m",
-]
 
 spider_colors = ["#ab62c0",
                  "#72a555",
@@ -103,22 +88,24 @@ pretty["efficientnet_b8"] = "EfficientNet-B8"
 pretty["efficientnet_l2"] = "EfficientNet-L2"
 
 
-pretty["vit_tiny_patch16_384"] = "ViT-tiny"
-pretty["vit_small_patch16_384"] = "ViT-small"
-pretty["vit_base_patch16_384"] = "ViT-base"
-pretty["vit_large_patch16_384"] = "ViT-large"
+pretty_training["resnet50"] = r"\small{Sup. (IN1k)}"
+pretty_training["ssl_resnet50"] = r"\small{Semi-Sup.(YFCC100M +IN1k)}"
+pretty_training["swsl_resnet50"] = r"\small{SW-Sup. (IG-1B-Targeted+ IN1k)}"
 
-pretty["resnet50"] = r"ResNet50" "\n" r"\small{Sup. (IN1k)}"
-pretty["ssl_resnet50"] = r"ResNet50" "\n" r"\small{Semi-Sup.(YFCC100M +IN1k)}"
-pretty["swsl_resnet50"] = r"ResNet50" "\n" r"\small{SW-Sup. (IG-1B-Targeted+ IN1k)}"
+pretty_training["vit_base_patch16_224"] = r"\small{Sup.} (IN21k+IN1k)"
+pretty_training["vit_base_patch16_224_sam"] = r"\small \textsc{SAM (IN1k)} "
+pretty_training["vit_base_patch16_224_dino"] = r"\small\textsc{DINO (IN1k)}"
+pretty_training["clip_vit_base_patch16"] = r"\small\textsc{CLIP (LAION-400M)} "
+pretty_training["mixer_b16_224_miil_in21k"] = r"\small\textsc{MIIL (IN21k)}"
+pretty_training["mixer_b16_224_in21k"] = r"\small{Sup. (IN21k)}"
 
-pretty["vit_base_patch16_224"] = r"ViT-B/16" "\n" r"\small{Sup.} (IN21k+IN1k)"
-pretty["vit_base_patch16_224_sam"] = r"ViT-B/16" "\n" r"\small \textsc{SAM (IN1k)} "
-pretty["vit_base_patch16_224_dino"] = r"ViT-B/16" "\n" r"\small\textsc{DINO (IN1k)}"
-pretty["clip_vit_base_patch16"] = r"ViT-B/16" "\n" r"\small\textsc{CLIP (LAION-400M)} "
-
-pretty["mixer_b16_224_miil_in21k"] = r"Mixer-B/16" "\n" r"\small\textsc{MIIL (IN21k)}"
-pretty["mixer_b16_224_in21k"] = r"Mixer-B/16" "\n" r"\small{Sup. (IN21k)}"
+for k in pretty_training:
+    if "vit_base_patch16" in k:
+        pretty_arch[k] = r"ViT-B/16"
+    elif 'resnet50' in k:
+        pretty_arch[k] = r"ResNet-50"
+    elif 'mixer_b16' in k:
+        pretty_arch[k] = r"Mixer-B/16"
 
 
 def parse_args() -> argparse.Namespace:

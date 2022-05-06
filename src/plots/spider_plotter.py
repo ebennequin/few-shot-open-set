@@ -33,7 +33,7 @@ class SpiderPlotter(CSVPlotter):
             nrows=1,
             ncols=len(self.metric_dic),
             subplot_kw=dict(projection="polar"),
-            figsize=(40, 13),
+            figsize=(10 * len(self.metric_dic), 13),
             squeeze=True,
         )
 
@@ -51,7 +51,6 @@ class SpiderPlotter(CSVPlotter):
                 assert self.metric_dic[metric][method]["x"] == x_names, (self.metric_dic[metric][method]["x"], x_names)
                 self.metric_dic[metric][method]["y"] = np.array(self.metric_dic[metric][method]["y"]) - y_baseline
             del self.metric_dic[metric][baseline_method]
-
 
         for i, metric_name in enumerate(self.metric_dic):
             ax = axes[i]
@@ -158,7 +157,7 @@ class SpiderPlotter(CSVPlotter):
                 ax.plot(
                     ANGLES,
                     values,
-                    linewidth=4 if 'OTTIM' in method else 2,
+                    linewidth=4 if 'OSTIM' in method else 2,
                     c=spider_colors[idx],
                     label=rf"\textbf{{{label}}}" if is_best else label,
                 )

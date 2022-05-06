@@ -26,9 +26,6 @@ class SnatcherF(AllInOne):
             hdim = 640
         else:
             raise ValueError("")
-        self.attn_model = BACKBONES["MultiHeadAttention"](
-            args, 1, hdim, hdim, hdim, dropout=0.5
-        )
         weights = (
             Path(args.data_dir)
             / "models"
@@ -38,20 +35,27 @@ class SnatcherF(AllInOne):
         state_dict = torch.load(weights)["params"]
         state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")
-        missing_keys, unexpected = self.attn_model.load_state_dict(
+        attn_model = BACKBONES["MultiHeadAttention"](
+            self.args, 1, hdim, hdim, hdim, dropout=0.5
+        )
+
+        self.attn_model = BACKBONES["MultiHeadAttention"](
+            self.args, 1, hdim, hdim, hdim, dropout=0.5
+        )
+        missing_keys, unexpected = attn_model.load_state_dict(
             state_dict, strict=False
         )
+        self.attn_model.eval()
+        self.attn_model = attn_model.to(self.device)
         logger.info(
             f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}"
         )
-
-        self.attn_model.eval()
-        self.attn_model = self.attn_model.to(self.device)
 
     def __call__(self, support_features, support_labels, query_features, **kwargs):
         """
         query_features [Ns, d]
         """
+
         support_features = support_features.to(self.device)
         query_features = query_features.to(self.device)
 

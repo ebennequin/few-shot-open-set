@@ -179,11 +179,27 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except:
+        return False
+
+
 def dump_config(args):
     path = Path(args.res_dir) / 'config.json'
     logger.info(f"Dropping config file at {path}")
     with open(path, "w") as f:
+        # try:
         arg_dict = vars(args)
+        keys_to_delete = []
+        for key, value in arg_dict.items():
+            if not is_jsonable(value):
+                logger.warning(f"Key {key} was not serializable, and will not be saved at {path}")
+                keys_to_delete.append(key)
+        for key in keys_to_delete:
+            del arg_dict[key]
         json.dump(arg_dict, f)
 
 

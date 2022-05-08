@@ -140,34 +140,6 @@ class Pool(FeatureTransform):
             return raw_feat_s, raw_feat_q
 
 
-class DebiasedCentering(FeatureTransform):
-    def __init__(self, ratio: float):
-        self.ratio = ratio
-
-    def compute_mean(self, feat_s, feat_q, **kwargs):
-        prototypes = compute_prototypes(feat_s, kwargs["support_labels"])  # [K, d]
-        nodes_degrees = torch.cdist(
-            F.normalize(feat_q, dim=1), F.normalize(prototypes, dim=1)
-        ).sum(
-            -1, keepdim=True
-        )  # [N]
-        farthest_points = nodes_degrees.topk(
-            dim=0,
-            k=min(feat_q.size(0), max(feat_s.size(0), feat_q.size(0) // self.ratio)),
-        ).indices.squeeze()
-        mean = torch.cat([prototypes, feat_q[farthest_points]], 0).mean(0, keepdim=True)
-        return mean
-
-    def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
-        """
-        feat: Tensor shape [N, hidden_dim, *]
-        """
-        # all_feats = torch.cat([feat_s, feat_q], 0)
-        mean = self.compute_mean(raw_feat_s, raw_feat_q, **kwargs)
-        assert len(mean.size()) == 2, mean.size()
-        return raw_feat_s - mean, raw_feat_q - mean
-
-
 class MeanCentering(FeatureTransform):
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
         """

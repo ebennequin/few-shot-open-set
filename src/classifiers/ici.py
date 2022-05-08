@@ -2,7 +2,9 @@ from typing import Tuple, List
 import torch
 import torch.nn.functional as F
 from loguru import logger
+from sklearn.svm import SVC
 from .abstract import FewShotMethod
+from sklearn.linear_model import LogisticRegression
 import math
 
 import numpy as np
@@ -18,16 +20,15 @@ class ICI(FewShotMethod):
         max_iter: str,
         reduce: str,
         d: int,
-        norm_name: str,
+        C: float,
     ):
         super().__init__()
         self.step = step
         self.max_iter = max_iter
         self.reduce = reduce
         self.d = d
-        self.norm_name = norm_name
+        self.C = C
         self.initial_embed(reduce, d)
-        self.initial_norm(norm_name)
         self.initial_classifier(classifier)
         self.elasticnet = ElasticNet(
             alpha=1.0,
@@ -39,17 +40,12 @@ class ICI(FewShotMethod):
         )
 
     def forward(self, support_features, query_features, support_labels, **kwargs):
-        support_X, support_y = (
-            self.norm(support_features.numpy()),
-            support_labels.numpy(),
-        )
+
+        support_X, support_y = support_features.numpy(), support_labels.numpy()
         way, num_support = support_labels.unique().size(0), len(support_X)
 
-        query_X = self.norm(query_features.numpy())
-        if kwargs["use_transductively"] is not None:
-            unlabel_X = query_X[kwargs["use_transductively"]]
-        else:
-            unlabel_X = query_X
+        query_X = query_features.numpy()
+        unlabel_X = query_X
         num_unlabel = unlabel_X.shape[0]
 
         embeddings = np.concatenate([support_X, unlabel_X])
@@ -87,10 +83,10 @@ class ICI(FewShotMethod):
             self.classifier.fit(embeddings[support_set], y[support_set])
             if len(support_set) == len(embeddings):
                 break
-        preds_q = torch.from_numpy(self.classifier.predict(query_X))
-        preds_s = torch.from_numpy(self.classifier.predict(support_X))
+        probs_s = torch.from_numpy(self.classifier.predict_proba(support_X))
+        probs_q = torch.from_numpy(self.classifier.predict_proba(query_X))
 
-        return F.one_hot(preds_s, way).float(), F.one_hot(preds_q, way).float()
+        return probs_s,  probs_q
 
     def expand(
         self, support_set, X_hat, y_hat, way, num_support, pseudo_y, embeddings, targets
@@ -140,32 +136,20 @@ class ICI(FewShotMethod):
             embed = SpectralEmbedding(n_components=d)
         elif reduce == "pca":
             from sklearn.decomposition import PCA
-
             embed = PCA(n_components=d)
+
         if reduce == "none":
             self.embed = lambda x: x
         else:
             self.embed = lambda x: embed.fit_transform(x)
 
-    def initial_norm(self, norm):
-        norm = norm.lower()
-        assert norm in ["l2", "none"]
-        if norm == "l2":
-            self.norm = lambda x: normalize(x)
-        else:
-            self.norm = lambda x: x
-
     def initial_classifier(self, classifier):
         assert classifier in ["lr", "svm"]
         if classifier == "svm":
-            from sklearn.svm import SVC
-
-            self.classifier = SVC(C=10, gamma="auto", kernel="linear", probability=True)
+            self.classifier = SVC(C=self.C, gamma="auto", kernel="linear", probability=True)
         elif classifier == "lr":
-            from sklearn.linear_model import LogisticRegression
-
             self.classifier = LogisticRegression(
-                C=10, multi_class="auto", solver="lbfgs", max_iter=1000
+                C=self.C, multi_class="auto", solver="lbfgs", max_iter=1000
             )
 
     def label2onehot(self, label, num_class):

@@ -189,7 +189,7 @@ run_finalists:
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
-	for classifier in LaplacianShot TIM_GD BDCSPN; do \
+	for classifier in ICI LaplacianShot TIM_GD BDCSPN; do \
 		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
 	done ;\
 	for classifier in Finetune SimpleShot; do \
@@ -273,9 +273,9 @@ benchmark:
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 log_latex:
 	for dataset in mini_imagenet tiered_imagenet; do \

@@ -82,7 +82,7 @@ class BarPlotter(CSVPlotter):
                             [value],
                             edgecolor="white",
                             color=barplot_colors[methods.index(method)],
-                            height=0.02,
+                            height=0.01,
                             left=[bottoms[training]],
                             label=r"Strong baseline" if method_index == 0 else method,
                         )
@@ -94,10 +94,10 @@ class BarPlotter(CSVPlotter):
                             ax.text(0.24, current_height + 0.02, arch, va='center', ha='center', fontsize=14)
                         yticks_labels.append(rf"{training}")
                         yticks.append(current_height)
-                        current_height += 0.03
-                    current_height += 0.07
+                        current_height += 0.02
+                    current_height += 0.03
 
-            current_height -= 0.07
+            current_height -= 0.03
             ax.set_xticks(np.arange(4, 9) / 10)
             ax.set_xlim(0.4, 0.85)
             ax.set_xticklabels([rf"${10 * x}$" for x in range(4, 9)])

@@ -482,6 +482,7 @@ def detect_outliers(
                     outlier_scores.append(
                         proba_detector(support_probas=probas_s, query_probas=probas_q)
                     )
+
                 else:
                     output = feature_detector(
                         support_features=transformed_features["det_sup"][layer],

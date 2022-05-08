@@ -109,9 +109,9 @@ classifiers:
              'max_iter': 'auto',
              'reduce': 'pca',
              'd': 5,
-             'norm_name': 'l2',
+             'C': 10,
             },
           }
     tuning:
-      hparams2tune: ['classifier', 'reduce']
-      hparam_values: {1: [['lr', 'svm'], ['none', 'pca']]}
+      hparams2tune: ['d', 'C']
+      hparam_values: {1: [[1, 5, 10, 20, 50, 100], [0.1, 1.0, 10, 20]]}

@@ -52,9 +52,6 @@ SPLIT=test
 OOD_QUERY=15
 N_TASKS=1000
 SHOTS=1 5 # will iterate over these values
-BALANCED=True
-MISC_ARG=alpha
-MISC_VAL=1.0
 
 # === Base recipes ===
 
@@ -87,7 +84,6 @@ run:
 	        --visu_episode $(VISU) \
 	        --backbone $(BACKBONE) \
 	        --model_source $(MODEL_SRC) \
-	        --balanced $(BALANCED) \
 	        --training $(TRAINING) \
 	        --split $(SPLIT) \
 	        --threshold $(THRESHOLD) \
@@ -95,7 +91,6 @@ run:
 			--n_ood_query $(OOD_QUERY) \
 			--tgt_dataset $(TGT_DATASET) \
 	        --simu_hparams $(SIMU_PARAMS) \
-	        --$(MISC_ARG) $(MISC_VAL) \
 	        --override $(OVERRIDE) \
 	        --tune $(TUNE) \
 	        --debug $(DEBUG) \
@@ -105,21 +100,21 @@ run:
 # ========== Extraction pipelines ===========
 
 extract_all:
-# 	# Extract for RN and WRN
-# 	for backbone in resnet12 wrn2810; do \
-# 		for dataset in mini_imagenet tiered_imagenet; do \
-# 			make BACKBONE=$${backbone} SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
-# 		done ;\
-# 	done ;\
+	# Extract for RN and WRN
+	for backbone in resnet12 wrn2810; do \
+		for dataset in mini_imagenet tiered_imagenet; do \
+			make BACKBONE=$${backbone} SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
+		done ;\
+	done ;\
 
-# 	# Tiered-Imagenet -> *
-# 	for backbone in resnet12 wrn2810; do \
-# 		for dataset in fungi; do \
-# 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
-# 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
-# 		done ;\
-# 	done ;\
+	# Tiered-Imagenet -> *
+	for backbone in resnet12 wrn2810; do \
+		for dataset in fungi; do \
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
+		done ;\
+	done ;\
 
 	# Imagenet -> *
 	for dataset in fungi imagenet; do \

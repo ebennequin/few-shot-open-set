@@ -205,8 +205,6 @@ def get_task_loader(
             n_id_query=n_id_query,
             n_ood_query=n_ood_query,
             n_tasks=n_tasks,
-            balanced=args.balanced_tasks,
-            alpha=args.alpha,
         )
     else:
         dataset = get_dataset(dataset_name, args, split, training)
@@ -217,8 +215,6 @@ def get_task_loader(
             n_id_query=n_id_query,
             n_ood_query=n_ood_query,
             n_tasks=n_tasks,
-            balanced=args.balanced_tasks,
-            alpha=args.alpha,
         )
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
@@ -230,13 +226,12 @@ def get_test_features(
     tgt_dataset,
     training_method,
     model_source,
-    layer,
     split: str = "test",
     path: Optional[Path] = None,
 ):
     if not isinstance(data_dir, Path):
         data_dir = Path(data_dir)
-    pickle_basename = f"{backbone}_{src_dataset}_{model_source}_{layer}.pickle"
+    pickle_basename = f"{backbone}_{src_dataset}_{model_source}.pickle"
     features_path = (
         data_dir
         / "features"

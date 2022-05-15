@@ -26,8 +26,6 @@ class TaskSampler(Sampler):
         n_id_query: int,
         n_ood_query: int,
         n_tasks: int,
-        balanced: bool,
-        alpha: float,
     ):
         """
         Args:
@@ -44,8 +42,6 @@ class TaskSampler(Sampler):
         self.n_id_query = n_id_query
         self.n_ood_query = n_ood_query
         self.n_tasks = n_tasks
-        self.balanced = balanced
-        self.alpha = alpha
 
         self.items_per_label = {}
         assert hasattr(
@@ -76,18 +72,9 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
             open_set_labels = all_labels[self.n_way :]
-            if self.balanced:
-                id_samples_per_class = [self.n_id_query] * self.n_way
-                ood_samples_per_class = [self.n_ood_query] * self.n_way
-            else:
-                query_samples_per_class = get_dirichlet_proportion(
-                    [self.alpha] * self.n_way * 2,
-                    1,
-                    2 * self.n_way,
-                    self.n_way * (self.n_id_query + self.n_ood_query),
-                )[0]
-                id_samples_per_class = query_samples_per_class[: self.n_way]
-                ood_samples_per_class = query_samples_per_class[self.n_way :]
+            id_samples_per_class = [self.n_id_query] * self.n_way
+            ood_samples_per_class = [self.n_ood_query] * self.n_way
+    
 
             yield torch.cat(
                 [
@@ -193,18 +180,8 @@ class OpenQuerySampler(TaskSampler):
             all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
             support_labels = all_labels[: self.n_way]
             open_set_labels = all_labels[self.n_way :]
-            if self.balanced:
-                id_samples_per_class = [self.n_id_query] * self.n_way
-                ood_samples_per_class = [self.n_ood_query] * self.n_way
-            else:
-                query_samples_per_class = get_dirichlet_proportion(
-                    [self.alpha] * self.n_way * 2,
-                    1,
-                    2 * self.n_way,
-                    self.n_way * (self.n_id_query + self.n_ood_query),
-                )[0]
-                id_samples_per_class = query_samples_per_class[: self.n_way]
-                ood_samples_per_class = query_samples_per_class[self.n_way :]
+            id_samples_per_class = [self.n_id_query] * self.n_way
+            ood_samples_per_class = [self.n_ood_query] * self.n_way
 
             yield torch.cat(
                 [
@@ -290,10 +267,3 @@ class OpenQuerySampler(TaskSampler):
             query_labels,
             outliers,
         )
-
-
-def get_dirichlet_proportion(alpha, n_tasks, n_ways, total_samples):
-    alpha = np.full(n_ways, alpha)
-    prob_dist = np.random.dirichlet(alpha, n_tasks)
-    total_samples = (total_samples * prob_dist).round().astype(np.int32)
-    return total_samples

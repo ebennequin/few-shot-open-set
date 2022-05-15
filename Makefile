@@ -178,14 +178,14 @@ run_pyod:
 	done ;\
 
 run_best:
-	make run_ottim ;\
+	make run_ostim ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
 	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 	make run_snatcher ;\
 
 run_finalists:
-	make run_ottim ;\
+	make run_ostim ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
@@ -201,24 +201,14 @@ run_classifiers:
 run_snatcher:
 	make MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
 
-run_ottim:
-	make FEATURE_DETECTOR=OTTIM run ;\
+run_ostim:
+	make FEATURE_DETECTOR=OSTIM run ;\
 
 run_open_set:
 	for method in RPL PROSER OpenMax; do \
 		make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
 	done \
 
-
-
-# ========== 0) Observing Deltas between  ==========
-
-perf_deltas:
-	for shot in 1 5; do \
-		for arch in resnet12 wrn2810; do \
-			make EXP=performance_deltas SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis BACKBONE=$${arch} SPLIT=train run_classifiers ;\
-		done ;\
-	done ;\
 
 
 # ========== 0) Separation histogram ==========
@@ -230,7 +220,7 @@ simu_maxprob_hist:
 				CLS_TRANSFORMS="Pool BaseCentering L2norm" SPLIT=$${split} \
 				SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis CLASSIFIER=$${classifier} run ;\
 		done ;\
-		make SHOTS=5 EXP=maxprob_hist SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis SPLIT=$${split} SAVE_PREDICTIONS=True run_ottim;\
+		make SHOTS=5 EXP=maxprob_hist SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet_bis SPLIT=$${split} SAVE_PREDICTIONS=True run_ostim;\
 	done ;\
 
 
@@ -247,16 +237,16 @@ maxprob_hist:
 
 
 
-# ========== 1) Tuning + Running pipelines ===========
+# ========== 1) Validation ===========
 
 tuning:
-	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ottim ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ostim ;\
 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
-log_best:
+log_best_configs:
 	for shot in 1 5; do \
 		python -m src.plots.csv_plotter \
 			 --exp tuning \
@@ -268,16 +258,18 @@ log_best:
 			 --filters n_shot=$${shot} ;\
 	done ;\
 
+# ========== 2) Standard benchmarks testing ===========
+
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ottim ;\
+		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
 
-log_latex:
+log_benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for shot in 1 5 ; do \
 			python -m src.plots.csv_plotter \
@@ -292,9 +284,9 @@ log_latex:
 	done \
 
 
-# ========== 2) Cross-domain experiments ===========
+# ========== 3) Cross-domain experiments ===========
 
-exhaustive_benchmark:
+spider_charts:
 	# Tiered -> CUB
 	for backbone in resnet12 wrn2810; do \
 		make EXP=spider BACKBONE=$${backbone} run_best ;\
@@ -303,7 +295,7 @@ exhaustive_benchmark:
 		done ; \
 	done ;\
 
-spider_chart:
+plot_spider_charts:
 	for shot in 1 5; do \
 		for backbone in resnet12 wrn2810; do \
 			python -m src.plots.spider_plotter \
@@ -318,10 +310,10 @@ spider_chart:
 	done ;\
 
 
-# ========== 3) Scaling up ==========
+# ========== 4) Model agnosticity ==========
 
 
-run_archs:
+model_agnosticity:
 	# Imagenet -> *
 	for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 		for dataset in fungi; do \
@@ -330,7 +322,7 @@ run_archs:
 	done ;\
 
 
-hbarplots:
+plot_model_agnosticity:
 	python -m src.plots.bar_plotter \
 		 --exp barplots \
 		 --groupby classifier feature_detector \
@@ -340,37 +332,15 @@ hbarplots:
 		 --filters n_shot=1 ;\
 
 
-# ========== 4) Ablation study ==========
+# ========== 5) Ablation study ==========
 
 
-ablate_ottim:
+ablate_ostim:
 	# Imagenet -> *
-	make TUNE=feature_detector run_ottim ;\
+	for dataset in mini_imagenet tiered_imagenet; do \
+		make EXP=ablation TUNE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+	done \
 
-# ========== Plots ===========
-
-plot_acc_vs_n_ood:
-	for backbone in resnet12; do \
-		for shot in 1 5; do \
-			for tgt_dataset in mini_imagenet tiered_imagenet; do \
-				python -m src.plots.csv_plotter --exp $(EXP) --groupby classifier \
-					 --metrics mean_acc mean_rocauc \
-					 --plot_versus n_ood_query --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$(TGT_DATASET) ;\
-			done ;\
-		done ;\
-	done ;\
-
-
-plot_acc_vs_threshold:
-	for backbone in resnet12; do \
-		for shot in 1 5; do \
-			for tgt_dataset in mini_imagenet; do \
-				python -m src.plots.csv_plotter --exp thresholding --groupby classifier \
-				     --metrics mean_acc mean_rocauc mean_believed_inliers mean_thresholding_accuracy \
-					 --plot_versus threshold --filters n_shot=$${shot} backbone=$${backbone} tgt_dataset=$(TGT_DATASET) ;\
-			done ;\
-		done ;\
-	done ;\
 
 # ================= Deployment / Imports ==================
 

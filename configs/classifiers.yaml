@@ -28,9 +28,7 @@ classifiers:
     tuning:
       hparams2tune: ['inference_steps', 'inference_lr', 'loss_weights']
       hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [[1.0, 1.0, 0.1], [1.0, 1.0, 0.5], [1.0, 1.0, 1.0]]]}
-    # tuning: # For visualisation
-    #     hparams2tune: ['loss_weights']
-    #     hparam_values: {1: [[[1.0, 1.0, 0.1], [1.0, 1.0, 0.5]]]}
+
 
   Finetune:
     default: {
@@ -108,8 +106,8 @@ classifiers:
              'step': 5,
              'max_iter': 'auto',
              'reduce': 'pca',
-             'd': 5,
-             'C': 10,
+             'd': 50,
+             'C': 20,
             },
           }
     tuning:

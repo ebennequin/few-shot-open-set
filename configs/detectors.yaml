@@ -112,7 +112,7 @@ feature_detectors:
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.1,
+          'lambda_em': 0.5,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes',
           'mu_init': 'mean',
@@ -132,20 +132,20 @@ feature_detectors:
            },
              }
     # == For Grid Search
-    tuning:
-      hparams2tune: ['inference_steps', 'inference_lr', 'lambda_em']
-      hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [0.1, 0.5, 1.0]]}
+    # tuning:
+    #   hparams2tune: ['inference_steps', 'inference_lr', 'lambda_em']
+    #   hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [0.1, 0.5, 1.0]]}
     # == For ablation studies
     # tuning:
     #   hparams2tune: ['use_explicit_prototype']
     #   hparam_values: {1: [[True, False]]}
     # tuning:
     #   hparams2tune: ['inference_steps']
-    #   hparam_values: {1: [[0, 100, 200]]}
+    #   hparam_values: {1: [[0, 25, 50]]}
     # For ablation study
-    # tuning:
-    #   hparams2tune: ['params2adapt', 'mu_init']
-    #   hparam_values: {1: [['mu', 'prototypes', 'prototypes-mu'], ['zeros', 'base', 'mean']]}
+    tuning:
+      hparams2tune: ['mu_init']
+      hparam_values: {1: [['zeros', 'base', 'mean']]}
 
 
 # === Detectors that work on probas ===

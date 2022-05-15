@@ -32,7 +32,6 @@ FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outl
 
 
 # Model
-LAYERS=1 # Numbers of layers (starting from the end) to use. If 2 layers, OOD detection will be made on 2 last layers, and then aggregated
 BACKBONE=resnet12
 MODEL_SRC=feat# Origin of the model. For all timm models, use MODEL_SRC=url
 TRAINING=standard# To differentiate between episodic and standard models
@@ -68,8 +67,7 @@ extract:
 				--data_dir $(DATADIR) \
 		        --model_source $(MODEL_SRC) \
 		        --training $(TRAINING) \
-				--split $${split} \
-				--layers $(LAYERS) ;\
+				--split $${split} ;\
 	    done ;\
 
 
@@ -81,7 +79,6 @@ run:
 	        --classifier $(CLASSIFIER) \
 	        --n_tasks $(N_TASKS) \
 	        --n_shot $${shot} \
-	        --layers $(LAYERS) \
 	        --feature_detector $(FEATURE_DETECTOR) \
 	        --use_filtering $(FILTERING) \
 	        --proba_detector $(PROBA_DETECTOR) \
@@ -128,7 +125,7 @@ extract_all:
 	for dataset in fungi imagenet; do \
 # 		for backbone in clip_vit_base_patch16 vit_base_patch16_224 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 		for backbone in resnet50 ssl_resnet50 swsl_resnet50; do \
-			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='url' TGT_DATASET=$${dataset} extract ;\
+			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='timm' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
 
@@ -144,7 +141,6 @@ extract_bis:
 							--model_source feat \
 							--training $(TRAINING) \
 							--split $${split} \
-							--layers $(LAYERS) \
 							--keep_all_train_features True ;\
 			done \
 	done ;\
@@ -317,7 +313,7 @@ model_agnosticity:
 	# Imagenet -> *
 	for backbone in vit_base_patch16_224 clip_vit_base_patch16 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 		for dataset in fungi; do \
-			make EXP=barplots SHOTS=1 MODEL_SRC='url' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${dataset} run_finalists ;\
+			make EXP=barplots SHOTS=1 MODEL_SRC='timm' BACKBONE=$${backbone} SRC_DATASET=imagenet TGT_DATASET=$${dataset} run_finalists ;\
 		done ; \
 	done ;\
 

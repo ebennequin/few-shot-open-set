@@ -73,14 +73,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--balanced_tasks", type=str2bool, default="True")
-    parser.add_argument("--alpha", type=float, default=1.0)
 
     # Model
     parser.add_argument("--backbone", type=str, default="resnet18")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
-    parser.add_argument("--layers", type=int)
 
     # Detector
     parser.add_argument("--feature_detector", type=str)
@@ -110,8 +107,6 @@ def parse_args() -> argparse.Namespace:
 
     # Classifier
     parser.add_argument("--classifier", type=str, default="SimpleShot")
-    parser.add_argument("--use_filtering", type=str2bool, default=False)
-    parser.add_argument("--threshold", type=str, default="otsu")
     parser.add_argument(
         "--classifiers_config_file", type=str, default="configs/classifiers.yaml"
     )
@@ -207,7 +202,6 @@ def main(args):
 
     args.res_root = os.path.join("results", args.exp_name)
     os.makedirs(args.res_root, exist_ok=True)
-    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers :]
 
     # ================ Prepare Transforms + Detector + Classifier ===================
 
@@ -244,19 +238,9 @@ def main(args):
         )
         proba_detectors = classifiers = [None]
 
-    elif args.feature_detector in SSL_METHODS:
-
-        feature_detectors = get_modules_to_try(
-            args,
-            "feature_detectors",
-            args.feature_detector,
-            SSL_METHODS,
-            "feature_detector" in args.tune,
-        )
-        proba_detectors = classifiers = [None]
-
     else:
         # ==== Prepare few-shot classifier ====
+
         if args.classifier == 'none':
             classifiers = [None]
         else:
@@ -276,6 +260,7 @@ def main(args):
                 FEATURE_DETECTORS,
                 "feature_detector" in args.tune,
             )
+
         # ==== Prepare proba detector ====
         if args.proba_detector == "none":
             proba_detectors = [None]
@@ -290,41 +275,21 @@ def main(args):
 
     # ================ Prepare data ===================
 
-    if (
-        args.feature_detector in SSL_METHODS
-    ):  # SSL methods require raw images and the actual model, not the features
-        logger.info("Using model instead of saved features.")
-        if args.model_source == "url":
-            weights = None
-        else:
-            weights = (
-                Path(args.data_dir)
-                / "models"
-                / args.training
-                / f"{args.backbone}_{args.src_dataset}_{args.model_source}.pth"
-            )
-        feature_extractor = load_model(
-            args, args.backbone, weights, args.src_dataset, args.device
-        )
-        feature_dic = train_mean = train_std = None
-    else:  # Currently, all other methods work directly on features
-        feature_extractor = None
-        feature_dic = defaultdict(dict)
-        train_mean = {}
-        train_std = {}
-        for i, layer in enumerate(args.layers):
-            features, _, train_mean[i], train_std[i], _, _ = get_test_features(
-                args.data_dir,
-                args.backbone,
-                args.src_dataset,
-                args.tgt_dataset,
-                args.training,
-                args.model_source,
-                layer,
-                args.split,
-            )
-            for class_ in features:
-                feature_dic[class_.item()][layer] = features[class_]
+    feature_extractor = None
+    feature_dic = defaultdict(dict)
+    train_mean = {}
+    train_std = {}
+    features, _, train_mean, train_std, _, _ = get_test_features(
+        args.data_dir,
+        args.backbone,
+        args.src_dataset,
+        args.tgt_dataset,
+        args.training,
+        args.model_source,
+        args.split,
+    )
+    for class_ in features:
+        feature_dic[class_.item()] = features[class_]
 
     data_loader = get_task_loader(
         args,
@@ -354,7 +319,6 @@ def main(args):
         args.proba_detector = str(proba_d)
         args.classifier = str(classifier)
 
-
         sub_exp = (str(args.classifier) + str(args.feature_detector)).replace("None", "")
         args.res_dir = os.path.join(args.res_root, sub_exp)
         os.makedirs(args.res_dir, exist_ok=True)
@@ -366,7 +330,6 @@ def main(args):
         if not check_if_record_exists(args, Path(args.res_root) / "out.csv") or args.override:
             metrics = detect_outliers(
                 args=args,
-                layers=args.layers,
                 feature_extractor=feature_extractor,
                 detector_transforms=detector_transforms,
                 classifier_transforms=classifier_transforms,
@@ -390,7 +353,6 @@ def save_results(args, metrics, res_root):
 
 def detect_outliers(
     args,
-    layers,
     classifier_transforms,
     detector_transforms,
     classifier,
@@ -426,126 +388,75 @@ def detect_outliers(
             query_features = query
 
             # === Transforming features ===
-            for layer in support_features:
-                (
-                    transformed_features["cls_sup"][layer],
-                    transformed_features["cls_query"][layer],
-                ) = classifier_transforms(
-                    raw_feat_s=support_features[layer],
-                    raw_feat_q=query_features[layer],
-                    train_mean=deepcopy(train_mean[layer]),
-                    train_std=deepcopy(train_std[layer]),
-                    support_labels=support_labels,
-                    query_labels=query_labels,
-                    outliers=outliers,
-                    intra_task_metrics=intra_task_metrics,
-                    figures=figures,
-                )
-                (
-                    transformed_features["det_sup"][layer],
-                    transformed_features["det_query"][layer],
-                ) = detector_transforms(
-                    raw_feat_s=support_features[layer],
-                    raw_feat_q=query_features[layer],
-                    train_mean=deepcopy(train_mean[layer]),
-                    train_std=deepcopy(train_std[layer]),
-                    support_labels=support_labels,
-                    query_labels=query_labels,
-                    outliers=outliers,
-                    intra_task_metrics=intra_task_metrics,
-                    figures=figures,
-                )
-        else:
-            feature_extractor.load_state_dict(initial_state_dict)
-            # assert isinstance(feature_detector, AllInOne), "Currently on AllInOne \
-            #     detectors also handle feature extraction"
-
-        # ====== Classification + OOD detection ======
-
-        outlier_scores = []
-        soft_preds_q = []
-
-        if feature_extractor is None:  # For methods that work on features directly
-            for layer in support_features:
-                if feature_detector is None:
-                    assert proba_detector is not None
-                    probas_s, probas_q = classifier(
-                        support_features=transformed_features["cls_sup"][layer],
-                        query_features=transformed_features["cls_query"][layer],
-                        train_mean=deepcopy(train_mean[layer]),
-                        support_labels=support_labels,
-                        intra_task_metrics=intra_task_metrics,
-                        use_transductively=None,
-                        query_labels=query_labels,
-                        outliers=outliers,
-                    )
-                    outlier_scores.append(
-                        proba_detector(support_probas=probas_s, query_probas=probas_q)
-                    )
-
-                else:
-                    output = feature_detector(
-                        support_features=transformed_features["det_sup"][layer],
-                        query_features=transformed_features["det_query"][layer],
-                        train_mean=deepcopy(train_mean[layer]),
-                        support_labels=support_labels,
-                        query_labels=query_labels,
-                        outliers=outliers,
-                        intra_task_metrics=intra_task_metrics,
-                        figures=figures,
-                    )
-                    if len(output) == 3:
-                        probas_s, probas_q, scores = output
-                    else:
-                        scores = output
-                        if args.use_filtering:  # Then we filter out before giving
-                            assert feature_detector is not None
-                            if args.threshold == "otsu":
-                                thresh = threshold_otsu(scores.numpy())
-                            else:
-                                thresh = float(args.threshold)
-                            believed_inliers = scores < thresh
-                            metrics["thresholding_accuracy"].append(
-                                (believed_inliers == ~outliers.bool())
-                                .float()
-                                .mean()
-                                .item()
-                            )
-                        else:
-                            believed_inliers = None
-
-                        probas_s, probas_q = classifier(
-                            support_features=transformed_features["cls_sup"][layer],
-                            query_features=transformed_features["cls_query"][layer],
-                            train_mean=train_mean[layer],
-                            support_labels=support_labels,
-                            intra_task_metrics=intra_task_metrics,
-                            query_labels=query_labels,
-                            use_transductively=believed_inliers,
-                            outliers=outliers,
-                        )
-                    outlier_scores.append(scores)
-                soft_preds_q.append(probas_q)
-        else:  # For SSL methods
-            output = feature_detector(
-                support_images=support,
-                query_images=query,
-                feature_extractor=feature_extractor,
+            (
+                transformed_features["cls_sup"],
+                transformed_features["cls_query"],
+            ) = classifier_transforms(
+                raw_feat_s=support_features,
+                raw_feat_q=query_features,
+                train_mean=deepcopy(train_mean),
+                train_std=deepcopy(train_std),
                 support_labels=support_labels,
                 query_labels=query_labels,
                 outliers=outliers,
                 intra_task_metrics=intra_task_metrics,
+                figures=figures,
             )
-            probas_s, probas_q, scores = output
-            soft_preds_q.append(probas_q)
-            outlier_scores.append(scores)
-            feature_detector.clear()
+            (
+                transformed_features["det_sup"],
+                transformed_features["det_query"],
+            ) = detector_transforms(
+                raw_feat_s=support_features,
+                raw_feat_q=query_features,
+                train_mean=deepcopy(train_mean),
+                train_std=deepcopy(train_std),
+                support_labels=support_labels,
+                query_labels=query_labels,
+                outliers=outliers,
+                intra_task_metrics=intra_task_metrics,
+                figures=figures,
+            )
+        # ====== Classification + OOD detection ======
 
-        # ====== Aggregate scores and probas across layers ======
+        if feature_detector is None:  # For methods that use a prediction-based detector
+            assert proba_detector is not None
+            probas_s, probas_q = classifier(
+                support_features=transformed_features["cls_sup"],
+                query_features=transformed_features["cls_query"],
+                train_mean=deepcopy(train_mean),
+                support_labels=support_labels,
+                intra_task_metrics=intra_task_metrics,
+                query_labels=query_labels,
+                outliers=outliers,
+            )
+            outlier_scores = proba_detector(support_probas=probas_s, query_probas=probas_q)
 
-        outlier_scores = torch.stack(outlier_scores, 0).mean(0)
-        all_probs = torch.stack(soft_preds_q, 0).mean(0)
-        predictions = all_probs.argmax(-1)
+        else:  #  For those that work on features that use a prediction-based detector
+            output = feature_detector(
+                support_features=transformed_features["det_sup"],
+                query_features=transformed_features["det_query"],
+                train_mean=deepcopy(train_mean),
+                support_labels=support_labels,
+                query_labels=query_labels,
+                outliers=outliers,
+                intra_task_metrics=intra_task_metrics,
+                figures=figures,
+            )
+            if len(output) == 3:  #  Open set methods perform classif and OOD detection at the same time
+                probas_s, probas_q, outlier_scores = output
+            else:
+                outlier_scores = output
+                probas_s, probas_q = classifier(
+                    support_features=transformed_features["cls_sup"],
+                    query_features=transformed_features["cls_query"],
+                    train_mean=train_mean,
+                    support_labels=support_labels,
+                    intra_task_metrics=intra_task_metrics,
+                    query_labels=query_labels,
+                    outliers=outliers,
+                )
+
+        predictions = probas_q.argmax(-1)
 
         # ====== Store predictions in case it needs saving ====
 

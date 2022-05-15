@@ -74,8 +74,6 @@ class Wide_ResNet(nn.Module):
     def __init__(self, depth, widen_factor, dropout_rate, num_classes=64, **kwargs):
         super(Wide_ResNet, self).__init__()
         self.in_planes = 16
-        self.all_layers = [f"{i}_{j}" for i in range(1, 4) for j in range(3)] + ["last"]
-        self.last_layer_name = "last"
 
         assert (depth - 4) % 6 == 0, "Wide-resnet depth should be 6n+4"
         n = int((depth - 4) / 6)
@@ -107,24 +105,14 @@ class Wide_ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, layers: List[str]):
+    def forward(self, x):
         """
         layers: List[str]
         """
-        all_feats = {}
         x = self.conv1(x)
-        layer_feats = [x]
         for block in range(1, 4):
-            layer_feats = eval(f"self.layer{block}")(layer_feats)
-            pooled_maps = [f.mean((-2, -1)) for f in layer_feats]
-            for block_layer, pooled_map in enumerate(pooled_maps):
-                layer_name = f"{block}_{block_layer}"
-                if layer_name in layers:
-                    all_feats[layer_name] = pooled_map
-        if "last" in layers:
-            last_map = F.relu(self.bn1(layer_feats[-1]))
-            all_feats["last"] = last_map.mean((-2, -1), keepdim=True)
-        return all_feats
+            x = eval(f"self.layer{block}")(x)
+        return x.mean((-2, -1))
 
 
 def wrn2810(**kwargs):

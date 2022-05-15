@@ -342,31 +342,6 @@ class Block(nn.Module):
         return x
 
 
-# class Transformer(nn.Module):
-#     """Transformer with Self-Attentive Blocks"""
-#     def __init__(self, num_layers, dim, num_heads, ff_dim, dropout):
-#         super().__init__()
-#         self.blocks = nn.ModuleList([
-#             Block(dim, num_heads, ff_dim, dropout) for _ in range(num_layers)])
-
-#     def forward(self, x, layers: List[str], mask=None):
-#         all_layers = {}
-#         for i, block in enumerate(self.blocks):
-#             x = block(x, mask)  # [b, seq_length, d]
-
-#             # Extracting layers
-
-#             layer_name = f"{i}_map"
-#             if layer_name in layers:
-#                 all_layers[layer_name] = x.detach()[:, 1:, :].mean(dim=1)
-
-#             layer_name = f"{i}_cls"
-#             if layer_name in layers:
-#                 all_layers[layer_name] = x.detach()[:, 0, :]
-
-#         return x, all_layers
-
-
 class VisionTransformer(nn.Module):
     """Vision Transformer
     A PyTorch impl of : `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale`
@@ -490,10 +465,6 @@ class VisionTransformer(nn.Module):
                 if num_classes > 0
                 else nn.Identity()
             )
-        self.all_layers = [
-            f"{i}_{j}" for i in range(len(self.blocks)) for j in ["map", "cls"]
-        ] + [f"last_{j}" for j in ["map", "cls"]]
-        self.last_layer_name = "last_cls"
         self.init_weights(weight_init)
 
     def init_weights(self, mode=""):
@@ -541,7 +512,7 @@ class VisionTransformer(nn.Module):
                 else nn.Identity()
             )
 
-    def forward(self, x, layers: List[str]):
+    def forward(self, x):
         x = self.patch_embed(x)
         cls_token = self.cls_token.expand(
             x.shape[0], -1, -1
@@ -553,64 +524,14 @@ class VisionTransformer(nn.Module):
                 (cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1
             )
         x = self.pos_drop(x + self.pos_embed)
-        all_layers = {}
         for i, block in enumerate(self.blocks):
             x = block(x)  # [b, seq_length, d]
 
-            # Extracting layers
-
-            layer_name = f"{i}_map"
-            if layer_name in layers:
-                all_layers[layer_name] = x.detach()[:, 1:, :].mean(dim=1)
-
-            layer_name = f"{i}_cls"
-            if layer_name in layers:
-                all_layers[layer_name] = x.detach()[:, 0, :]
-
         x = self.norm(x)
-        all_layers["last_map"] = x[:, 1:].mean(dim=1)  # b,d
-        all_layers["last_cls"] = x[:, 0]  # b,d
+        # all_layers["last_map"] = x[:, 1:].mean(dim=1)  # b,d
+        # all_layers["last_cls"] = x[:, 0]  # b,d
 
-        return all_layers
-        # if self.dist_token is None:
-        #     return self.pre_logits(x[:, 0])
-        # else:
-        #     return x[:, 0], x[:, 1]
-
-    # def forward(self, x, layers):
-    #     """Breaks image into patches, applies transformer, applies MLP head.
-    #     Args:
-    #         x (tensor): `b,c,fh,fw`
-    #     """
-    #     b, c, fh, fw = x.shape
-    #     x = self.patch_embedding(x)  # b,d,gh,gw
-    #     x = x.flatten(2).transpose(1, 2)  # b,gh*gw,d
-    #     if hasattr(self, 'class_token'):
-    #         x = torch.cat((self.class_token.expand(b, -1, -1), x), dim=1)  # b,gh*gw+1,d
-    #     if hasattr(self, 'positional_embedding'):
-    #         x = self.positional_embedding(x)  # b,gh*gw+1,d
-    #     x, all_layers = self.transformer(x, layers)  # b,gh*gw+1,d
-    #     if hasattr(self, 'pre_logits'):
-    #         x = self.pre_logits(x)
-    #         x = torch.tanh(x)
-    #     x = self.norm(x)
-    #     all_layers['last_map'] = x[:, 1:].mean(dim=1) # b,d
-    #     all_layers['last_cls'] = x[:, 0]  # b,d
-    #     return all_layers
-
-    # def forward(self, x):
-    #     x = self.forward_features(x)
-    #     if self.head_dist is not None:
-    #         x, x_dist = self.head(x[0]), self.head_dist(x[1])  # x must be a tuple
-    #         if self.training and not torch.jit.is_scripting():
-    #             # during inference, return the average of both classifier predictions
-    #             return x, x_dist
-    #         else:
-    #             return (x + x_dist) / 2
-    #     else:
-    #         x = self.head(x)
-    #     return x
-
+        return x[:, 0]
 
 def _init_vit_weights(
     module: nn.Module, name: str = "", head_bias: float = 0.0, jax_impl: bool = False

@@ -508,8 +508,6 @@ class CLIP(nn.Module):
         super().__init__()
 
         self.context_length = context_length
-        self.all_layers = ["last"]
-        self.last_layer_name = "last"
 
         if isinstance(vision_layers, (tuple, list)):
             vision_heads = vision_width * 32 // 64
@@ -607,10 +605,9 @@ class CLIP(nn.Module):
 
         return x
 
-    def forward(self, image, layers: List[str]):
+    def forward(self, image):
         image_features = self.encode_image(image).to(torch.float32)
-        return {'last': image_features}
-        # text_features = self.encode_text(text)
+        return image_features
 
         # normalized features
         # image_features = image_features / image_features.norm(dim=1, keepdim=True)

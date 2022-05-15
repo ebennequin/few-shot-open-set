@@ -149,37 +149,31 @@ class BasicBlock(nn.Module):
         self.block_size = block_size
         self.DropBlock = DropBlock(block_size=self.block_size)
 
-    def forward(self, layer_feats):
-        x = layer_feats[-1]
+    def forward(self, x):
         self.num_batches_tracked += 1
 
         residual = x
 
-        feats = []
-
         out = self.conv1(x)
         out = self.bn1(out)
-        feats.append(out)
+
         out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
-        feats.append(out)
+
         out = self.relu(out)
 
         out = self.conv3(out)
         out = self.bn3(out)
 
-        feats.append(out)
         if self.downsample is not None:
             residual = self.downsample(x)
         out += residual
-        feats.append(out)
 
         out = self.relu(out)
         out = self.maxpool(out)
 
-        feats.append(out)
         if self.drop_rate > 0:
             if self.drop_block == True:
                 feat_size = out.size()[2]
@@ -199,7 +193,7 @@ class BasicBlock(nn.Module):
                     out, p=self.drop_rate, training=self.training, inplace=True
                 )
 
-        return feats
+        return out
 
 
 # TODO: this is actually hardcoded as a Resnet12
@@ -218,8 +212,6 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
 
         self.num_classes = num_classes
-        self.last_layer_name = "4_4"
-        self.all_layers = [f"{i}_{j}" for i in range(1, 5) for j in range(5)]
         channels = [64, 160, 320, 640]
         self.layer_dims = [
             channels[i] * block.expansion for i in range(4) for j in range(4)
@@ -294,20 +286,13 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, layers: List[str]):
+    def forward(self, x):
         """
         layers: List[str]
         """
-        all_feats = {}
-        layer_feats = [x]
         for block in range(1, 5):
-            layer_feats = eval(f"self.layer{block}")(layer_feats)
-            pooled_maps = [f.mean((-2, -1)) for f in layer_feats]
-            for block_layer, pooled_map in enumerate(pooled_maps):
-                layer_name = f"{block}_{block_layer}"
-                if layer_name in layers:
-                    all_feats[layer_name] = pooled_map
-        return all_feats
+            x = eval(f"self.layer{block}")(x)
+        return x.mean((-2, -1))
 
 
 def resnet12(**kwargs):

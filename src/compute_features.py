@@ -16,7 +16,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data_dir", type=str, default="data")
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
-    parser.add_argument("--layers", type=int)
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--device", type=str, default="cuda")
@@ -50,8 +49,6 @@ def main(args):
     feature_extractor = load_model(
         args, args.backbone, weights, args.src_dataset, args.device
     )
-    args.layers = BACKBONES[args.backbone]().all_layers[-args.layers :]
-    logger.info(f"Layers to extract: {args.layers}")
 
     logger.info("Computing features...")
     features, labels = compute_features(
@@ -59,37 +56,35 @@ def main(args):
         data_loader,
         device=args.device,
         split=args.split,
-        layers=args.layers,
         keep_all_train_features=args.keep_all_train_features,
     )
 
     # if output_file is None:
-    for layer in args.layers:
-        pickle_name = Path(stem + f"_{layer}").with_suffix(f".pickle").name
-        output_file = (
-            Path("data")
-            / "features"
-            / args.src_dataset
-            / args.tgt_dataset
-            / args.split
-            / args.training
-            / pickle_name
-        )
-        output_file.parent.mkdir(parents=True, exist_ok=True)
+    pickle_name = Path(stem).with_suffix(f".pickle").name
+    output_file = (
+        Path("data")
+        / "features"
+        / args.src_dataset
+        / args.tgt_dataset
+        / args.split
+        / args.training
+        / pickle_name
+    )
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        if args.split == "test" or args.split == "val" or args.keep_all_train_features:
-            logger.info("Packing by class...")
-            packed_features = {
-                class_integer_label: features[layer][labels == class_integer_label]
-                for class_integer_label in labels.unique()
-            }
-            with open(output_file, "wb") as stream:
-                cpickle.dump(packed_features, stream, protocol=-1)
-        else:
-            logger.info("Dumping average feature map...")
-            with open(output_file, "wb") as stream:
-                cpickle.dump(features[layer], stream, protocol=-1)
-        logger.info(f"Dumped features in {output_file}")
+    if args.split == "test" or args.split == "val" or args.keep_all_train_features:
+        logger.info("Packing by class...")
+        packed_features = {
+            class_integer_label: features[labels == class_integer_label]
+            for class_integer_label in labels.unique()
+        }
+        with open(output_file, "wb") as stream:
+            cpickle.dump(packed_features, stream, protocol=-1)
+    else:
+        logger.info("Dumping average feature map...")
+        with open(output_file, "wb") as stream:
+            cpickle.dump(features, stream, protocol=-1)
+    logger.info(f"Dumped features in {output_file}")
 
 
 if __name__ == "__main__":

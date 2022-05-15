@@ -795,8 +795,6 @@ class EfficientNet(nn.Module):
             self.num_features, self.num_classes, pool_type=global_pool
         )
 
-        self.last_layer_name = "last"
-        self.all_layers = ["last"]
         efficientnet_init_weights(self)
 
     def as_sequential(self):
@@ -815,7 +813,7 @@ class EfficientNet(nn.Module):
             self.num_features, self.num_classes, pool_type=global_pool
         )
 
-    def forward(self, x, layers: List[str]):
+    def forward(self, x):
         x = self.conv_stem(x)
         x = self.bn1(x)
         x = self.act1(x)
@@ -823,8 +821,7 @@ class EfficientNet(nn.Module):
         x = self.conv_head(x)
         x = self.bn2(x)
         x = self.act2(x)
-        layers = {"last": x.detach().mean((-2, -1), keepdim=True)}
-        return layers
+        return x.mean((-2, -1))
 
     # def forward(self, x):
     #     x = self.forward_features(x)

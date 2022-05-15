@@ -508,27 +508,21 @@ class BasicBlock(nn.Module):
     def zero_init_last_bn(self):
         nn.init.zeros_(self.bn2.weight)
 
-    def forward(self, feats):
+    def forward(self, x):
 
-        x = feats[-1]
-
-        feats = []
         shortcut = x
         assert isinstance(x, torch.Tensor), type(x)
         x = self.conv1(x)
         x = self.bn1(x)
-        feats.append(x)
         if self.drop_block is not None:
             x = self.drop_block(x)
         x = self.act1(x)
 
-        feats.append(x)
         if self.aa is not None:
             x = self.aa(x)
 
         x = self.conv2(x)
         x = self.bn2(x)
-        feats.append(x)
         if self.drop_block is not None:
             x = self.drop_block(x)
 
@@ -542,9 +536,8 @@ class BasicBlock(nn.Module):
             shortcut = self.downsample(shortcut)
         x += shortcut
         x = self.act2(x)
-        feats.append(x)
 
-        return feats
+        return x
 
 
 class Bottleneck(nn.Module):
@@ -609,18 +602,15 @@ class Bottleneck(nn.Module):
     def zero_init_last_bn(self):
         nn.init.zeros_(self.bn3.weight)
 
-    def forward(self, feats):
+    def forward(self, x):
 
-        x = feats[-1]
         shortcut = x
-        new_feats = []
 
         x = self.conv1(x)
         x = self.bn1(x)
         if self.drop_block is not None:
             x = self.drop_block(x)
         x = self.act1(x)
-        new_feats.append(x)
 
         x = self.conv2(x)
         x = self.bn2(x)
@@ -629,7 +619,6 @@ class Bottleneck(nn.Module):
         x = self.act2(x)
         if self.aa is not None:
             x = self.aa(x)
-        new_feats.append(x)
 
         x = self.conv3(x)
         x = self.bn3(x)
@@ -644,14 +633,10 @@ class Bottleneck(nn.Module):
 
         if self.downsample is not None:
             shortcut = self.downsample(shortcut)
-        new_feats.append(x)
 
         x += shortcut
         x = self.act3(x)
-
-        new_feats.append(x)
-
-        return new_feats
+        return x
 
 
 def downsample_conv(
@@ -899,8 +884,6 @@ class ResNet(nn.Module):
         block_args = block_args or dict()
         assert output_stride in (8, 16, 32)
         self.num_classes = num_classes
-        self.last_layer_name = "4_3"
-        self.all_layers = [f"{i}_{j}" for i in range(1, 5) for j in range(4)]
         channels = [64, 128, 256, 512]
         self.layer_dims = [
             channels[i] * block.expansion for i in range(4) for j in range(4)
@@ -1026,22 +1009,15 @@ class ResNet(nn.Module):
             self.num_features, self.num_classes, pool_type=global_pool
         )
 
-    def forward(self, x, layers: List[str]):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
         x = self.maxpool(x)
 
-        all_feats = {}
-        feats = [x]
         for block in range(1, 5):
-            feats = eval(f"self.layer{block}")(feats)
-            pooled_maps = [f.mean((-2, -1)) for f in feats]
-            for block_layer, pooled_map in enumerate(pooled_maps):
-                layer_name = f"{block}_{block_layer}"
-                if layer_name in layers:
-                    all_feats[layer_name] = pooled_map
-        return all_feats
+            x = eval(f"self.layer{block}")(x)
+        return x.mean((-2, -1))
 
 
 def _create_resnet(variant, pretrained=False, pretrained_strict=True, **kwargs):

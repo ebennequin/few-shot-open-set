@@ -262,8 +262,6 @@ class MlpMixer(nn.Module):
             global_pool='avg',
     ):
         super().__init__()
-        self.last_layer_name = "last"
-        self.all_layers = ["last"]
         self.num_classes = num_classes
         self.global_pool = global_pool
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
@@ -319,13 +317,12 @@ class MlpMixer(nn.Module):
         x = self.norm(x)
         return x
 
-    def forward(self, x, layers):
+    def forward(self, x):
         x = self.forward_features(x)
         if self.global_pool == 'avg':
             x = x.mean(dim=1)
         assert len(x.size())
-        # x = self.head(x)
-        return {'last': x}
+        return x
 
 
 def _init_weights(module: nn.Module, name: str, head_bias: float = 0., flax=False):

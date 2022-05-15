@@ -64,47 +64,41 @@ def compute_features(
     feature_extractor: nn.Module,
     loader: DataLoader,
     split: str,
-    layers,
     device="cuda",
     keep_all_train_features=False,
-) -> Tuple[ndarray, ndarray]:
+) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
     with torch.no_grad():
         if split == "val" or split == "test" or keep_all_train_features:
             all_features = defaultdict(list)
             all_labels = []
             for images, labels in tqdm(loader, unit="batch"):
-                feat = feature_extractor(images.to(device), layers=layers)
-                for layer in feat:
-                    all_features[layer].append(feat[layer].cpu())
+                feat = feature_extractor(images.to(device))
+                all_features.append(feat.cpu())
                 all_labels.append(labels)
 
-            for layer in layers:
-                all_features[layer] = torch.cat(all_features[layer], dim=0)
+            all_features = torch.cat(all_features, dim=0)
             return (
                 all_features,
                 torch.cat(all_labels, dim=0),
             )
         else:
-            mean = defaultdict(float)
-            var = defaultdict(float)
+            mean = 0.
+            var = 0.
             N = 1.0
             for images, labels in tqdm(loader, unit="batch"):
-                feats = feature_extractor(images.to(device), layers=layers)
-                for layer in layers:
-                    for new_sample in feats[layer].cpu():
-                        if N == 1:
-                            mean[layer] = new_sample
-                        else:
-                            var[layer] = incremental_var(
-                                var[layer], mean[layer], new_sample, N
-                            )  # [d,]
-                            mean[layer] = incremental_mean(
-                                mean[layer], new_sample, N
-                            )  # [d,]
-                        N += 1
-            train_feats = {}
-            for layer in layers:
-                train_feats[layer] = torch.stack([mean[layer], var[layer]], 0)  # [2, d]
+                feats = feature_extractor(images.to(device))
+                for new_sample in feats.cpu():
+                    if N == 1:
+                        mean = new_sample
+                    else:
+                        var = incremental_var(
+                            var, mean, new_sample, N
+                        )  # [d,]
+                        mean = incremental_mean(
+                            mean, new_sample, N
+                        )  # [d,]
+                    N += 1
+            train_feats = torch.stack([mean, var], 0)  # [2, d]
             return train_feats, None
 
 

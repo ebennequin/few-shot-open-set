@@ -16,7 +16,9 @@ from sklearn.metrics import roc_curve, precision_recall_curve
 from sklearn.metrics import auc as auc_fn
 
 colors = ["#0f6300",
-"#bd0d9e"]
+          "#bd0d9e"]
+
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -63,10 +65,6 @@ class TorchPlotter(Plotter):
 
             metric_dic[method][metric_name] = torch.Tensor
         """
-        # if kwargs['use_pretty']:
-        #     process_dic = pretty
-        # else:
-        #     process_dic = my_default_dict(lambda x: x)
 
         #  ===== Recover all csv result files =====
         p = Path("results") / kwargs["exp"]
@@ -127,7 +125,7 @@ class TorchPlotter(Plotter):
 
             flat_maxprobs = - (flat_probs * torch.log(flat_probs)).sum(-1)
 
-            sns.kdeplot(baseline_maxprobs[all_inliers].numpy(), color=colors[0], alpha=1.0, linestyle='--', ax=ax, label="Inliers at initialization")
+            sns.kdeplot(baseline_maxprobs[all_inliers].numpy(), color=colors[0],alpha=1.0, linestyle='--', ax=ax, label="Inliers at initialization")
             sns.kdeplot(flat_maxprobs[all_inliers].numpy(), fill=True,  color=colors[0], alpha=0.4, label='Inliers after inference', ax=ax)
 
             sns.kdeplot(baseline_maxprobs[~all_inliers].numpy(), color=colors[1], alpha=1.0, linestyle='--', ax=ax, label="Outliers at initialization")

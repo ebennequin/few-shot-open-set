@@ -146,8 +146,8 @@ def parse_args() -> argparse.Namespace:
         help="Whether to override results already present in the .csv out file.",
     )
 
-    # Tuning
     parser.add_argument("--tune", nargs="+", default=[])
+    parser.add_argument("--ablate", nargs="+", default=[])
     parser.add_argument("--debug", type=str2bool)
 
     args = parser.parse_args()
@@ -203,7 +203,7 @@ def main(args):
     classifier_transforms: List[FeatureTransform] = []
     for x in args.classifier_transforms:
         classifier_transforms.append(
-            get_modules_to_try(args, "transforms", x, TRANSFORMS, False)[0]
+            get_modules_to_try(args, "transforms", x, TRANSFORMS, False, False)[0]
         )
     classifier_transforms: FeatureTransform = TRANSFORMS["SequentialTransform"](
         classifier_transforms
@@ -212,7 +212,7 @@ def main(args):
     detector_transforms: List[FeatureTransform] = []
     for x in args.detector_transforms:
         detector_transforms.append(
-            get_modules_to_try(args, "transforms", x, TRANSFORMS, False)[0]
+            get_modules_to_try(args, "transforms", x, TRANSFORMS, False, False)[0]
         )
     detector_transforms: FeatureTransform = TRANSFORMS["SequentialTransform"](
         detector_transforms
@@ -227,7 +227,7 @@ def main(args):
             "feature_detectors",
             args.feature_detector,
             ALL_IN_ONE_METHODS,
-            "feature_detector" in args.tune,
+            "feature_detector" in args.tune, "feature_detector" in args.ablate
         )
         proba_detectors = classifiers = [None]
 
@@ -238,7 +238,8 @@ def main(args):
             classifiers = [None]
         else:
             classifiers: List[FewShotMethod] = get_modules_to_try(
-                args, "classifiers", args.classifier, CLASSIFIERS, "classifier" in args.tune
+                args, "classifiers", args.classifier, CLASSIFIERS,
+                "classifier" in args.tune, "classifier" in args.ablate
             )
 
         # ==== Prepare feature detector ====
@@ -251,7 +252,7 @@ def main(args):
                 "feature_detectors",
                 args.feature_detector,
                 FEATURE_DETECTORS,
-                "feature_detector" in args.tune,
+                "feature_detector" in args.tune, "feature_detector" in args.ablate,
             )
 
         # ==== Prepare proba detector ====
@@ -263,7 +264,7 @@ def main(args):
                 "proba_detectors",
                 args.proba_detector,
                 PROBA_DETECTORS,
-                "proba_detector" in args.tune,
+                "proba_detector" in args.tune, "proba_detector" in args.ablate,
             )
 
     # ================ Prepare data ===================

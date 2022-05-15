@@ -3,10 +3,9 @@ Utils for quick fetching of Dataset or DataLoader objects.
 """
 import pickle
 from pathlib import Path
-from typing import Tuple, Dict, Optional
+from typing import Optional
 
 from easyfsl.data_tools import TaskSampler
-from numpy import ndarray
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from loguru import logger
@@ -22,7 +21,7 @@ from src.datasets import (
     Aircraft,
 )
 from src.datasets.imagenet_val import ImageNetVal
-from src.sampler import OpenQuerySamplerOnFeatures, OpenQuerySampler
+from src.sampler import OpenQuerySamplerOnFeatures
 
 
 def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
@@ -195,27 +194,16 @@ def get_task_loader(
     features_dict=None,
     training: bool = False,
 ):
-
-    if features_dict is not None:
-        dataset = FeaturesDataset(features_dict)
-        sampler = OpenQuerySamplerOnFeatures(
-            dataset=dataset,
-            n_way=n_way,
-            n_shot=n_shot,
-            n_id_query=n_id_query,
-            n_ood_query=n_ood_query,
-            n_tasks=n_tasks,
-        )
-    else:
-        dataset = get_dataset(dataset_name, args, split, training)
-        sampler = OpenQuerySampler(
-            dataset=dataset,
-            n_way=n_way,
-            n_shot=n_shot,
-            n_id_query=n_id_query,
-            n_ood_query=n_ood_query,
-            n_tasks=n_tasks,
-        )
+    assert features_dict is not None
+    dataset = FeaturesDataset(features_dict)
+    sampler = OpenQuerySamplerOnFeatures(
+        dataset=dataset,
+        n_way=n_way,
+        n_shot=n_shot,
+        n_id_query=n_id_query,
+        n_ood_query=n_ood_query,
+        n_tasks=n_tasks,
+    )
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 
 

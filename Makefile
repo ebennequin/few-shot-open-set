@@ -42,6 +42,7 @@ GPUS=0
 SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
 OVERRIDE=False # used to override existing entries in out.csv
 TUNE=""
+ABLATE=""
 VISU=False
 SAVE_PREDICTIONS=False
 
@@ -54,7 +55,7 @@ SHOTS=1 5 # will iterate over these values
 # === Base recipes ===
 
 extract:
-	    for split in train test; do \
+	    for split in train val test; do \
 			python -m src.compute_features \
 				--backbone $(BACKBONE) \
 				--src_dataset $(SRC_DATASET) \
@@ -89,8 +90,9 @@ run:
 	        --simu_hparams $(SIMU_PARAMS) \
 	        --override $(OVERRIDE) \
 	        --tune $(TUNE) \
+	        --ablate $(ABLATE) \
 	        --debug $(DEBUG) \
-	        --save_predictions $(SAVE_PREDICTIONS) ;\
+	        --save_predictions $(SAVE_PREDICTIONS)  ;\
     done ;\
 
 # ========== Extraction pipelines ===========
@@ -321,11 +323,10 @@ plot_model_agnosticity:
 
 # ========== 5) Ablation study ==========
 
-
 ablate_ostim:
 	# Imagenet -> *
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make EXP=ablation TUNE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
 	done \
 
 
@@ -346,6 +347,11 @@ import/archive:
 import/tiered:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/data/tiered_imagenet.tar.gz ./data/ ;\
 
+import/models:
+	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
+		rsync -avm $(SERVER_IP):${SERVER_PATH}/data/models .;\
+	done ;\
+
 tar_data:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
 		tar -czvf  data/$${dataset}.tar.gz -C data/ $${dataset} ;\
@@ -361,6 +367,7 @@ deploy_models:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
 		rsync -avm data/models $(SERVER_IP):${SERVER_PATH}/ ;\
 	done ;\
+
 
 deploy_features:
 	for dataset in mini_imagenet tiered_imagenet fgvc-aircraft-2013b cub; do \
@@ -388,13 +395,16 @@ fungi:
 	tar -xvf train_val_annotations.tgz -C data/fungi ;\
 	rm fungi_train_val.tgz; rm train_val_annotations.tgz ;
 
+cub:
+	# Unfortunately, cub's dataset has been removed by authors. 
+
 mini_imagenet_bis:
 	python -m scripts.generate_mini_imagenet_bis
 
 
 # ============= Archive results =============
 
-store: # Archive experiments
+archive: # Archive experiments
 	python src/utils/list_files.py results/ archive/ tmp.txt
 	{ read -r out_files; read -r archive_dir; } < tmp.txt ; \
 	for file in $${out_files}; do \

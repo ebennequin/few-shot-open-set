@@ -20,7 +20,7 @@ def _cfg(url="", **kwargs):
         ),
         "std": np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]),
         "interpolation": 'bilinear',
-        "crop_pct": 256 / 224,
+        "crop_pct": 0.875,
         **kwargs,
     }
 

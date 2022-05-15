@@ -1,9 +1,7 @@
 from typing import Dict, Tuple
 from loguru import logger
-import pandas as pd
 import torch
 from numpy import ndarray
-from torch import nn
 from torch.utils.data import Dataset
 
 
@@ -13,19 +11,17 @@ class FeaturesDataset(Dataset):
         features_dict: Dict[int, ndarray],
     ):
         """
-        features_dict[class][layer] = [tensor1, tensor2, ..., tensorN]
+        features_dict[class] = [tensor1, tensor2, ..., tensorN]
         """
         self.labels = []
         self.data = []
         for class_ in features_dict:
-            all_features = list(features_dict[class_].values())
-            n_samples = len(all_features[0])
-            assert all([len(x) == n_samples for x in all_features])
+            all_features = features_dict[class_]
+            n_samples = len(all_features)
             if n_samples >= 15:  # filter out classes with too few samples
                 self.labels += [class_] * n_samples
-                for sample_tuple in zip(*all_features):
-                    sample_dic = {i: x for i, x in enumerate(sample_tuple)}
-                    self.data.append(sample_dic)
+                for tensor in zip(all_features):
+                    self.data.append(tensor[0])
             else:
                 logger.warning(
                     f"Filtered out class {class_} because only contains {n_samples} samples"

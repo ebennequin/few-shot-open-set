@@ -1,6 +1,6 @@
 from .abstract import AllInOne
 from .snatcher import SnatcherF
-from .ottim import OTTIM
+from .ostim import OSTIM
 from .open_max import OpenMax
 from .proser import PROSER
 from .rpl import RPL

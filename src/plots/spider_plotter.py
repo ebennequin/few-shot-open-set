@@ -192,12 +192,6 @@ if __name__ == "__main__":
                 "font.sans-serif": ["Helvetica"],
             }
         )
-        # for Palatino and other serif fonts use:
-        # plt.rcParams.update({
-        #     "text.usetex": True,
-        #     "font.family": "serif",
-        #     "font.serif": ["Palatino"],
-        # })
     plotter = SpiderPlotter()
     plotter.fit(**vars(args))
     plotter.plot()

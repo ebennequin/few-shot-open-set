@@ -12,14 +12,13 @@ from easyfsl.utils import compute_prototypes
 from copy import deepcopy
 
 
-class OTTIM(AllInOne):
+class OSTIM(AllInOne):
     def __init__(
         self,
         softmax_temperature: float,
         inference_steps: int,
         inference_lr: float,
         mu_init: str,
-        bias_init: str,
         params2adapt: str,
         lambda_ce: float,
         lambda_marg: float,
@@ -35,8 +34,7 @@ class OTTIM(AllInOne):
         self.softmax_temperature = softmax_temperature
         self.params2adapt = params2adapt
         self.mu_init = mu_init
-        self.bias_init = bias_init
-        self.use_explicit_prototype = use_explicit_prototype
+        self.use_explicit_prototype = use_explicit_prototype  # use for ablation, to compare with PROSER
 
     def cosine(self, X, Y):
         return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
@@ -44,9 +42,8 @@ class OTTIM(AllInOne):
     def clear(self):
         delattr(self, 'prototypes')
         delattr(self, 'mu')
-        delattr(self, 'biases')
 
-    def get_logits(self, prototypes, query_features, bias=True):
+    def get_logits(self, prototypes, query_features):
 
         logits = self.cosine(query_features, prototypes)  # [Nq, K]
         if not self.use_explicit_prototype:
@@ -54,11 +51,7 @@ class OTTIM(AllInOne):
                 [logits, -logits.mean(-1, keepdim=True)], dim=1
             )  # [Nq, Ns]
 
-        if bias:
-            return self.softmax_temperature * logits - self.biases
-        else:
-            return self.softmax_temperature * logits
-        return logits
+        return self.softmax_temperature * logits
 
     def __call__(
         self,
@@ -91,12 +84,6 @@ class OTTIM(AllInOne):
             self.prototypes = compute_prototypes(support_features, support_labels)
             if self.use_explicit_prototype:
                 self.prototypes = torch.cat([self.prototypes, torch.zeros(1, support_features.size(1))], 0)
-            if self.bias_init == "zeros":
-                self.biases = torch.zeros(num_classes + 1)
-            elif self.bias_init == "mean":
-                self.biases = self.get_logits(self.prototypes, torch.cat([support_features, query_features], dim=0), bias=False).mean(dim=0)
-            else:
-                raise ValueError(f"Bias init {self.bias_init} not recognized.")
 
         params_list = []
         if "mu" in self.params2adapt:
@@ -105,26 +92,19 @@ class OTTIM(AllInOne):
         if "prototypes" in self.params2adapt:
             self.prototypes.requires_grad_()
             params_list.append(self.prototypes)
-        if "bias" in self.params2adapt:
-            self.biases.requires_grad_()
-            params_list.append(self.biases)
 
         # Run adaptation
         optimizer = torch.optim.Adam(params_list, lr=self.inference_lr)
 
         q_cond_ent_values = []
-        acc_otsu = []
-        aucs = []
+        rocaucs = []
         q_ent_values = []
         ce_values = []
         inlier_entropy = []
-        precs = []
-        recalls = []
         outlier_entropy = []
         inlier_outscore = []
         oulier_outscore = []
         acc_values = []
-        oracle_diff = []
 
         for self.iter_ in range(self.inference_steps):
 
@@ -160,17 +140,9 @@ class OTTIM(AllInOne):
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 inlier_outscore.append(outlier_scores[inliers].mean(0).item())
                 oulier_outscore.append(outlier_scores[~inliers].mean(0).item())
-                aucs.append(self.compute_auc(outlier_scores, **kwargs))
-                thresh = threshold_otsu(outlier_scores.numpy())
-                believed_inliers = outlier_scores < thresh
-                acc_otsu.append((believed_inliers == inliers).float().mean().item())
+                rocaucs.append(self.compute_auc(outlier_scores, **kwargs))
                 precision, recall, thresholds = precision_recall_curve(
                     (~inliers).numpy(), outlier_scores.numpy()
-                )
-                precs.append(precision[recall > 0.9][-1])
-                recalls.append(recall[precision > 0.9][0])
-                oracle_diff.append(
-                    believed_inliers.float().mean() - inliers.float().mean()
                 )
 
             # Optimize
@@ -187,10 +159,7 @@ class OTTIM(AllInOne):
         )
         kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
         kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
-        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(aucs)
-        kwargs["intra_task_metrics"]["main_metrics"]["acc_otsu"].append(acc_otsu)
-        kwargs["intra_task_metrics"]["main_metrics"]["prec_at_90"].append(precs)
-        kwargs["intra_task_metrics"]["main_metrics"]["rec_at_90"].append(recalls)
+        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(rocaucs)
         kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
             inlier_entropy
         )
@@ -205,9 +174,6 @@ class OTTIM(AllInOne):
         )
         kwargs["intra_task_metrics"]["secondary_metrics"]["oulier_outscore"].append(
             oulier_outscore
-        )
-        kwargs["intra_task_metrics"]["secondary_metrics"]["oracle_diff"].append(
-            oracle_diff
         )
 
         with torch.no_grad():

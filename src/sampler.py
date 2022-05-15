@@ -42,8 +42,8 @@ class TaskSampler(Sampler):
         self.n_id_query = n_id_query
         self.n_ood_query = n_ood_query
         self.n_tasks = n_tasks
-
         self.items_per_label = {}
+        
         assert hasattr(
             dataset, "labels"
         ), "TaskSampler needs a dataset with a field 'label' containing the labels of all images."

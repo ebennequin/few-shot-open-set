@@ -15,14 +15,11 @@ from sklearn.metrics import auc as auc_fn
 from loguru import logger
 import os
 import json
-import inspect
 import yaml
 import numpy as np
 import itertools
 from typing import Tuple, List, Dict, Any
-import seaborn as sns
 from pathlib import Path
-from src.utils.utils import load_model
 
 from src.classifiers import __dict__ as CLASSIFIERS
 from src.classifiers import FewShotMethod
@@ -33,16 +30,12 @@ from src.detectors.feature import FeatureDetector
 from src.detectors.proba import __dict__ as PROBA_DETECTORS
 from src.detectors.proba import ProbaDetector
 from src.all_in_one import __dict__ as ALL_IN_ONE_METHODS
-from src.robust_ssl import __dict__ as SSL_METHODS
 
-from src.models import __dict__ as BACKBONES
 from src.transforms import __dict__ as TRANSFORMS
 from src.transforms import FeatureTransform
 from src.utils.plots_and_metrics import update_csv, check_if_record_exists
 from src.utils.data_fetchers import get_task_loader, get_test_features
-from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
-from skimage.filters import threshold_otsu
 from copy import deepcopy
 
 

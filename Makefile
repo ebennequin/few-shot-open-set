@@ -28,7 +28,6 @@ DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD de
 FEATURE_DETECTOR=none
 PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
 CLASSIFIER=none
-FILTERING=False # whether to use $(FEATURE_DETECTOR) in order to filter out outliers before feeding to classifier
 
 
 # Model
@@ -44,7 +43,6 @@ SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
 OVERRIDE=False # used to override existing entries in out.csv
 TUNE=""
 VISU=False
-THRESHOLD=otsu
 SAVE_PREDICTIONS=False
 
 # Tasks
@@ -77,7 +75,6 @@ run:
 	        --n_tasks $(N_TASKS) \
 	        --n_shot $${shot} \
 	        --feature_detector $(FEATURE_DETECTOR) \
-	        --use_filtering $(FILTERING) \
 	        --proba_detector $(PROBA_DETECTOR) \
 	        --detector_transforms  $(DET_TRANSFORMS) \
 	        --classifier_transforms  $(CLS_TRANSFORMS) \
@@ -86,7 +83,6 @@ run:
 	        --model_source $(MODEL_SRC) \
 	        --training $(TRAINING) \
 	        --split $(SPLIT) \
-	        --threshold $(THRESHOLD) \
 			--src_dataset $(SRC_DATASET) \
 			--n_ood_query $(OOD_QUERY) \
 			--tgt_dataset $(TGT_DATASET) \

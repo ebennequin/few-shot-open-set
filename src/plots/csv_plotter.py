@@ -292,14 +292,6 @@ if __name__ == "__main__":
                 "font.sans-serif": ["Helvetica"],
             }
         )
-        # for Palatino and other serif fonts use:
-        plt.rcParams.update(
-            {
-                "text.usetex": True,
-                "font.family": "serif",
-                "font.serif": ["Palatino"],
-            }
-        )
 
     if args.action == "plot":
         plotter = CSVPlotter()

@@ -100,8 +100,8 @@ run:
 extract_all:
 	# Extract for RN and WRN
 	for backbone in resnet12 wrn2810; do \
-		for dataset in mini_imagenet tiered_imagenet; do \
-			make BACKBONE=$${backbone} SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+		for dataset in tiered_imagenet; do \
+			make BACKBONE=$${backbone} SRC_DATASET=$${dataset} MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
@@ -109,7 +109,7 @@ extract_all:
 	# Tiered-Imagenet -> *
 	for backbone in resnet12 wrn2810; do \
 		for dataset in fungi; do \
-			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$(TGT_DATASET) extract ;\
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\

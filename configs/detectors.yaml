@@ -136,7 +136,7 @@ feature_detectors:
 
     ablation:
       hparams2tune: ['use_explicit_prototype', 'inference_steps', 'mu_init']
-      hparam_values: {1: [[True, False], [0, 25, 50], ['zeros', 'base', 'mean']]}
+      hparam_values: {1: [[True, False], [0, 100, 200], ['zeros', 'base', 'mean']]}
 
 
 # === Detectors that work on probas ===

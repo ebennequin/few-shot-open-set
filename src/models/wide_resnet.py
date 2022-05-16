@@ -57,17 +57,12 @@ class wide_basic(nn.Module):
                 nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=True),
             )
 
-    def forward(self, feats: List[Tensor]):
-        x = feats[-1]
-        new_feats = []
+    def forward(self, x):
         out = self.dropout(self.conv1(F.relu(self.bn1(x))))
-        new_feats.append(out)
         out = self.conv2(F.relu(self.bn2(out)))
-        new_feats.append(out)
         out += self.shortcut(x)
-        new_feats.append(out)
 
-        return new_feats
+        return x
 
 
 class Wide_ResNet(nn.Module):

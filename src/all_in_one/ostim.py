@@ -10,7 +10,7 @@ import math
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 from copy import deepcopy
-
+from sklearn.metrics import auc as auc_fn
 
 class OSTIM(AllInOne):
     def __init__(
@@ -97,7 +97,7 @@ class OSTIM(AllInOne):
         optimizer = torch.optim.Adam(params_list, lr=self.inference_lr)
 
         q_cond_ent_values = []
-        rocaucs = []
+        auprs = []
         q_ent_values = []
         ce_values = []
         inlier_entropy = []
@@ -133,14 +133,18 @@ class OSTIM(AllInOne):
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
                 q_ent_values.append(div.item())
                 ce_values.append(ce.item())
-                inliers = ~kwargs["outliers"].bool()
+                outliers = kwargs["outliers"].bool()
+                inliers = ~outliers
                 acc = (closed_q_probs.argmax(-1) == kwargs["query_labels"])[inliers].float().mean().item()
                 acc_values.append(acc)
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 inlier_outscore.append(outlier_scores[inliers].mean(0).item())
                 oulier_outscore.append(outlier_scores[~inliers].mean(0).item())
-                rocaucs.append(self.compute_auc(outlier_scores, **kwargs))
+                precision, recall, thresholds = precision_recall_curve(
+                outliers.numpy(), outlier_scores.numpy())
+                aupr = auc_fn(recall, precision)
+                auprs.append(aupr)
                 precision, recall, thresholds = precision_recall_curve(
                     (~inliers).numpy(), outlier_scores.numpy()
                 )
@@ -159,7 +163,7 @@ class OSTIM(AllInOne):
         )
         kwargs["intra_task_metrics"]["classifier_losses"]["ce"].append(ce_values)
         kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)
-        kwargs["intra_task_metrics"]["main_metrics"]["rocauc"].append(rocaucs)
+        kwargs["intra_task_metrics"]["main_metrics"]["aupr"].append(auprs)
         kwargs["intra_task_metrics"]["secondary_metrics"]["inlier_entropy"].append(
             inlier_entropy
         )

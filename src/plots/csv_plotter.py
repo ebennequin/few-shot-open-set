@@ -190,7 +190,7 @@ class CSVPlotter(Plotter):
                     full_method_name = list(filter(lambda x: len(x), full_method_name))
                     # full_method_name = list(filter(lambda x: x != 'None', full_method_name))
                     method_at_row = " + ".join(full_method_name)
-                    x_value = "\n".join([process_dic[row[x]] for x in kwargs["plot_versus"]])
+                    x_value = ("\n" + r"$\downarrow$" + "\n").join([process_dic[row[x]] for x in kwargs["plot_versus"]])
                     if metric in row:
                         result_dir[metric][method_at_row][x_value].append(row[metric])
 

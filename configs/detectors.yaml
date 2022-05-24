@@ -112,7 +112,7 @@ feature_detectors:
           'inference_lr': 0.001,
           'lambda_ce': 1.0,
           'lambda_marg': 1.0,
-          'lambda_em': 0.5,
+          'lambda_em': 0.1,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes',
           'mu_init': 'mean',
@@ -133,7 +133,8 @@ feature_detectors:
     tuning:
       hparams2tune: ['inference_steps', 'inference_lr', 'lambda_em']
       hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [0.1, 0.5, 1.0]]}
-
+      
+    # == For ablation
     ablation:
       hparams2tune: ['use_explicit_prototype', 'inference_steps', 'mu_init']
       hparam_values: {1: [[True, False], [0, 100, 200], ['zeros', 'base', 'mean']]}

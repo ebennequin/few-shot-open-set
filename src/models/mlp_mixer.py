@@ -46,7 +46,7 @@ import torch
 import torch.nn as nn
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from timm.models.helpers import build_model_with_cfg, named_apply, checkpoint_seq
+from timm.models.helpers import build_model_with_cfg, named_apply
 from timm.models.layers import PatchEmbed, Mlp, GluMlp, GatedMlp, DropPath, lecun_normal_, to_2tuple
 
 
@@ -310,10 +310,11 @@ class MlpMixer(nn.Module):
 
     def forward_features(self, x):
         x = self.stem(x)
-        if self.grad_checkpointing and not torch.jit.is_scripting():
-            x = checkpoint_seq(self.blocks, x)
-        else:
-            x = self.blocks(x)
+        # if self.grad_checkpointing and not torch.jit.is_scripting():
+        #     x = checkpoint_seq(self.blocks, x)
+        # else:
+            # x = self.blocks(x)
+        x = self.blocks(x)
         x = self.norm(x)
         return x
 

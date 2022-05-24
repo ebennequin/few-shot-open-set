@@ -23,8 +23,8 @@ TGT_DATASET=$(SRC_DATASET)
 
 
 # Modules
-CLS_TRANSFORMS=Pool  # Feature transformations used before feeding to the classifier
-DET_TRANSFORMS=Pool  # Feature transformations used before feeding to the OOD detector
+CLS_TRANSFORMS=Trivial # Feature transformations used before feeding to the classifier
+DET_TRANSFORMS=Trivial # Feature transformations used before feeding to the OOD detector
 FEATURE_DETECTOR=none
 PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
 CLASSIFIER=none
@@ -63,6 +63,8 @@ extract:
 				--data_dir $(DATADIR) \
 		        --model_source $(MODEL_SRC) \
 		        --training $(TRAINING) \
+		        --override $(OVERRIDE) \
+		        --debug $(DEBUG) \
 				--split $${split} ;\
 	    done ;\
 
@@ -100,15 +102,15 @@ run:
 extract_all:
 	# Extract for RN and WRN
 	for backbone in resnet12 wrn2810; do \
-		for dataset in tiered_imagenet; do \
+		for dataset in mini_imagenet tiered_imagenet; do \
 			make BACKBONE=$${backbone} SRC_DATASET=$${dataset} MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
-			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$(TGT_DATASET) MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
+			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=$${dataset} MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
 
 	# Tiered-Imagenet -> *
 	for backbone in resnet12 wrn2810; do \
-		for dataset in fungi; do \
+		for dataset in aircraft cub fungi; do \
 			make BACKBONE=$${backbone} TRAINING='feat' SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 			make BACKBONE=$${backbone} SRC_DATASET=tiered_imagenet MODEL_SRC='feat' TGT_DATASET=$${dataset} extract ;\
 		done ;\
@@ -116,8 +118,7 @@ extract_all:
 
 	# Imagenet -> *
 	for dataset in fungi imagenet; do \
-# 		for backbone in clip_vit_base_patch16 vit_base_patch16_224 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
-		for backbone in resnet50 ssl_resnet50 swsl_resnet50; do \
+		for backbone in clip_vit_base_patch16 vit_base_patch16_224 vit_base_patch16_224_dino vit_base_patch16_224_sam resnet50 dino_resnet50 ssl_resnet50 swsl_resnet50 mixer_b16_224_in21k mixer_b16_224_miil_in21k; do \
 			make BACKBONE=$${backbone} SRC_DATASET=imagenet MODEL_SRC='timm' TGT_DATASET=$${dataset} extract ;\
 		done ;\
 	done ;\
@@ -340,6 +341,9 @@ deploy:
 
 import/results:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/results ./ ;\
+
+import/features:
+	rsync -avm $(SERVER_IP):${SERVER_PATH}/data/features ./data/ ;\
 
 import/archive:
 	rsync -avm $(SERVER_IP):${SERVER_PATH}/archive ./ ;\

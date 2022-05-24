@@ -110,7 +110,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Set values for the angular axis (x)
             ax.set_xticks(ANGLES[:-1])
-            ax.set_xticklabels(VARIABLES, size=30, y=-0.25)
+            ax.set_xticklabels(VARIABLES, size=30, y=-0.35)
 
             # Remove lines for radial axis (y)
             ax.set_yticks([])
@@ -165,10 +165,10 @@ class SpiderPlotter(CSVPlotter):
                 # ax.plot(ANGLES, values, c=method2color[method], linewidth=3, label=,)
                 # ax.scatter(ANGLES, values, s=130, c=method2color[method], zorder=10)
 
-            ax.set_title(fr"\textbf{{{pretty[metric_name]}}}", fontdict={"fontsize": 30}, y=1.4)
+            ax.set_title(fr"\textbf{{{pretty[metric_name]}}}", fontdict={"fontsize": 30}, y=1.5)
             ax.legend(
                 loc="center",
-                bbox_to_anchor=[1.15, 1.25],  # bottom-right
+                bbox_to_anchor=[1.25, 1.3],  # bottom-right
                 ncol=1,
                 frameon=False,  # don't put a frame
                 prop={"size": 25},

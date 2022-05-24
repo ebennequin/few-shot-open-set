@@ -38,10 +38,7 @@ class TIM_GD(AbstractTIM):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs["use_transductively"] is not None:
-            unlabelled_data = query_features[kwargs["use_transductively"]]
-        else:
-            unlabelled_data = query_features
+        unlabelled_data = query_features
 
         # Metric dic
         num_classes = support_labels.unique().size(0)

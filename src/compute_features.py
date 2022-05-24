@@ -5,7 +5,7 @@ from loguru import logger
 from src.utils.data_fetchers import get_classic_loader
 from src.utils.utils import compute_features, load_model
 import argparse
-
+from .inference import str2bool
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -17,9 +17,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_source", type=str, default="feat")
     parser.add_argument("--training", type=str, default="standard")
     parser.add_argument("--split", type=str, default="test")
+    parser.add_argument("--override", type=str2bool, default="False")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--keep_all_train_features", type=bool, default=False)
+    parser.add_argument("--debug", type=str2bool, default="False")
 
     args = parser.parse_args()
     return args
@@ -35,7 +37,7 @@ def main(args):
     )
 
     logger.info("Building model...")
-    if args.model_source == "url":
+    if args.model_source == "timm":
         weights = None
         stem = f"{args.backbone}_{args.src_dataset}_{args.model_source}"  # used for saving features downstream
     else:
@@ -50,16 +52,6 @@ def main(args):
         args, args.backbone, weights, args.src_dataset, args.device
     )
 
-    logger.info("Computing features...")
-    features, labels = compute_features(
-        feature_extractor,
-        data_loader,
-        device=args.device,
-        split=args.split,
-        keep_all_train_features=args.keep_all_train_features,
-    )
-
-    # if output_file is None:
     pickle_name = Path(stem).with_suffix(f".pickle").name
     output_file = (
         Path("data")
@@ -71,6 +63,28 @@ def main(args):
         / pickle_name
     )
     output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # First checking whether those features already exist
+    if output_file.exists():
+        logger.info(f"File {output_file} already exists.")
+        if args.override:
+            logger.warning("Overriding.")
+        else:
+            logger.warning("Not overriding.")
+            return
+    else:
+        logger.info(f"File {output_file} does not exist. Performing extraction.")
+    logger.info("Computing features...")
+    features, labels = compute_features(
+        feature_extractor,
+        data_loader,
+        device=args.device,
+        split=args.split,
+        keep_all_train_features=args.keep_all_train_features,
+        debug=args.debug
+    )
+
+    # if output_file is None:
 
     if args.split == "test" or args.split == "val" or args.keep_all_train_features:
         logger.info("Packing by class...")

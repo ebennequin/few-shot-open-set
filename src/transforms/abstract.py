@@ -110,14 +110,7 @@ class BaseCentering(FeatureTransform):
         feat: Tensor shape [N, hidden_dim, *]
         """
         train_mean: Tensor = kwargs["train_mean"]
-        # train_mean = train_mean.unsqueeze(0)
-        if len(train_mean.size()) > len(raw_feat_s.size()):
-            mean = train_mean.squeeze(-1).squeeze(-1)
-        elif len(train_mean.size()) < len(raw_feat_s.size()):
-            mean = train_mean.unsqueeze(-1).unsqueeze(-1)
-        else:
-            mean = train_mean
-        return (raw_feat_s - mean), (raw_feat_q - mean)
+        return (raw_feat_s - train_mean), (raw_feat_q - train_mean)
 
 
 class L2norm(FeatureTransform):

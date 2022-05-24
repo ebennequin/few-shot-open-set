@@ -56,10 +56,7 @@ class BDCSPN(FewShotMethod):
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
 
-        if kwargs["use_transductively"] is not None:
-            unlabelled_data = query_features[kwargs["use_transductively"]]
-        else:
-            unlabelled_data = query_features
+        unlabelled_data = query_features
 
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)  # [K, d]

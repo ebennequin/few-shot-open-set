@@ -16,7 +16,6 @@ from src.datasets import (
     Fungi,
     FeaturesDataset,
     TieredImageNet,
-    FeatTieredImageNet,
     ImageNet,
     Aircraft,
 )
@@ -104,21 +103,21 @@ def get_tiered_imagenet_set(args, split, training, bis=False):
     root = Path(args.data_dir) / "tiered_imagenet"
     if bis:
         root = root / "bis"
-    if args.model_source == "feat":
-        logger.warning("Return FEAT version of Tiered-ImageNet ! ")
-        return FeatTieredImageNet(
-            root=root,
-            args=args,
-            split=split,
-            training=training,
-        )
-    else:
-        return TieredImageNet(
-            root=root,
-            args=args,
-            split=split,
-            training=training,
-        )
+    # if args.model_source == "feat":
+    # logger.warning("Return FEAT version of Tiered-ImageNet ! ")
+    return TieredImageNet(
+        root=root,
+        args=args,
+        split=split,
+        training=training,
+    )
+    # else:
+    #     return TieredImageNet(
+    #         root=root,
+    #         args=args,
+    #         split=split,
+    #         training=training,
+    #     )
 
 
 def get_cub_set(args, split, training):

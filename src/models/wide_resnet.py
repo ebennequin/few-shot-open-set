@@ -6,7 +6,7 @@ from torch import Tensor
 import sys
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 import numpy as np
-
+from loguru import logger
 
 def _cfg(url="", **kwargs):
     return {
@@ -62,7 +62,7 @@ class wide_basic(nn.Module):
         out = self.conv2(F.relu(self.bn2(out)))
         out += self.shortcut(x)
 
-        return x
+        return out
 
 
 class Wide_ResNet(nn.Module):

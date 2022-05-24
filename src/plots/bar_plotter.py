@@ -11,7 +11,6 @@ import argparse
 from .csv_plotter import CSVPlotter, parse_args, pretty, pretty_training, pretty_arch
 import matplotlib.pyplot as plt
 import os
-from src.inference import str2bool
 
 
 CB91_Blue = "#2CBDFE"
@@ -33,6 +32,15 @@ barplot_colors = [
     "m",
 ]
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 class BarPlotter(CSVPlotter):
     """

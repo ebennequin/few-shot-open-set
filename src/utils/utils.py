@@ -67,15 +67,20 @@ def compute_features(
     split: str,
     device="cuda",
     keep_all_train_features=False,
+    debug=False,
 ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    if debug:
+        logger.warning("Debugging mode activated, only doing 5 iterations.")
     with torch.no_grad():
         if split == "val" or split == "test" or keep_all_train_features:
             all_features = []
             all_labels = []
-            for images, labels in tqdm(loader, unit="batch"):
+            for index, (images, labels) in tqdm(enumerate(loader), unit="batch"):
                 feat = feature_extractor(images.to(device))
                 all_features.append(feat.cpu())
                 all_labels.append(labels)
+                if debug and index >= 5:
+                    break
 
             all_features = torch.cat(all_features, dim=0)
             return (
@@ -86,7 +91,7 @@ def compute_features(
             mean = 0.
             var = 0.
             N = 1.0
-            for images, labels in tqdm(loader, unit="batch"):
+            for index, (images, labels) in tqdm(enumerate(loader), unit="batch"):
                 feats = feature_extractor(images.to(device))
                 for new_sample in feats.cpu():
                     if N == 1:
@@ -99,6 +104,8 @@ def compute_features(
                             mean, new_sample, N
                         )  # [d,]
                     N += 1
+                if debug and index >= 5:
+                    break
             train_feats = torch.stack([mean, var], 0)  # [2, d]
             return train_feats, None
 

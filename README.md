@@ -1,10 +1,15 @@
-# Open Query Set experiments
+# Model-Agnostic Few-Shot Open-Set Recognition
+
 ![Python Versions](https://img.shields.io/badge/python-3.8-%23EBBD68.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 
 Code for the paper "Model-Agnostic Few-Shot Open-Set Recognition", under review.
 
 # Get started
+
+### Requirements
+
+On top of common packages, this project uses [pyod](https://pyod.readthedocs.io/en/latest/), [timm](https://github.com/rwightman/pytorch-image-models) and [easyfsl](https://pypi.org/project/easyfsl/).
 
 ### Download models
 

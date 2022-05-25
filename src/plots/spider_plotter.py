@@ -19,7 +19,7 @@ class SpiderPlotter(CSVPlotter):
     An abstract plotter.
     """
 
-    def plot(self, **kwargs):
+    def plot(self, horizontal: bool):
         """
         metric_dic[metric_name][method] = {
                                     'x': ndarray [n_points_found],
@@ -28,12 +28,20 @@ class SpiderPlotter(CSVPlotter):
                                    }
         """
         assert len(self.metric_dic)
+        if horizontal:
+            nrows = 1
+            n_cols = len(self.metric_dic)
+            figsize = (10 * len(self.metric_dic), 13)
+        else:
+            nrows = len(self.metric_dic)
+            n_cols = 1
+            figsize = (10, 11 * len(self.metric_dic))
 
         fig, axes = plt.subplots(
-            nrows=1,
-            ncols=len(self.metric_dic),
+            nrows=nrows,
+            ncols=n_cols,
             subplot_kw=dict(projection="polar"),
-            figsize=(10 * len(self.metric_dic), 13),
+            figsize=figsize,
             squeeze=True,
         )
 
@@ -175,7 +183,6 @@ class SpiderPlotter(CSVPlotter):
             )
 
         # ---- Save plots ----
-        # plt.subplots_adjust(wspace=-0.1)
         fig.tight_layout()
         os.makedirs(self.out_dir, exist_ok=True)
         fig.savefig(self.out_dir / f"spider.pdf", dpi=300, bbox_inches="tight")
@@ -194,4 +201,4 @@ if __name__ == "__main__":
         )
     plotter = SpiderPlotter()
     plotter.fit(**vars(args))
-    plotter.plot()
+    plotter.plot(horizontal=args.horizontal)

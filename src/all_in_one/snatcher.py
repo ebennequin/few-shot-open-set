@@ -35,18 +35,15 @@ class SnatcherF(AllInOne):
         state_dict = torch.load(weights)["params"]
         state_dict = strip_prefix(state_dict, "module.")
         state_dict = strip_prefix(state_dict, "slf_attn.")
-        attn_model = BACKBONES["MultiHeadAttention"](
-            self.args, 1, hdim, hdim, hdim, dropout=0.5
-        )
 
         self.attn_model = BACKBONES["MultiHeadAttention"](
             self.args, 1, hdim, hdim, hdim, dropout=0.5
         )
-        missing_keys, unexpected = attn_model.load_state_dict(
+        missing_keys, unexpected = self.attn_model.load_state_dict(
             state_dict, strict=False
         )
+        self.attn_model = self.attn_model.to(self.device)
         self.attn_model.eval()
-        self.attn_model = attn_model.to(self.device)
         logger.info(
             f"Loaded Snatcher attention module. \n Missing keys: {missing_keys} \n Unexpected keys: {unexpected}"
         )

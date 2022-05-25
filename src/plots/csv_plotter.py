@@ -115,6 +115,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plot_versus", type=str, nargs="+")
     parser.add_argument("--use_pretty", type=str2bool, default=True)
     parser.add_argument("--latex", type=str2bool, default=True)
+    parser.add_argument("--horizontal", type=str2bool, default=True)
     parser.add_argument(
         "--filters",
         type=str,

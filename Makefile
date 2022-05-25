@@ -168,11 +168,11 @@ run_pyod:
 	done ;\
 
 run_best:
-	make run_ostim ;\
-	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
-	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
-	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 	make run_snatcher ;\
+# 	make run_ostim ;\
+# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+# 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
+# 	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 
 run_finalists:
 	make run_ostim ;\
@@ -252,11 +252,11 @@ log_best_configs:
 
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
 
 log_benchmark:
@@ -292,7 +292,8 @@ plot_spider_charts:
 				 --exp spider \
 				 --groupby classifier feature_detector \
 				 --use_pretty True \
-				 --metrics mean_acc mean_rocauc mean_aupr \
+				 --horizontal False \
+				 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
 				 --plot_versus src_dataset tgt_dataset \
 				 --filters n_shot=$${shot} \
 				 backbone=$${backbone} ;\

@@ -15,16 +15,18 @@ On top of common packages, this project uses [pyod](https://pyod.readthedocs.io/
 
 This code uses several models, but most will be automatically downloaded. The only models you will need to download manually are:
 
-1) [mini-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1ixqw1l9XVxl3lh1m5VXkctw6JssahGbQ/view) and [tiered-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1M93jdOjAn8IihICPKJg8Mb4B-eYDSZfE/view). Place them under under `data/models/feat/resnet_{dataset}_feat.pth`, with `dataset in [mini, tiered]`.
+1) [mini-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1ixqw1l9XVxl3lh1m5VXkctw6JssahGbQ/view) and [tiered-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1M93jdOjAn8IihICPKJg8Mb4B-eYDSZfE/view). Place them under `data/models/feat/resnet_{dataset}_feat.pth`, with `dataset in [mini, tiered]`.
 
-2) [mini-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/19TdjthkqMKLKSVHrbT5pVEmKvu-6-6iM) and [tiered-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/1y23iU6vW9ySsCn94XmlRs2z2FjSLMGPN). Place them under under `data/models/standard/{arch}_{dataset}_feat.pth`, with `arch in [resnet, wrn2810]` and `dataset in [mini, tiered]`.
+2) [mini-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/19TdjthkqMKLKSVHrbT5pVEmKvu-6-6iM) and [tiered-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/1y23iU6vW9ySsCn94XmlRs2z2FjSLMGPN). Place them under `data/models/standard/{arch}_{dataset}_feat.pth`, with `arch in [resnet, wrn2810]` and `dataset in [mini, tiered]`.
 
 
 ### Download data
 
 #### Mini-ImageNet
 
-Explain here.
+Download [ILSVRC2015](https://image-net.org/challenges/LSVRC/index.php) and place all class-wise
+directories images in `data/mini_imagenet/images` 
+(e.g. `data/mini_imagenet/images/nXXXXXXX/nXXXXXXX_XXXXX.JPEG`).
 
 #### Tiered-ImageNet
 

@@ -24,7 +24,11 @@ This code uses several models, but most will be automatically downloaded. The on
 
 #### Mini-ImageNet
 
-We still the same old version that you sent me. For TieredImageNet, to be continued...
+Explain here.
+
+#### Tiered-ImageNet
+
+Download from [here](https://github.com/kjunelee/MetaOptNet) and place under `data/tiered_imagenet`.
 
 #### Aircraft
 

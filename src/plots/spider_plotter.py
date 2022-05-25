@@ -35,7 +35,7 @@ class SpiderPlotter(CSVPlotter):
         else:
             nrows = len(self.metric_dic)
             n_cols = 1
-            figsize = (10, 11 * len(self.metric_dic))
+            figsize = (10, 10 * len(self.metric_dic))
 
         fig, axes = plt.subplots(
             nrows=nrows,
@@ -48,10 +48,18 @@ class SpiderPlotter(CSVPlotter):
         # Form the differences instead of absolute values
         baseline_values = {}
         for i, metric in enumerate(self.metric_dic):
-            methods = list(self.metric_dic[metric].keys())
+            if i == 0:
+                methods = list(self.metric_dic[metric].keys())
+                print(f"Methods detected : {methods} \n  Which methods to use ? ('all' or space-separated indices.)")
+                selection = input()
+                if selection == 'all':
+                    pass
+                else:
+                    methods = [methods[int(x)] for x in selection.split(' ')]
             if i == 0:
                 print(f"Methods detected : {methods} \n  Which one to use as a baseline ?")
                 baseline_method = methods[int(input())]
+                methods.remove(baseline_method)
             x_names = deepcopy(self.metric_dic[metric][baseline_method]["x"])
             y_baseline = np.array(self.metric_dic[metric][baseline_method]["y"])
             baseline_values[metric] = y_baseline
@@ -69,17 +77,17 @@ class SpiderPlotter(CSVPlotter):
             GREY_LIGHT = "#f2efe8"
 
             min_val = min(
-                [min(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+                [min(self.metric_dic[metric_name][method]["y"]) for method in methods]
             )
             max_val = max(
-                [max(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+                [max(self.metric_dic[metric_name][method]["y"]) for method in methods]
             )
             max_avg_perf = max(
-                [np.mean(arr["y"]) for arr in self.metric_dic[metric_name].values()]
+                [np.mean(self.metric_dic[metric_name][method]["y"]) for method in methods]
             )
             yticks = np.linspace(min_val - 0.005, max_val + 0.005, 5)
             cloest_to_0 = np.abs(yticks).argmin()
-            yticks = np.delete(yticks, cloest_to_0)
+            # yticks = np.delete(yticks, cloest_to_0)
 
             PAD = ((max_val - min_val) / 5) * 0.5
             angle = 3.14
@@ -146,7 +154,6 @@ class SpiderPlotter(CSVPlotter):
             ax.fill(HANGLES, H[-1], GREY_LIGHT)
 
             # Fill lines and dots --------------------------------------------
-            methods = list(self.metric_dic[metric_name].keys())
             methods.sort()
             for idx, method in enumerate(
                 methods
@@ -185,7 +192,7 @@ class SpiderPlotter(CSVPlotter):
         # ---- Save plots ----
         fig.tight_layout()
         os.makedirs(self.out_dir, exist_ok=True)
-        fig.savefig(self.out_dir / f"spider.pdf", dpi=300, bbox_inches="tight")
+        fig.savefig(self.out_dir / f"{self.filters}.pdf", dpi=300, bbox_inches="tight")
 
 
 if __name__ == "__main__":

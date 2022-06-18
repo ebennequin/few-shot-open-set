@@ -42,7 +42,45 @@ class FewShotMethod(nn.Module):
             query_soft_predictions: Tensor of shape [n_query, K], where K is the number of classes
                 in the task, representing the soft predictions of the method for query samples.
         """
-        raise NotImplementedError
+        support_features, query_features = self.transform_features(
+            support_features=support_features, query_features=query_features
+        )
+        return self.classify_support_and_queries(
+            support_features=support_features,
+            query_features=query_features,
+            support_labels=support_labels,
+        )
+
+    def classify_support_and_queries(
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        raise NotImplementedError(
+            "ALl few_shot classifiers must implement classify_support_and_queries()."
+        )
+
+    def transform_features(self, support_features: Tensor, query_features: Tensor):
+        """
+        Performs an (optional) normalization of feature maps or feature vectors,
+        then average pooling to obtain feature vectors in all cases,
+        then another (optional) normalization.
+        """
+
+        # Pre-pooling transforms
+        support_features, query_features = self.prepool_feature_transformer(
+            support_features, query_features
+        )
+
+        # Average pooling
+        query_features, support_features = pool_features(
+            query_features, support_features
+        )
+
+        # Post-pooling transforms
+        support_features, query_features = self.postpool_feature_transformer(
+            support_features, query_features
+        )
+
+        return support_features, query_features
 
     def get_logits_from_euclidean_distances_to_prototypes(self, samples):
         return -self.softmax_temperature * torch.cdist(samples, self.prototypes)

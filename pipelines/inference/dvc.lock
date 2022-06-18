@@ -1,0 +1,239 @@
+schema: '2.0'
+stages:
+  classify_queries:
+    cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py mini_imagenet
+    deps:
+    - path: data/features/mini_imagenet.pickle
+      md5: f0a320542b15f255e9512dc251696939
+      size: 384033495
+    - path: pipelines/inference/classify_queries.py
+      md5: abf40cf845c8eb63f0fca8fd2639d0d7
+      size: 3683
+    outs:
+    - path: data/predictions/classifications.csv
+      md5: e28c955be1f289a99a20bbc158964b56
+      size: 25951
+  detect_outliers:
+    cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py mini_imagenet
+    deps:
+    - path: data/features/mini_imagenet.pickle
+      md5: f0a320542b15f255e9512dc251696939
+      size: 384033495
+    - path: pipelines/inference/detect_outliers.py
+      md5: 10f60f1370f526a1eabfb67723eec58f
+      size: 2560
+    outs:
+    - path: data/predictions/outliers.csv
+      md5: 301e58f86074f616d0d251ea33e3b53a
+      size: 22036
+  compute_metrics:
+    cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py mini_imagenet
+    deps:
+    - path: data/predictions/classifications.csv
+      md5: e28c955be1f289a99a20bbc158964b56
+      size: 25951
+    - path: data/predictions/outliers.csv
+      md5: 301e58f86074f616d0d251ea33e3b53a
+      size: 22036
+    - path: pipelines/inference/compute_metrics.py
+      md5: a3cfd501ddf6bdacc9399fc31e66d171
+      size: 2575
+    outs:
+    - path: data/predictions/metrics.json
+      md5: 0ff691e214a3e92e3cd6b3384667b768
+      size: 128
+    - path: data/predictions/roc_curve.csv
+      md5: e3ef429db39e0ef2d3f386aee5400829
+      size: 4825
+  detect_outliers@tiered_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py tiered_imagenet
+    deps:
+    - path: data/features/tiered_imagenet.pickle
+      md5: d65457a931298a9ae4258bfe3f385167
+      size: 6598730175
+    - path: pipelines/inference/detect_outliers.py
+      md5: 7b4d7c215ef199176074166e96a1fa12
+      size: 2614
+    params:
+      pipelines/inference/params.yaml:
+        method:
+          detector: KNNOutlierDetector
+          detector_args:
+            n_neighbors: 3
+            method: mean
+          classifier: SimpleShot
+          classifier_args:
+            softmax_temperature: 1.0
+          prepool_transformers:
+          - BaseSetCentering
+          postpool_transformers:
+          - Normalize
+          transformers_args:
+            beta: 0.5
+            norm: 2.0
+        setting:
+          random_seed: 0
+          n_way: 5
+          n_shot: 5
+          n_query: 10
+          n_tasks: 10
+          n_workers: 12
+    outs:
+    - path: data/predictions/tiered_imagenet/outliers.csv
+      md5: 2638a0c454130402858089e767849431
+      size: 31177
+  classify_queries@tiered_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py tiered_imagenet
+    deps:
+    - path: data/features/tiered_imagenet.pickle
+      md5: d65457a931298a9ae4258bfe3f385167
+      size: 6598730175
+    - path: pipelines/inference/classify_queries.py
+      md5: b548adbf3037302f22ac0a2400171343
+      size: 3680
+    params:
+      pipelines/inference/params.yaml:
+        method:
+          detector: KNNOutlierDetector
+          detector_args:
+            n_neighbors: 3
+            method: mean
+          classifier: SimpleShot
+          classifier_args:
+            softmax_temperature: 1.0
+          prepool_transformers:
+          - BaseSetCentering
+          postpool_transformers:
+          - Normalize
+          transformers_args:
+            beta: 0.5
+            norm: 2.0
+        setting:
+          random_seed: 0
+          n_way: 5
+          n_shot: 5
+          n_query: 10
+          n_tasks: 10
+          n_workers: 12
+    outs:
+    - path: data/predictions/tiered_imagenet/classifications.csv
+      md5: 337050d023c6be7bd215ed7d8a4c81f2
+      size: 25863
+  compute_metrics@tiered_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py tiered_imagenet
+    deps:
+    - path: data/predictions/tiered_imagenet/classifications.csv
+      md5: 337050d023c6be7bd215ed7d8a4c81f2
+      size: 25863
+    - path: data/predictions/tiered_imagenet/outliers.csv
+      md5: 2638a0c454130402858089e767849431
+      size: 31177
+    - path: pipelines/inference/compute_metrics.py
+      md5: b1fefb40f417b36be0b863f8ff8869fb
+      size: 2167
+    params:
+      pipelines/inference/params.yaml:
+        objective: 0.9
+    outs:
+    - path: data/predictions/tiered_imagenet/metrics.json
+      md5: e9f259cb3b3cacd2c682741592214e28
+      size: 131
+    - path: data/predictions/tiered_imagenet/roc_curve.csv
+      md5: 5a67517cdac1831e2c526f76b89c634c
+      size: 5513
+  classify_queries@mini_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/classify_queries.py mini_imagenet
+    deps:
+    - path: data/features/mini_imagenet.pickle
+      md5: f0a320542b15f255e9512dc251696939
+      size: 384033495
+    - path: pipelines/inference/classify_queries.py
+      md5: b548adbf3037302f22ac0a2400171343
+      size: 3680
+    params:
+      pipelines/inference/params.yaml:
+        method:
+          detector: KNNOutlierDetector
+          detector_args:
+            n_neighbors: 3
+            method: mean
+          classifier: SimpleShot
+          classifier_args:
+            softmax_temperature: 1.0
+          prepool_transformers:
+          - BaseSetCentering
+          postpool_transformers:
+          - Normalize
+          transformers_args:
+            beta: 0.5
+            norm: 2.0
+        setting:
+          random_seed: 0
+          n_way: 5
+          n_shot: 5
+          n_query: 10
+          n_tasks: 10
+          n_workers: 12
+    outs:
+    - path: data/predictions/mini_imagenet/classifications.csv
+      md5: 4a977382918a350b97ef1dbd7a42fdb6
+      size: 25980
+  detect_outliers@mini_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/detect_outliers.py mini_imagenet
+    deps:
+    - path: data/features/mini_imagenet.pickle
+      md5: f0a320542b15f255e9512dc251696939
+      size: 384033495
+    - path: pipelines/inference/detect_outliers.py
+      md5: 7b4d7c215ef199176074166e96a1fa12
+      size: 2614
+    params:
+      pipelines/inference/params.yaml:
+        method:
+          detector: KNNOutlierDetector
+          detector_args:
+            n_neighbors: 3
+            method: mean
+          classifier: SimpleShot
+          classifier_args:
+            softmax_temperature: 1.0
+          prepool_transformers:
+          - BaseSetCentering
+          postpool_transformers:
+          - Normalize
+          transformers_args:
+            beta: 0.5
+            norm: 2.0
+        setting:
+          random_seed: 0
+          n_way: 5
+          n_shot: 5
+          n_query: 10
+          n_tasks: 10
+          n_workers: 12
+    outs:
+    - path: data/predictions/mini_imagenet/outliers.csv
+      md5: d60e7e86dbb7e18aa69f552fcb464a31
+      size: 30369
+  compute_metrics@mini_imagenet:
+    cmd: PYTHONPATH=. python pipelines/inference/compute_metrics.py mini_imagenet
+    deps:
+    - path: data/predictions/mini_imagenet/classifications.csv
+      md5: 4a977382918a350b97ef1dbd7a42fdb6
+      size: 25980
+    - path: data/predictions/mini_imagenet/outliers.csv
+      md5: d60e7e86dbb7e18aa69f552fcb464a31
+      size: 30369
+    - path: pipelines/inference/compute_metrics.py
+      md5: b1fefb40f417b36be0b863f8ff8869fb
+      size: 2167
+    params:
+      pipelines/inference/params.yaml:
+        objective: 0.9
+    outs:
+    - path: data/predictions/mini_imagenet/metrics.json
+      md5: 9a1229dab542df19f458c6d883178f76
+      size: 139
+    - path: data/predictions/mini_imagenet/roc_curve.csv
+      md5: ff3fe00d2f0a5c0757dc5fe83820b5be
+      size: 5367

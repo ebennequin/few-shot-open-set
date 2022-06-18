@@ -13,7 +13,7 @@ class SimpleShot(FewShotMethod):
     In this fashion, it comes down to Prototypical Networks.
     """
 
-    def forward(
+    def classify_support_and_queries(
         self,
         support_features: Tensor,
         query_features: Tensor,

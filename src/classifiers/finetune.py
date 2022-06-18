@@ -19,13 +19,14 @@ class Finetune(FewShotMethod):
         softmax_temperature: float = 1.0,
         inference_steps: int = 10,
         inference_lr: float = 1e-3,
+        **kwargs,
     ):
         super().__init__()
         self.inference_steps = inference_steps
         self.softmax_temperature = softmax_temperature
         self.inference_lr = inference_lr
 
-    def forward(
+    def classify_support_and_queries(
         self,
         support_features: Tensor,
         query_features: Tensor,

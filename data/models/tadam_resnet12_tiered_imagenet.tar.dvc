@@ -1,0 +1,4 @@
+outs:
+- md5: 32f8ce9b85cd65333a4df2bc96ea1937
+  size: 49766661
+  path: tadam_resnet12_tiered_imagenet.tar

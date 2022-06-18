@@ -5,7 +5,7 @@
 
 Code for the paper "Model-Agnostic Few-Shot Open-Set Recognition", under review.
 
-# Get started
+# Getting started
 
 ### Requirements
 
@@ -26,7 +26,7 @@ This code uses several models, but most will be automatically downloaded. The on
 
 Download [ILSVRC2015](https://image-net.org/challenges/LSVRC/index.php) and place all class-wise
 directories images in `data/mini_imagenet/images` 
-(e.g. `data/mini_imagenet/images/nXXXXXXX/nXXXXXXX_XXXXX.JPEG`).
+(e.g. `data/mini_imagenet/images/nXXXXXXX/nXXXXXXX_XXXXX.JPEG`). You may also download ImageNet from academic torrents [here](https://academictorrents.com/details/943977d8c96892d24237638335e481f3ccd54cfb). 
 
 #### Tiered-ImageNet
 
@@ -42,7 +42,7 @@ Execute `make fungi`
 
 #### CUB
 
-Download from [here](https://drive.google.com/file/d/1hbzc_P1FuxMkcabkgn9ZKinBwW683j45/view). Unfortunately, the link now seems to be down. 
+Download from https://data.caltech.edu/tindfiles/serve/1239ea37-e132-42ee-8c09-c383bb54e7ff/
 
 ### Extract features
 
@@ -53,7 +53,7 @@ make extract_all
 This operation make take quite some time.
 
 
-### Reproduce results
+# Reproducing results
 
 All commands to reproduce any results in the paper is contained as a recipe in the `Makefile`. We detail in what follows every command:
 
@@ -76,7 +76,7 @@ In the previous example, the tuning pipeline will perform a grid search over hyp
 Once the tuning is over, results will be logged to  `results/tuning/*`. You can directly log the best configs found for each methods (computed as the best trade-off between accuracy and ROCAUC) by executing `log_best_configs`.
 
 
-#### Benchmark 
+#### Benchmarks (Table 2 and 4)
 
 To reproduce the standard benchmarking Table (2 and 4) in the paper, please execute `make benchmark`.  Results will be saved to `results/benchmarks`. You can also directly log the results in a Markdown format by running `make log_benchmark`.
 
@@ -102,6 +102,10 @@ The code support easy deployement to a remote server through `rsync`. If this ca
 
 Once a set of results have been performed, you can archive them by running `make archive` and follow the subsequent instructions to reduce chances of losing them. This will store them in the `archive/` folder. To restore them back to `results/` at any time, run `make restore` and follow the instructions.
 
+
+# Acknowledgements
+
+We would like to thank authors from [FEAT](https://github.com/Sha-Lab/FEAT) for open-sourcing their code and publicly releasing checkpoints, and contributors to [timm library](https://github.com/rwightman/pytorch-image-models) for their excellent work in keeping up with most recent architectures. 
 
 
 

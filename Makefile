@@ -1,19 +1,7 @@
-# Server options
-# SERVER_IP=narval
-# SERVER_PATH=~/scratch/open-set
-# USER=mboudiaf
-# DATADIR=data
-
-# SERVER_IP=shannon
-# SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set-Test
-# DATADIR=../Open-Set/open-query-set/data/
-# USER=malik
-
-
-SERVER_IP=shannon
-SERVER_PATH=/ssd/repos/Few-Shot-Classification/Open-Set/open-query-set
-DATADIR=data
-USER=malik
+# Server options, not necessary if working locally
+SERVER_IP=
+SERVER_PATH=
+USER=
 
 
 
@@ -25,9 +13,10 @@ TGT_DATASET=$(SRC_DATASET)
 # Modules
 CLS_TRANSFORMS=Trivial # Feature transformations used before feeding to the classifier
 DET_TRANSFORMS=Trivial # Feature transformations used before feeding to the OOD detector
-FEATURE_DETECTOR=none
-PROBA_DETECTOR=none # may be removed, was just curious to see how detection on proba was working --> very bad
-CLASSIFIER=none
+
+FEATURE_DETECTOR=none # OOD detector working on arbitrary features
+PROBA_DETECTOR=none # OOD detector working on probabilistic output
+CLASSIFIER=none # Classification method for few-shot
 
 
 # Model
@@ -35,22 +24,24 @@ BACKBONE=resnet12
 MODEL_SRC=feat# Origin of the model. For all timm models, use MODEL_SRC=url
 TRAINING=standard# To differentiate between episodic and standard models
 
+# DATA
+DATADIR=data 
+SPLIT=test # should be in ['val', 'test']
+OOD_QUERY=15
+N_TASKS=1000 
+SHOTS=1 5 # will iterate over these values
+
+
 # Misc
-EXP=default# name of the folder in which results will be stored.
-DEBUG=False
-GPUS=0
+EXP=default # name of the folder in which results will be stored.
+DEBUG=False # runs with small number of tasks 
 SIMU_PARAMS=  # just in case you need to track some particular args in out.csv
 OVERRIDE=False # used to override existing entries in out.csv
 TUNE=""
 ABLATE=""
 VISU=False
-SAVE_PREDICTIONS=False
+SAVE_PREDICTIONS=False # only used to save model's predictions as a numpy file
 
-# Tasks
-SPLIT=test
-OOD_QUERY=15
-N_TASKS=1000
-SHOTS=1 5 # will iterate over these values
 
 # === Base recipes ===
 
@@ -253,10 +244,10 @@ log_best_configs:
 benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-# 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+ 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+ 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+ 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+ 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
 
 log_benchmark:
@@ -388,6 +379,7 @@ kill_all: ## Kill all my python and tee processes on the server
 # ============= Downlooad/Prepare data ============
 
 aircraft:
+	mkdir -p data
 	wget http://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/archives/fgvc-aircraft-2013b.tar.gz
 	tar -xvf  fgvc-aircraft-2013b.tar.gz -C data ;\
 	rm fgvc-aircraft-2013b.tar.gz ;\
@@ -401,7 +393,9 @@ fungi:
 	rm fungi_train_val.tgz; rm train_val_annotations.tgz ;
 
 cub:
-	# Unfortunately, cub's dataset has been removed by authors. 
+	mkdir -p data/cub ;\
+	wget https://data.caltech.edu/tindfiles/serve/1239ea37-e132-42ee-8c09-c383bb54e7ff/
+
 
 mini_imagenet_bis:
 	python -m scripts.generate_mini_imagenet_bis

@@ -7,7 +7,13 @@ Code for the paper "Model-Agnostic Few-Shot Open-Set Recognition", under review.
 
 # Getting started
 
-### Requirements
+### Installation
+
+```bash
+virtualenv venv --python=python3.8 
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 On top of common packages, this project uses [pyod](https://pyod.readthedocs.io/en/latest/), [timm](https://github.com/rwightman/pytorch-image-models) and [easyfsl](https://pypi.org/project/easyfsl/).
 

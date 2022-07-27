@@ -1,13 +1,8 @@
+from collections import Counter
 import random
 from typing import List, Tuple
-import torch
-from loguru import logger
-import random
-from typing import List, Tuple
-import math
 import torch
 from torch.utils.data import Sampler, Dataset
-import numpy as np
 
 
 class TaskSampler(Sampler):
@@ -24,6 +19,7 @@ class TaskSampler(Sampler):
         n_id_query: int,
         n_ood_query: int,
         n_tasks: int,
+        broad_open_set: bool = False,
     ):
         """
         Args:
@@ -31,8 +27,12 @@ class TaskSampler(Sampler):
                 list of length len(dataset) containing containing the labels of all images.
             n_way: number of classes in one task
             n_shot: number of support images for each class in one task
-            n_query: number of query images for each class in one task
+            n_id_query: number of closed-set query images for each class in one task
+            n_ood_query: number of open-set query images for each open-set class in one task
             n_tasks: number of tasks to sample
+            broad_open_set: whether to use all remaining test classes for open-set.
+                If False, we randomly sample n_way open-set classes and n_ood_query instances per open-set class
+                If True, we randomly sample n_ood_query * n_way open-set instances from all open-set classes.
         """
         super().__init__(data_source=None)
         self.n_way = n_way
@@ -41,7 +41,8 @@ class TaskSampler(Sampler):
         self.n_ood_query = n_ood_query
         self.n_tasks = n_tasks
         self.items_per_label = {}
-        
+        self.broad_open_set = broad_open_set
+
         assert hasattr(
             dataset, "labels"
         ), "TaskSampler needs a dataset with a field 'label' containing the labels of all images."
@@ -67,12 +68,22 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
     def __iter__(self):
         for _ in range(self.n_tasks):
             # TODO: allow customizable shape of the open query task
-            all_labels = random.sample(self.items_per_label.keys(), self.n_way * 2)
+            all_labels = random.sample(
+                self.items_per_label.keys(), len(self.items_per_label)
+            )
             support_labels = all_labels[: self.n_way]
-            open_set_labels = all_labels[self.n_way :]
             id_samples_per_class = [self.n_id_query] * self.n_way
-            ood_samples_per_class = [self.n_ood_query] * self.n_way
-    
+            if self.broad_open_set:
+                open_set_labels_with_replacement = random.choices(
+                    list(set(all_labels).difference(set(support_labels))),
+                    k=self.n_ood_query * self.n_way,
+                )
+                occurences_per_class = Counter(open_set_labels_with_replacement)
+                open_set_labels = list(occurences_per_class.keys())
+                ood_samples_per_class = list(occurences_per_class.values())
+            else:
+                open_set_labels = all_labels[self.n_way : self.n_way * 2]
+                ood_samples_per_class = [self.n_ood_query] * self.n_way
 
             yield torch.cat(
                 [
@@ -109,12 +120,12 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
                 - an image (or feature vector) as a  torch Tensor
                 - the label of this image
         Returns:
-            tuple(Tensor, Tensor, Tensor, Tensor, list[int]): respectively:
+            tuple(Tensor, Tensor, Tensor, Tensor, Tensor): respectively:
                 - support images,
                 - their labels,
                 - query images,
                 - their labels,
-                - the dataset class ids of the class sampled in the episode
+                - for each query instance, 0 if it is an inlier, 1 if it is an outlier
         """
         true_class_ids = list(
             dict.fromkeys([x[1] for x in input_data])
@@ -123,14 +134,13 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
         support_data = input_data[: self.n_way * self.n_shot]
         in_set_labels = set([x[1] for x in support_data])
         id_query = [
-            x for x in input_data[self.n_way * self.n_shot:] if x[1] in in_set_labels
+            x for x in input_data[self.n_way * self.n_shot :] if x[1] in in_set_labels
         ]
         ood_query = [
             x
             for x in input_data[self.n_way * self.n_shot :]
             if x[1] not in in_set_labels
         ]
-
 
         # Preparing labels
         support_labels = torch.Tensor(
@@ -144,12 +154,8 @@ class OpenQuerySamplerOnFeatures(TaskSampler):
         outliers = torch.cat([torch.zeros(len(id_query)), torch.ones(len(ood_query))])
 
         # Preparing features
-        support_images = torch.stack(
-            [x[0] for x in support_data], 0
-        )  # [Ns, d_layer]
-        query_images = torch.stack(
-            [x[0] for x in id_query], 0
-        )  # [Ns, d_layer]
+        support_images = torch.stack([x[0] for x in support_data], 0)  # [Ns, d_layer]
+        query_images = torch.stack([x[0] for x in id_query], 0)  # [Ns, d_layer]
         if len(ood_query):
             query_images = torch.cat(
                 [

@@ -28,7 +28,7 @@ class FewShotMethod(nn.Module):
         return auc_fn(fp_rate, tp_rate)
 
     def forward(
-        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor
+        self, support_features: Tensor, query_features: Tensor, support_labels: Tensor, **kwargs
     ) -> Tuple[Tensor, Tensor]:
         """
         Args:

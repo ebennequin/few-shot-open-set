@@ -58,8 +58,6 @@ make extract_all
 ```
 This operation make take quite some time.
 
-/!\ miniImageNet's CSV specs files are missing
-
 # Reproducing results
 
 All commands to reproduce any results in the paper is contained as a recipe in the `Makefile`. We detail in what follows every command:

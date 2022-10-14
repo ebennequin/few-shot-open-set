@@ -137,11 +137,25 @@ dmypy.json
 
 # data
 data/CUB/images
-data/tiered_imagenet/images
 data/mini_imagenet/images
+data/cub/
+data/fgvc-aircraft-2013b/
+data/fungi/images/
+data/fungi/train.json
+data/fungi/val.json
+data/tiered_imagenet/images
 data/tiered_imagenet/tb_logs
+data/tiered_imagenet/class_names.txt
+data/tiered_imagenet/synsets.txt
+data/tiered_imagenet/test_images.npz
+data/tiered_imagenet/test_labels.pkl
+data/tiered_imagenet/train_images.npz
+data/tiered_imagenet/train_labels.pkl
+data/tiered_imagenet/val_images.npz
+data/tiered_imagenet/val_labels.pkl
 data/cifar/data
 data/features
+data/models
 
 results/
 

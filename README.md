@@ -23,7 +23,9 @@ This code uses several models, but most will be automatically downloaded. The on
 
 1) [mini-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1ixqw1l9XVxl3lh1m5VXkctw6JssahGbQ/view) and [tiered-ImageNet FEAT ResNet-12](https://drive.google.com/file/d/1M93jdOjAn8IihICPKJg8Mb4B-eYDSZfE/view). Place them under `data/models/feat/resnet12_{dataset}_feat.pth`, with `dataset in [mini_imagenet, tiered_imagenet]`.
 
-2) [mini-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/19TdjthkqMKLKSVHrbT5pVEmKvu-6-6iM) and [tiered-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/1y23iU6vW9ySsCn94XmlRs2z2FjSLMGPN). Place them under `data/models/standard/{arch}_{dataset}_feat.pth`, with `arch in [resnet, wrn2810]` and `dataset in [mini, tiered]`.
+2) [mini-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/19TdjthkqMKLKSVHrbT5pVEmKvu-6-6iM) 
+and [tiered-ImageNet pretrained ResNet-12 & WRN 28-10](https://drive.google.com/drive/folders/1y23iU6vW9ySsCn94XmlRs2z2FjSLMGPN). 
+Place them under `data/models/standard/{arch}_{dataset}_feat.pth`, with `arch in [resnet12, wrn2810]` and `dataset in [mini_imagenet, tiered_imagenet]`.
 
 
 ### Download data

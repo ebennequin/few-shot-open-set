@@ -26,7 +26,7 @@ TRAINING=standard# To differentiate between episodic and standard models
 
 # DATA
 DATADIR=data 
-SPLIT=test # should be in ['val', 'test']
+SPLIT=test
 OOD_QUERY=15
 N_TASKS=1000 
 SHOTS=1 5 # will iterate over these values

@@ -42,9 +42,6 @@ class FewShotMethod(nn.Module):
             query_soft_predictions: Tensor of shape [n_query, K], where K is the number of classes
                 in the task, representing the soft predictions of the method for query samples.
         """
-        support_features, query_features = self.transform_features(
-            support_features=support_features, query_features=query_features
-        )
         return self.classify_support_and_queries(
             support_features=support_features,
             query_features=query_features,

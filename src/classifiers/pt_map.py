@@ -22,14 +22,8 @@ class MAP(FewShotMethod):
         **kwargs
     ):
 
-        if kwargs["use_transductively"] is not None:
-            unlabelled_data = query_features[kwargs["use_transductively"]]
-        else:
-            unlabelled_data = query_features
-
-        support_features, unlabelled_data, query_features = (
+        support_features, query_features = (
             support_features.cuda(),
-            unlabelled_data.cuda(),
             query_features.cuda(),
         )
         support_labels, query_labels = (
@@ -41,11 +35,11 @@ class MAP(FewShotMethod):
         self.prototypes = compute_prototypes(support_features, support_labels)
         num_classes = support_labels.unique().size(0)
         probs_s = F.one_hot(support_labels, num_classes)
-        all_features = torch.cat([support_features, unlabelled_data], 0)
+        all_features = torch.cat([support_features, query_features], 0)
         acc_values = []
         for epoch in range(self.inference_steps):
 
-            probs_q = self.get_probas(unlabelled_data)
+            probs_q = self.get_probas(query_features)
             all_probs = torch.cat([probs_s, probs_q], dim=0)
 
             # update centroids

@@ -16,7 +16,7 @@ DET_TRANSFORMS=Trivial # Feature transformations used before feeding to the OOD 
 
 FEATURE_DETECTOR=none # OOD detector working on arbitrary features
 PROBA_DETECTOR=none # OOD detector working on probabilistic output
-CLASSIFIER=none # Classification method for few-shot
+CLASSIFIER=SimpleShot # Classification method for few-shot
 
 
 # Model

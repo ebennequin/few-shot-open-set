@@ -183,7 +183,7 @@ run_snatcher:
 	make MODEL_SRC=feat TRAINING=feat FEATURE_DETECTOR=SnatcherF run ;\
 
 run_ostim:
-	make FEATURE_DETECTOR=OSTIM run ;\
+	make FEATURE_DETECTOR=OSTIM DET_TRANSFORMS="Pool MeanCentering L2norm" run ;\
 
 run_open_set:
 	for method in RPL PROSER OpenMax; do \

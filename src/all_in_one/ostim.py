@@ -3,10 +3,7 @@ from typing import Tuple, List
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from loguru import logger
 from sklearn.metrics import precision_recall_curve
-from skimage.filters import threshold_otsu
-import math
 from .abstract import AllInOne
 from easyfsl.utils import compute_prototypes
 from copy import deepcopy
@@ -36,8 +33,11 @@ class OSTIM(AllInOne):
         self.mu_init = mu_init
         self.use_explicit_prototype = use_explicit_prototype  # use for ablation, to compare with PROSER
 
+    def normalize_before_cosine(self, x):
+        return F.normalize((x - self.mu) / (self.std + 1e-10), dim=1)
+
     def cosine(self, X, Y):
-        return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
+        return self.normalize_before_cosine(X) @ self.normalize_before_cosine(Y).T
 
     def clear(self):
         delattr(self, 'prototypes')
@@ -67,6 +67,7 @@ class OSTIM(AllInOne):
         num_classes = support_labels.unique().size(0)
 
         # Initialize weights
+        self.std = torch.ones(support_features.size(-1))
         if self.mu_init == "base":
             self.mu = deepcopy(kwargs["train_mean"].squeeze())
         elif self.mu_init == "zeros":
@@ -77,6 +78,11 @@ class OSTIM(AllInOne):
             self.mu = torch.cat([support_features, query_features], 0).mean(
                 0, keepdim=True
             )
+        elif self.mu_init == "batch":
+            self.mu = torch.cat([support_features, query_features], 0).mean(
+                0, keepdim=True
+            )
+            self.std = torch.cat([support_features, query_features], 0).std(dim=0, unbiased=False, keepdim=True)
         else:
             raise ValueError(f"Mu init {self.mu_init} not recognized.")
 

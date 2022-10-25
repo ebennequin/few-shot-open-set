@@ -115,7 +115,7 @@ feature_detectors:
           'lambda_em': 0.1,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes',
-          'mu_init': 'mean',
+          'mu_init': 'zeros',
            },
         5: {
           'softmax_temperature': 10.0,
@@ -126,13 +126,13 @@ feature_detectors:
           'lambda_em': 0.1,
           "use_explicit_prototype": False,
           'params2adapt': 'prototypes',
-          'mu_init': 'mean',
+          'mu_init': 'zeros',
            },
              }
     # == For Grid Search
     tuning:
       hparams2tune: ['inference_steps', 'inference_lr', 'lambda_em']
-      hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001], [0.1, 0.5, 1.0]]}
+      hparam_values: {1: [[50, 100, 200, 300], [0.001, 0.0001, 0.00001], [0.1, 0.5, 1.0]]}
       
     # == For ablation
     ablation:

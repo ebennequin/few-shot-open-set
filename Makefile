@@ -227,6 +227,9 @@ tuning:
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_snatcher ;\
 
+tune_ostim_outside_transforms:
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 DET_TRANSFORMS="Pool MeanCentering L2norm" run_ostim ;\
+
 log_best_configs:
 	for shot in 1 5; do \
 		python -m src.plots.csv_plotter \

@@ -67,6 +67,20 @@ class OSTIM(AllInOne):
         num_classes = support_labels.unique().size(0)
 
         # Initialize weights
+        # Note that here we perform feature transformation (eg. mean centering) inside the OSTIM method
+        # This is not the case for other methods we compare to
+        # This is because it was easier to implement the ablation study on the feature transformation this way
+        # You can still reproduce comparable results with the transformation outside of the method
+        # To do so, set mu_init to zeros in configs/detectors.yaml and make the recipe run_ostim
+        # with DET_TRANSFORMS="Pool MeanCentering L2norm"
+        # We found that the best set of hyper-parameters was different in this setting. Here are the hyper-parameters
+        # that we optimized on miniImageNet's val set for this setting:
+        # 1-shot: 'inference_steps': 100,
+        #           'inference_lr': 0.0001,
+        #           'lambda_em': 0.5,
+        # 5-shot: 'inference_steps': 50,
+        #           'inference_lr': 0.0001,
+        #           'lambda_em': 0.1,
         self.std = torch.ones(support_features.size(-1))
         if self.mu_init == "base":
             self.mu = deepcopy(kwargs["train_mean"].squeeze())

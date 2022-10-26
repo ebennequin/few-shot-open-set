@@ -5,7 +5,6 @@ import pickle
 from pathlib import Path
 from typing import Optional
 
-from easyfsl.data_tools import TaskSampler
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from loguru import logger
@@ -20,7 +19,7 @@ from src.datasets import (
     Aircraft,
 )
 from src.datasets.imagenet_val import ImageNetVal
-from src.sampler import OpenQuerySamplerOnFeatures
+from src.sampler import OpenQuerySamplerOnFeatures, TaskSampler
 
 
 def create_dataloader(dataset: Dataset, sampler: TaskSampler, n_workers: int):
@@ -181,9 +180,6 @@ def get_classic_loader(
 
 
 def get_task_loader(
-    args,
-    split: str,
-    dataset_name: str,
     n_way: int,
     n_shot: int,
     n_id_query: int,
@@ -191,7 +187,7 @@ def get_task_loader(
     n_tasks: int,
     n_workers: int,
     features_dict=None,
-    training: bool = False,
+    broad_open_set=False,
 ):
     assert features_dict is not None
     dataset = FeaturesDataset(features_dict)
@@ -202,6 +198,7 @@ def get_task_loader(
         n_id_query=n_id_query,
         n_ood_query=n_ood_query,
         n_tasks=n_tasks,
+        broad_open_set=broad_open_set,
     )
     return create_dataloader(dataset=dataset, sampler=sampler, n_workers=n_workers)
 

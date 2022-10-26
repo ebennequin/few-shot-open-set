@@ -62,6 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_id_query", type=int, default=15)
     parser.add_argument("--n_ood_query", type=int, default=15)
+    parser.add_argument("--broad_open_set", type=bool, default=False)
     parser.add_argument("--n_tasks", type=int, default=500)
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)
@@ -286,16 +287,14 @@ def main(args):
         feature_dic[class_.item()] = features[class_]
 
     data_loader = get_task_loader(
-        args,
-        args.split,
-        args.tgt_dataset,
-        args.n_way,
-        args.n_shot,
-        args.n_id_query,
-        args.n_ood_query,
-        args.n_tasks,
-        args.n_workers,
-        feature_dic,
+        n_way=args.n_way,
+        n_shot=args.n_shot,
+        n_id_query=args.n_id_query,
+        n_ood_query=args.n_ood_query,
+        n_tasks=args.n_tasks,
+        n_workers=args.n_workers,
+        features_dict=feature_dic,
+        broad_open_set=args.broad_open_set,
     )  # If feature_dic is None, this loader will return raw PIL images !
 
     for feature_d, proba_d, classifier in itertools.product(

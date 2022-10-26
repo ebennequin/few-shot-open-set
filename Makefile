@@ -29,6 +29,7 @@ DATADIR=data
 SPLIT=test
 ID_QUERY=15
 OOD_QUERY=15
+BROAD=False
 N_TASKS=1000
 SHOTS=1 5 # will iterate over these values
 
@@ -81,6 +82,7 @@ run:
 			--src_dataset $(SRC_DATASET) \
 			--n_id_query $(ID_QUERY) \
 			--n_ood_query $(OOD_QUERY) \
+			--broad_open_set $(BROAD) \
 			--tgt_dataset $(TGT_DATASET) \
 	        --simu_hparams $(SIMU_PARAMS) \
 	        --override $(OVERRIDE) \

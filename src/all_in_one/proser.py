@@ -14,11 +14,7 @@ import torch.nn as nn
 
 class PROSER(AllInOne):
     def __init__(
-        self,
-        beta: float,
-        inference_lr: float,
-        inference_steps: int,
-        n_dummies: float
+        self, beta: float, inference_lr: float, inference_steps: int, n_dummies: float
     ):
         super().__init__()
         self.beta = beta
@@ -69,13 +65,11 @@ class PROSER(AllInOne):
 
         with torch.no_grad():
             logits_q = self.cls(query_features)
-            logits_q[:, num_classes] = logits_q[:, num_classes:].max(-1).values # [Nq, 1]
+            logits_q[:, num_classes] = (
+                logits_q[:, num_classes:].max(-1).values
+            )  # [Nq, 1]
             return (
                 None,
                 logits_q[:, :-1].softmax(-1),
                 logits_q[:, -1],
             )
-
-
-
-

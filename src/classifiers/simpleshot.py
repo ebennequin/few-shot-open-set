@@ -24,10 +24,12 @@ class SimpleShot(FewShotMethod):
         # print(support_features.size(), support_labels.size())
         self.prototypes = compute_prototypes(support_features, support_labels)
 
-        probs_q = self.get_logits_from_cosine_distances_to_prototypes(query_features).softmax(-1)
+        probs_q = self.get_logits_from_cosine_distances_to_prototypes(
+            query_features
+        ).softmax(-1)
         return (
             self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             ).softmax(-1),
-            probs_q
+            probs_q,
         )

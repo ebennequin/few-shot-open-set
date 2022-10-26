@@ -277,7 +277,7 @@ class Attention(nn.Module):
         assert dim % num_heads == 0, "dim should be divisible by num_heads"
         self.num_heads = num_heads
         head_dim = dim // num_heads
-        self.scale = head_dim ** -0.5
+        self.scale = head_dim**-0.5
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
@@ -532,6 +532,7 @@ class VisionTransformer(nn.Module):
         # all_layers["last_cls"] = x[:, 0]  # b,d
 
         return x[:, 0]
+
 
 def _init_vit_weights(
     module: nn.Module, name: str = "", head_bias: float = 0.0, jax_impl: bool = False

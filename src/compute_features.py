@@ -7,6 +7,7 @@ from src.utils.utils import compute_features, load_model
 import argparse
 from .inference import str2bool
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
@@ -81,7 +82,7 @@ def main(args):
         device=args.device,
         split=args.split,
         keep_all_train_features=args.keep_all_train_features,
-        debug=args.debug
+        debug=args.debug,
     )
 
     # if output_file is None:

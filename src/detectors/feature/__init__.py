@@ -19,5 +19,14 @@ __all__ = {
     "KNN": kNNDetector,
 }
 
-for pyod_detector in ["HBOS", "IForest", "LOF", "MCD", "PCA", "OCSVM", "COPOD", "MO_GAAL"]:
+for pyod_detector in [
+    "HBOS",
+    "IForest",
+    "LOF",
+    "MCD",
+    "PCA",
+    "OCSVM",
+    "COPOD",
+    "MO_GAAL",
+]:
     __all__[pyod_detector] = partial(instanciate_wrapper, pyod_detector=pyod_detector)

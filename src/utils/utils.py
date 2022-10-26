@@ -88,8 +88,8 @@ def compute_features(
                 torch.cat(all_labels, dim=0),
             )
         else:
-            mean = 0.
-            var = 0.
+            mean = 0.0
+            var = 0.0
             N = 1.0
             for index, (images, labels) in tqdm(enumerate(loader), unit="batch"):
                 feats = feature_extractor(images.to(device))
@@ -97,12 +97,8 @@ def compute_features(
                     if N == 1:
                         mean = new_sample
                     else:
-                        var = incremental_var(
-                            var, mean, new_sample, N
-                        )  # [d,]
-                        mean = incremental_mean(
-                            mean, new_sample, N
-                        )  # [d,]
+                        var = incremental_var(var, mean, new_sample, N)  # [d,]
+                        mean = incremental_mean(mean, new_sample, N)  # [d,]
                     N += 1
                 if debug and index >= 5:
                     break
@@ -214,15 +210,20 @@ def find_free_port() -> int:
 
 
 def get_modules_to_try(
-    args, module_group: str, module_name: str, module_pool: Dict[str, Any],
-    tune: bool, ablate: bool
+    args,
+    module_group: str,
+    module_name: str,
+    module_pool: Dict[str, Any],
+    tune: bool,
+    ablate: bool,
 ):
 
     modules_to_try: List[Any] = []
     # logger.warning(module_pool)
     module_dict = eval(f"args.{module_group}")
-    assert (not tune and not ablate) or (tune ^ ablate), \
-        "Cannot be both in ablation and tuning mode."
+    assert (not tune and not ablate) or (
+        tune ^ ablate
+    ), "Cannot be both in ablation and tuning mode."
 
     if tune:
         logger.warning(f"Tuning over {module_group} activated")
@@ -266,7 +267,9 @@ def get_modules_to_try(
             shot = (
                 args.n_shot if args.n_shot in module_dict[module_name]["default"] else 1
             )
-            default_args = module_dict[module_name]["default"][shot]  # take default args
+            default_args = module_dict[module_name]["default"][
+                shot
+            ]  # take default args
             if "ablation" in module_dict[module_name]:
                 params2tune = module_dict[module_name]["ablation"]["hparams2tune"]
                 shot = (
@@ -275,7 +278,9 @@ def get_modules_to_try(
                     in module_dict[module_name]["ablation"]["hparam_values"]
                     else 1
                 )
-                values2tune = module_dict[module_name]["ablation"]["hparam_values"][shot]
+                values2tune = module_dict[module_name]["ablation"]["hparam_values"][
+                    shot
+                ]
                 for k, values2try in zip(params2tune, values2tune):
                     # Override default args
                     for v in values2try:
@@ -291,7 +296,9 @@ def get_modules_to_try(
                         modules_to_try.append(module_pool[module_name](**module_args))
                 logger.info(f"Modules to try: {modules_to_try}")
             else:
-                raise ValueError(f"Module {module_name} has no specified ablation parameters.")
+                raise ValueError(
+                    f"Module {module_name} has no specified ablation parameters."
+                )
         else:
             modules_to_try.append(module_pool[module_name]())
     else:

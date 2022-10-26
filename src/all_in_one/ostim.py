@@ -9,6 +9,7 @@ from easyfsl.utils import compute_prototypes
 from copy import deepcopy
 from sklearn.metrics import auc as auc_fn
 
+
 class OSTIM(AllInOne):
     def __init__(
         self,
@@ -31,7 +32,9 @@ class OSTIM(AllInOne):
         self.softmax_temperature = softmax_temperature
         self.params2adapt = params2adapt
         self.mu_init = mu_init
-        self.use_explicit_prototype = use_explicit_prototype  # use for ablation, to compare with PROSER
+        self.use_explicit_prototype = (
+            use_explicit_prototype  # use for ablation, to compare with PROSER
+        )
 
     def normalize_before_cosine(self, x):
         return F.normalize((x - self.mu) / (self.std + 1e-10), dim=1)
@@ -40,8 +43,8 @@ class OSTIM(AllInOne):
         return self.normalize_before_cosine(X) @ self.normalize_before_cosine(Y).T
 
     def clear(self):
-        delattr(self, 'prototypes')
-        delattr(self, 'mu')
+        delattr(self, "prototypes")
+        delattr(self, "mu")
 
     def get_logits(self, prototypes, query_features):
 
@@ -58,7 +61,7 @@ class OSTIM(AllInOne):
         support_features: Tensor,
         query_features: Tensor,
         support_labels: Tensor,
-        **kwargs
+        **kwargs,
     ) -> Tuple[Tensor, Tensor, Tensor]:
 
         self.iter_ = 0
@@ -96,14 +99,18 @@ class OSTIM(AllInOne):
             self.mu = torch.cat([support_features, query_features], 0).mean(
                 0, keepdim=True
             )
-            self.std = torch.cat([support_features, query_features], 0).std(dim=0, unbiased=False, keepdim=True)
+            self.std = torch.cat([support_features, query_features], 0).std(
+                dim=0, unbiased=False, keepdim=True
+            )
         else:
             raise ValueError(f"Mu init {self.mu_init} not recognized.")
 
         with torch.no_grad():
             self.prototypes = compute_prototypes(support_features, support_labels)
             if self.use_explicit_prototype:
-                self.prototypes = torch.cat([self.prototypes, torch.zeros(1, support_features.size(1))], 0)
+                self.prototypes = torch.cat(
+                    [self.prototypes, torch.zeros(1, support_features.size(1))], 0
+                )
 
         params_list = []
         if "mu" in self.params2adapt:
@@ -148,21 +155,29 @@ class OSTIM(AllInOne):
             with torch.no_grad():
                 outlier_scores = q_probs[:, -1]
                 closed_q_probs = logits_q[:, :-1].softmax(-1)
-                q_cond_ent = -(closed_q_probs * torch.log(closed_q_probs + 1e-12)).sum(-1)
+                q_cond_ent = -(closed_q_probs * torch.log(closed_q_probs + 1e-12)).sum(
+                    -1
+                )
 
                 q_cond_ent_values.append(q_cond_ent.mean(0).item())
                 q_ent_values.append(div.item())
                 ce_values.append(ce.item())
                 outliers = kwargs["outliers"].bool()
                 inliers = ~outliers
-                acc = (closed_q_probs.argmax(-1) == kwargs["query_labels"])[inliers].float().mean().item()
+                acc = (
+                    (closed_q_probs.argmax(-1) == kwargs["query_labels"])[inliers]
+                    .float()
+                    .mean()
+                    .item()
+                )
                 acc_values.append(acc)
                 inlier_entropy.append(q_cond_ent[inliers].mean(0).item())
                 outlier_entropy.append(q_cond_ent[~inliers].mean(0).item())
                 inlier_outscore.append(outlier_scores[inliers].mean(0).item())
                 oulier_outscore.append(outlier_scores[~inliers].mean(0).item())
                 precision, recall, thresholds = precision_recall_curve(
-                outliers.numpy(), outlier_scores.numpy())
+                    outliers.numpy(), outlier_scores.numpy()
+                )
                 aupr = auc_fn(recall, precision)
                 auprs.append(aupr)
                 precision, recall, thresholds = precision_recall_curve(
@@ -204,7 +219,7 @@ class OSTIM(AllInOne):
             logits_s = self.get_logits(self.prototypes, support_features)
             logits_q = self.get_logits(self.prototypes, query_features)
             outlier_scores = logits_q.softmax(-1)[:, -1]
-        
+
         # Ensure that nothing persists after
         self.clear()
         return (

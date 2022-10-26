@@ -86,7 +86,7 @@ class ICI(FewShotMethod):
         probs_s = torch.from_numpy(self.classifier.predict_proba(support_X))
         probs_q = torch.from_numpy(self.classifier.predict_proba(query_X))
 
-        return probs_s,  probs_q
+        return probs_s, probs_q
 
     def expand(
         self, support_set, X_hat, y_hat, way, num_support, pseudo_y, embeddings, targets
@@ -136,6 +136,7 @@ class ICI(FewShotMethod):
             embed = SpectralEmbedding(n_components=d)
         elif reduce == "pca":
             from sklearn.decomposition import PCA
+
             embed = PCA(n_components=d)
 
         if reduce == "none":
@@ -146,7 +147,9 @@ class ICI(FewShotMethod):
     def initial_classifier(self, classifier):
         assert classifier in ["lr", "svm"]
         if classifier == "svm":
-            self.classifier = SVC(C=self.C, gamma="auto", kernel="linear", probability=True)
+            self.classifier = SVC(
+                C=self.C, gamma="auto", kernel="linear", probability=True
+            )
         elif classifier == "lr":
             self.classifier = LogisticRegression(
                 C=self.C, multi_class="auto", solver="lbfgs", max_iter=1000

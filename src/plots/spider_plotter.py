@@ -50,22 +50,31 @@ class SpiderPlotter(CSVPlotter):
         for i, metric in enumerate(self.metric_dic):
             if i == 0:
                 methods = list(self.metric_dic[metric].keys())
-                print(f"Methods detected : {methods} \n  Which methods to use ? ('all' or space-separated indices.)")
+                print(
+                    f"Methods detected : {methods} \n  Which methods to use ? ('all' or space-separated indices.)"
+                )
                 selection = input()
-                if selection == 'all':
+                if selection == "all":
                     pass
                 else:
-                    methods = [methods[int(x)] for x in selection.split(' ')]
+                    methods = [methods[int(x)] for x in selection.split(" ")]
             if i == 0:
-                print(f"Methods detected : {methods} \n  Which one to use as a baseline ?")
+                print(
+                    f"Methods detected : {methods} \n  Which one to use as a baseline ?"
+                )
                 baseline_method = methods[int(input())]
                 methods.remove(baseline_method)
             x_names = deepcopy(self.metric_dic[metric][baseline_method]["x"])
             y_baseline = np.array(self.metric_dic[metric][baseline_method]["y"])
             baseline_values[metric] = y_baseline
             for method in methods:
-                assert self.metric_dic[metric][method]["x"] == x_names, (self.metric_dic[metric][method]["x"], x_names)
-                self.metric_dic[metric][method]["y"] = np.array(self.metric_dic[metric][method]["y"]) - y_baseline
+                assert self.metric_dic[metric][method]["x"] == x_names, (
+                    self.metric_dic[metric][method]["x"],
+                    x_names,
+                )
+                self.metric_dic[metric][method]["y"] = (
+                    np.array(self.metric_dic[metric][method]["y"]) - y_baseline
+                )
             del self.metric_dic[metric][baseline_method]
 
         for i, metric_name in enumerate(self.metric_dic):
@@ -83,7 +92,10 @@ class SpiderPlotter(CSVPlotter):
                 [max(self.metric_dic[metric_name][method]["y"]) for method in methods]
             )
             max_avg_perf = max(
-                [np.mean(self.metric_dic[metric_name][method]["y"]) for method in methods]
+                [
+                    np.mean(self.metric_dic[metric_name][method]["y"])
+                    for method in methods
+                ]
             )
             yticks = np.linspace(min_val - 0.005, max_val + 0.005, 5)
             cloest_to_0 = np.abs(yticks).argmin()
@@ -94,7 +106,10 @@ class SpiderPlotter(CSVPlotter):
 
             first_method = list(self.metric_dic[metric_name].keys())[0]
             x_names = self.metric_dic[metric_name][first_method]["x"]
-            VARIABLES = [f"{x} \n ({np.round(100 * y, 1)})" for x, y in zip(x_names, baseline_values[metric_name])]
+            VARIABLES = [
+                f"{x} \n ({np.round(100 * y, 1)})"
+                for x, y in zip(x_names, baseline_values[metric_name])
+            ]
             VARIABLES_N = len(VARIABLES)
 
             # The angles at which the values of the numeric variables are placed
@@ -139,15 +154,28 @@ class SpiderPlotter(CSVPlotter):
 
             # Add custom lines for radial axis (y) at 0, 0.5 and 1.
             _ = [ax.plot(HANGLES, h, ls=(0, (6, 6)), c=GREY70) for h in H]
-            _ = ax.plot(HANGLES, [0.] * len(HANGLES), ls=(0, (6, 6)), c='black',
-                        label="Strong baseline", linewidth=2)
+            _ = ax.plot(
+                HANGLES,
+                [0.0] * len(HANGLES),
+                ls=(0, (6, 6)),
+                c="black",
+                label="Strong baseline",
+                linewidth=2,
+            )
 
             # Add levels -----------------------------------------------------
             # These labels indicate the values of the radial axis
             size = 18
-            _ = [ax.text(angle, li + PAD, f"+{np.round(li * 100, 1)}" if li > 0 \
-                 else np.round(li * 100, 1), size=size) for li in yticks]
-            ax.text(angle, 0. + PAD, 0., size=size)
+            _ = [
+                ax.text(
+                    angle,
+                    li + PAD,
+                    f"+{np.round(li * 100, 1)}" if li > 0 else np.round(li * 100, 1),
+                    size=size,
+                )
+                for li in yticks
+            ]
+            ax.text(angle, 0.0 + PAD, 0.0, size=size)
 
             # Now fill the area of the circle with radius 1.
             # This create the effect of gray background.
@@ -155,9 +183,7 @@ class SpiderPlotter(CSVPlotter):
 
             # Fill lines and dots --------------------------------------------
             methods.sort()
-            for idx, method in enumerate(
-                methods
-            ):
+            for idx, method in enumerate(methods):
                 method_result = self.metric_dic[metric_name][method]
                 assert method_result["x"] == x_names, (
                     method,
@@ -172,7 +198,7 @@ class SpiderPlotter(CSVPlotter):
                 ax.plot(
                     ANGLES,
                     values,
-                    linewidth=4 if 'OSTIM' in method else 2,
+                    linewidth=4 if "OSTIM" in method else 2,
                     c=spider_colors[idx],
                     label=rf"\textbf{{{label}}}" if is_best else label,
                 )
@@ -180,7 +206,9 @@ class SpiderPlotter(CSVPlotter):
                 # ax.plot(ANGLES, values, c=method2color[method], linewidth=3, label=,)
                 # ax.scatter(ANGLES, values, s=130, c=method2color[method], zorder=10)
 
-            ax.set_title(fr"\textbf{{{pretty[metric_name]}}}", fontdict={"fontsize": 30}, y=1.5)
+            ax.set_title(
+                rf"\textbf{{{pretty[metric_name]}}}", fontdict={"fontsize": 30}, y=1.5
+            )
             ax.legend(
                 loc="center",
                 bbox_to_anchor=[1.25, 1.3],  # bottom-right

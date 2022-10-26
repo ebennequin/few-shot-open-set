@@ -35,12 +35,7 @@ pretty_arch = my_default_dict(lambda x: x)
 pretty_training = my_default_dict(lambda x: x)
 
 
-spider_colors = ["#ab62c0",
-                 "#72a555",
-                 "#c9556f",
-                 "#638ccc",
-                 "#c57d3d"
-                 ]
+spider_colors = ["#ab62c0", "#72a555", "#c9556f", "#638ccc", "#c57d3d"]
 
 # ---------- Datasets
 
@@ -102,9 +97,9 @@ pretty_training["mixer_b16_224_in21k"] = r"\small{Sup. (IN21k)}"
 for k in pretty_training:
     if "vit_base_patch16" in k:
         pretty_arch[k] = r"ViT-B/16"
-    elif 'resnet50' in k:
+    elif "resnet50" in k:
         pretty_arch[k] = r"ResNet-50"
-    elif 'mixer_b16' in k:
+    elif "mixer_b16" in k:
         pretty_arch[k] = r"Mixer-B/16"
 
 
@@ -153,7 +148,7 @@ class CSVPlotter(Plotter):
                                                 'pm': Optional[ndarray],
                                                }
         """
-        if kwargs['use_pretty']:
+        if kwargs["use_pretty"]:
             process_dic = pretty
         else:
             process_dic = my_default_dict(lambda x: x)
@@ -181,7 +176,7 @@ class CSVPlotter(Plotter):
             # Read remaining rows and add it to result_dir
             for index, row in df.iterrows():
                 for metric in kwargs["metrics"]:
-                    if kwargs['use_pretty']:
+                    if kwargs["use_pretty"]:
                         full_method_name = [
                             process_dic[row[x].split("(")[0]] for x in kwargs["groupby"]
                         ]
@@ -191,7 +186,9 @@ class CSVPlotter(Plotter):
                     full_method_name = list(filter(lambda x: len(x), full_method_name))
                     # full_method_name = list(filter(lambda x: x != 'None', full_method_name))
                     method_at_row = " + ".join(full_method_name)
-                    x_value = ("\n" + r"$\downarrow$" + "\n").join([process_dic[row[x]] for x in kwargs["plot_versus"]])
+                    x_value = ("\n" + r"$\downarrow$" + "\n").join(
+                        [process_dic[row[x]] for x in kwargs["plot_versus"]]
+                    )
                     if metric in row:
                         result_dir[metric][method_at_row][x_value].append(row[metric])
 
@@ -229,14 +226,27 @@ class CSVPrinter(CSVPlotter):
         all_metrics = self.metric_dic.keys()
         for metric in self.metric_dic:
             all_methods = self.metric_dic[metric].keys()
-            all_methods_stems = [remove_args_from_name(full_name) for full_name in all_methods]
-            stem2methods = {stem: [meth for meth in all_methods if remove_args_from_name(meth) == stem] for stem in all_methods_stems}
+            all_methods_stems = [
+                remove_args_from_name(full_name) for full_name in all_methods
+            ]
+            stem2methods = {
+                stem: [
+                    meth for meth in all_methods if remove_args_from_name(meth) == stem
+                ]
+                for stem in all_methods_stems
+            }
             # logger.warning(all_methods)
             for method, res in self.metric_dic[metric].items():
                 assert len(res["x"]) == len(res["y"]) == 1, res
         for method_stem in stem2methods:
             revelant_methods = stem2methods[method_stem]
-            all_items = [(method, [self.metric_dic[metric][method]["y"][0] for metric in all_metrics]) for method in revelant_methods]
+            all_items = [
+                (
+                    method,
+                    [self.metric_dic[metric][method]["y"][0] for metric in all_metrics],
+                )
+                for method in revelant_methods
+            ]
             sorted_methods = list(
                 sorted(
                     all_items,
@@ -247,10 +257,10 @@ class CSVPrinter(CSVPlotter):
             best_method = sorted_methods[0]
             msg = f"Best method {best_method[0]} achieved overall : {best_method[1]}"
             for metric in all_metrics:
-                msg += f" and {metric}={self.metric_dic[metric][best_method[0]]['y'][0]}"
-            logger.info(
-                msg
-            )
+                msg += (
+                    f" and {metric}={self.metric_dic[metric][best_method[0]]['y'][0]}"
+                )
+            logger.info(msg)
 
     def log_latex(self, **kwargs):
         assert hasattr(self, "metric_dic")
@@ -276,11 +286,11 @@ class CSVPrinter(CSVPlotter):
 
 
 def remove_args_from_name(full_name: str):
-    '''
+    """
     Args:
         A full method name will be in the form Classifier_name(args_cls) + Detector_name(args_det)
-    '''
-    return '+'.join([part.split('(')[0] for part in full_name.split('+')])
+    """
+    return "+".join([part.split("(")[0] for part in full_name.split("+")])
 
 
 if __name__ == "__main__":

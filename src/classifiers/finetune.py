@@ -31,7 +31,7 @@ class Finetune(FewShotMethod):
         support_features: Tensor,
         query_features: Tensor,
         support_labels: Tensor,
-        **kwargs
+        **kwargs,
     ) -> Tuple[Tensor, Tensor]:
 
         # Initialize prototypes

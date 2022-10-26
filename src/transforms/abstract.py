@@ -150,6 +150,8 @@ class TransductiveBatchNorm(FeatureTransform):
         feat: Tensor shape [N, hidden_dim, *]
         """
         mean = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)
-        std = torch.cat([raw_feat_s, raw_feat_q], 0).std(0, unbiased=False, keepdim=True)
+        std = torch.cat([raw_feat_s, raw_feat_q], 0).std(
+            0, unbiased=False, keepdim=True
+        )
         assert len(mean.size()) == 2, mean.size()
         return (raw_feat_s - mean) / (std + 1e-10), (raw_feat_q - mean) / (std + 1e-10)

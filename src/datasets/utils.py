@@ -4,8 +4,10 @@ from src.models import BACKBONE_CONFIGS
 from loguru import logger
 from torchvision.transforms import InterpolationMode
 
-INTERPOLATIONS = {'bilinear': InterpolationMode.BILINEAR,
-                  'bicubic': InterpolationMode.BICUBIC}
+INTERPOLATIONS = {
+    "bilinear": InterpolationMode.BILINEAR,
+    "bicubic": InterpolationMode.BICUBIC,
+}
 
 
 def get_transforms(args):

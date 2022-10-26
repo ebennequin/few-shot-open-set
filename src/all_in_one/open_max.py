@@ -14,10 +14,7 @@ import numpy as np
 
 
 class OpenMax(AllInOne):
-    def __init__(
-        self,
-        alpha: int
-    ):
+    def __init__(self, alpha: int):
         super().__init__()
         self.alpha = alpha
 
@@ -42,7 +39,7 @@ class OpenMax(AllInOne):
         #     self.fit_weibull(support_features, support_labels)
 
         # Compute closed-set activations
-        activations = - torch.cdist(query_features, self.prototypes)
+        activations = -torch.cdist(query_features, self.prototypes)
 
         # Compute augmented logits
 

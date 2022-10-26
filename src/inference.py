@@ -130,7 +130,7 @@ def parse_args() -> argparse.Namespace:
             "n_way",
             "n_shot",
             "n_id_query",
-            "n_ood_query"
+            "n_ood_query",
         ],
         help="Important params that will appear in .csv result file.",
     )
@@ -177,7 +177,7 @@ def is_jsonable(x):
 
 
 def dump_config(args):
-    path = Path(args.res_dir) / 'config.json'
+    path = Path(args.res_dir) / "config.json"
     logger.info(f"Dropping config file at {path}")
     with open(path, "w") as f:
         # try:
@@ -185,7 +185,9 @@ def dump_config(args):
         keys_to_delete = []
         for key, value in arg_dict.items():
             if not is_jsonable(value):
-                logger.warning(f"Key {key} was not serializable, and will not be saved at {path}")
+                logger.warning(
+                    f"Key {key} was not serializable, and will not be saved at {path}"
+                )
                 keys_to_delete.append(key)
         for key in keys_to_delete:
             del arg_dict[key]
@@ -228,19 +230,24 @@ def main(args):
             "feature_detectors",
             args.feature_detector,
             ALL_IN_ONE_METHODS,
-            "feature_detector" in args.tune, "feature_detector" in args.ablate
+            "feature_detector" in args.tune,
+            "feature_detector" in args.ablate,
         )
         proba_detectors = classifiers = [None]
 
     else:
         # ==== Prepare few-shot classifier ====
 
-        if args.classifier == 'none':
+        if args.classifier == "none":
             classifiers = [None]
         else:
             classifiers: List[FewShotMethod] = get_modules_to_try(
-                args, "classifiers", args.classifier, CLASSIFIERS,
-                "classifier" in args.tune, "classifier" in args.ablate
+                args,
+                "classifiers",
+                args.classifier,
+                CLASSIFIERS,
+                "classifier" in args.tune,
+                "classifier" in args.ablate,
             )
 
         # ==== Prepare feature detector ====
@@ -253,7 +260,8 @@ def main(args):
                 "feature_detectors",
                 args.feature_detector,
                 FEATURE_DETECTORS,
-                "feature_detector" in args.tune, "feature_detector" in args.ablate,
+                "feature_detector" in args.tune,
+                "feature_detector" in args.ablate,
             )
 
         # ==== Prepare proba detector ====
@@ -265,7 +273,8 @@ def main(args):
                 "proba_detectors",
                 args.proba_detector,
                 PROBA_DETECTORS,
-                "proba_detector" in args.tune, "proba_detector" in args.ablate,
+                "proba_detector" in args.tune,
+                "proba_detector" in args.ablate,
             )
 
     # ================ Prepare data ===================
@@ -312,7 +321,9 @@ def main(args):
         args.proba_detector = str(proba_d)
         args.classifier = str(classifier)
 
-        sub_exp = (str(args.classifier) + str(args.feature_detector)).replace("None", "")
+        sub_exp = (str(args.classifier) + str(args.feature_detector)).replace(
+            "None", ""
+        )
         args.res_dir = os.path.join(args.res_root, sub_exp)
         os.makedirs(args.res_dir, exist_ok=True)
 
@@ -320,7 +331,10 @@ def main(args):
 
         set_random_seed(args.random_seed)
 
-        if not check_if_record_exists(args, Path(args.res_root) / "out.csv") or args.override:
+        if (
+            not check_if_record_exists(args, Path(args.res_root) / "out.csv")
+            or args.override
+        ):
             metrics = detect_outliers(
                 args=args,
                 feature_extractor=feature_extractor,
@@ -335,7 +349,9 @@ def main(args):
             )
             save_results(args, metrics, args.res_root)
         else:
-            logger.warning("Experiment already done, and overriding not activated. Moving to the next.")
+            logger.warning(
+                "Experiment already done, and overriding not activated. Moving to the next."
+            )
 
 
 def save_results(args, metrics, res_root):
@@ -422,7 +438,9 @@ def detect_outliers(
                 query_labels=query_labels,
                 outliers=outliers,
             )
-            outlier_scores = proba_detector(support_probas=probas_s, query_probas=probas_q)
+            outlier_scores = proba_detector(
+                support_probas=probas_s, query_probas=probas_q
+            )
 
         else:  #  For those that work on features that use a prediction-based detector
             output = feature_detector(
@@ -435,7 +453,9 @@ def detect_outliers(
                 intra_task_metrics=intra_task_metrics,
                 figures=figures,
             )
-            if len(output) == 3:  #  Open set methods perform classif and OOD detection at the same time
+            if (
+                len(output) == 3
+            ):  #  Open set methods perform classif and OOD detection at the same time
                 probas_s, probas_q, outlier_scores = output
             else:
                 outlier_scores = output
@@ -454,7 +474,12 @@ def detect_outliers(
         # ====== Store predictions in case it needs saving ====
 
         if args.save_predictions:
-            for array_name in ['probas_q', 'outliers', 'query_labels', 'outlier_scores']:
+            for array_name in [
+                "probas_q",
+                "outliers",
+                "query_labels",
+                "outlier_scores",
+            ]:
                 tensors2save[array_name].append(eval(array_name))
 
         # ====== Tracking metrics ======
@@ -515,7 +540,7 @@ def detect_outliers(
     if args.save_predictions:
         for array_name, tensor_list in tensors2save.items():
             tensor = torch.stack(tensor_list, 0)
-            torch.save(tensor, Path(args.res_dir) / f'{array_name}.pt')
+            torch.save(tensor, Path(args.res_dir) / f"{array_name}.pt")
             logger.info(f"Saved {Path(args.res_dir) / array_name}.pt'")
 
     return final_metrics

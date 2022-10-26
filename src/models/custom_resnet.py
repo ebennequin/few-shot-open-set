@@ -19,7 +19,7 @@ def _cfg(url="", **kwargs):
             [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
         ),
         "std": np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]),
-        "interpolation": 'bilinear',
+        "interpolation": "bilinear",
         "crop_pct": 0.875,
         **kwargs,
     }
@@ -91,14 +91,14 @@ class DropBlock(nn.Module):
             ]
         ).t()
         offsets = torch.cat(
-            (torch.zeros(self.block_size ** 2, 2).long(), offsets.long()), 1
+            (torch.zeros(self.block_size**2, 2).long(), offsets.long()), 1
         )
         if torch.cuda.is_available():
             rank = dist.get_rank()
             offsets = offsets.to(rank)
 
         if nr_blocks > 0:
-            non_zero_idxs = non_zero_idxs.repeat(self.block_size ** 2, 1)
+            non_zero_idxs = non_zero_idxs.repeat(self.block_size**2, 1)
             offsets = offsets.repeat(nr_blocks, 1).view(-1, 4)
             offsets = offsets.long()
 
@@ -183,8 +183,8 @@ class BasicBlock(nn.Module):
                 )
                 gamma = (
                     (1 - keep_rate)
-                    / self.block_size ** 2
-                    * feat_size ** 2
+                    / self.block_size**2
+                    * feat_size**2
                     / (feat_size - self.block_size + 1) ** 2
                 )
                 out = self.DropBlock(out, gamma=gamma)

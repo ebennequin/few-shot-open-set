@@ -32,6 +32,7 @@ barplot_colors = [
     "m",
 ]
 
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -41,6 +42,7 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
+
 
 class BarPlotter(CSVPlotter):
     """
@@ -58,9 +60,13 @@ class BarPlotter(CSVPlotter):
         fig, axes = plt.subplots(figsize=(10, 6), ncols=2)
 
         metric_names = list(self.metric_dic.keys())
-        assert len(metric_names) == 2, 'Mirror BarPlotter only supports 2 metrics (one on each side)'
+        assert (
+            len(metric_names) == 2
+        ), "Mirror BarPlotter only supports 2 metrics (one on each side)"
 
-        for metric_index, (metric_name, metric_dic) in enumerate(self.metric_dic.items()):
+        for metric_index, (metric_name, metric_dic) in enumerate(
+            self.metric_dic.items()
+        ):
 
             ax = axes[metric_index]
 
@@ -77,13 +83,17 @@ class BarPlotter(CSVPlotter):
 
                 grouped_items = defaultdict(list)
                 for arch, result in zip(method_dic["x"], method_dic["y"]):
-                    grouped_items[pretty_arch[arch]].append((pretty_training[arch], result))
+                    grouped_items[pretty_arch[arch]].append(
+                        (pretty_training[arch], result)
+                    )
 
                 current_height = 0
                 yticks = []
                 yticks_labels = []
                 for arch in grouped_items:
-                    for training_index, (training, value) in enumerate(grouped_items[arch]):
+                    for training_index, (training, value) in enumerate(
+                        grouped_items[arch]
+                    ):
                         value = value - bottoms[training]
                         ax.barh(
                             [current_height],
@@ -96,10 +106,26 @@ class BarPlotter(CSVPlotter):
                         )
                         bottoms[training] += value
                         if method_index == 1:
-                            ax.text(bottoms[training] + 0.01, current_height, rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
-                                    color=barplot_colors[methods.index(method)], va='center', ha='right' if metric_index == 0 else 'left', fontsize=15)
-                        if (metric_index == 1) and (training_index == len(grouped_items[arch]) - 1):
-                            ax.text(0.24, current_height + 0.02, arch, va='center', ha='center', fontsize=14)
+                            ax.text(
+                                bottoms[training] + 0.01,
+                                current_height,
+                                rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
+                                color=barplot_colors[methods.index(method)],
+                                va="center",
+                                ha="right" if metric_index == 0 else "left",
+                                fontsize=15,
+                            )
+                        if (metric_index == 1) and (
+                            training_index == len(grouped_items[arch]) - 1
+                        ):
+                            ax.text(
+                                0.24,
+                                current_height + 0.02,
+                                arch,
+                                va="center",
+                                ha="center",
+                                fontsize=14,
+                            )
                         yticks_labels.append(rf"{training}")
                         yticks.append(current_height)
                         current_height += 0.02
@@ -116,8 +142,13 @@ class BarPlotter(CSVPlotter):
                 ax.yaxis.tick_right()
             else:
                 ax.set(yticks=yticks)
-                ax.set_yticklabels(yticks_labels,
-                                   ha='center', va='center', position=(-0.32, 0), fontsize=12)
+                ax.set_yticklabels(
+                    yticks_labels,
+                    ha="center",
+                    va="center",
+                    position=(-0.32, 0),
+                    fontsize=12,
+                )
                 # ax.yaxis.tick_left()
             plt.subplots_adjust(wspace=0.7)
             ax.set_ylim(-0.03, current_height)
@@ -143,15 +174,17 @@ class BarPlotter(CSVPlotter):
             if metric_index == 1:
                 handles, labels = ax.get_legend_handles_labels()
                 by_label = dict(zip(labels, handles))
-                fig.legend(by_label.values(), by_label.keys(),
-                           loc="center",
-                           bbox_to_anchor=[0.53, 0.97],  # bottom-right
-                           ncol=2,
-                           frameon=False,  # don't put a frame)
-                           )
+                fig.legend(
+                    by_label.values(),
+                    by_label.keys(),
+                    loc="center",
+                    bbox_to_anchor=[0.53, 0.97],  # bottom-right
+                    ncol=2,
+                    frameon=False,  # don't put a frame)
+                )
             if metric_index == 0:
                 # If you have positive numbers and want to invert the x-axis of the left plot
-                ax.invert_xaxis() 
+                ax.invert_xaxis()
 
                 # # To show data from highest to lowest
                 # ax.invert_yaxis()

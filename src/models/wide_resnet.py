@@ -8,13 +8,14 @@ from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 import numpy as np
 from loguru import logger
 
+
 def _cfg(url="", **kwargs):
     return {
         "input_size": (3, 84, 84),
         "mean": IMAGENET_DEFAULT_MEAN,
         "std": IMAGENET_DEFAULT_STD,
         "crop_pct": 0.875,
-        "interpolation": 'bilinear',
+        "interpolation": "bilinear",
         **kwargs,
     }
 

@@ -27,8 +27,9 @@ TRAINING=standard# To differentiate between episodic and standard models
 # DATA
 DATADIR=data 
 SPLIT=test
+ID_QUERY=15
 OOD_QUERY=15
-N_TASKS=1000 
+N_TASKS=1000
 SHOTS=1 5 # will iterate over these values
 
 
@@ -78,6 +79,7 @@ run:
 	        --training $(TRAINING) \
 	        --split $(SPLIT) \
 			--src_dataset $(SRC_DATASET) \
+			--n_id_query $(ID_QUERY) \
 			--n_ood_query $(OOD_QUERY) \
 			--tgt_dataset $(TGT_DATASET) \
 	        --simu_hparams $(SIMU_PARAMS) \
@@ -160,10 +162,10 @@ run_pyod:
 
 run_best:
 	make run_snatcher ;\
-# 	make run_ostim ;\
-# 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
-# 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
-# 	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
+	make run_ostim ;\
+	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
+	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 
 run_finalists:
 	make run_ostim ;\
@@ -264,6 +266,15 @@ log_benchmark:
 		done \
 	done \
 
+
+ablation_n_query:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		for shot in 1 5 ; do \
+			for query in 1 5 15 30; do \
+				make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} ID_QUERY=$${query} N_SHOT=$${shot} run_ostim ;\
+			done ;\
+		done \
+	done \
 
 # ========== 3) Cross-domain experiments ===========
 

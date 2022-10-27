@@ -245,14 +245,20 @@ log_best_configs:
 
 # ========== 2) Standard benchmarks testing ===========
 
-benchmark:
+_benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
- 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
- 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
- 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
- 		make EXP=benchmark SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
+
+benchmark:
+	make EXP=benchmark _benchmark ;\
+
+benchmark_broad_open_set:
+	make EXP=benchmark_broad BROAD=True _benchmark ;\
 
 log_benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \

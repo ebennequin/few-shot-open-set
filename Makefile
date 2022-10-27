@@ -271,11 +271,10 @@ log_benchmark:
 
 ablation_n_query:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		for shot in 1 5 ; do \
-			for query in 1 5 15 30; do \
-				make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} ID_QUERY=$${query} N_SHOT=$${shot} run_ostim ;\
-			done ;\
-		done \
+		for query in 1 5 15 30; do \
+			make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
+			make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} run_ostim ;\
+		done ;\
 	done \
 
 # ========== 3) Cross-domain experiments ===========

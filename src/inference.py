@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n_shot", type=int, default=5)
     parser.add_argument("--n_id_query", type=int, default=15)
     parser.add_argument("--n_ood_query", type=int, default=15)
-    parser.add_argument("--broad_open_set", type=bool, default=False)
+    parser.add_argument("--broad_open_set", type=str2bool)
     parser.add_argument("--n_tasks", type=int, default=500)
     parser.add_argument("--random_seed", type=int, default=0)
     parser.add_argument("--n_workers", type=int, default=6)

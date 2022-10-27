@@ -65,31 +65,31 @@ extract:
 run:
 	for shot in $(SHOTS); do \
 	    python3 -m src.inference \
-	        --exp_name $(EXP)/$(SRC_DATASET)'-->'$(TGT_DATASET)'('$(SPLIT)')'/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
-	        --data_dir $(DATADIR) \
-	        --classifier $(CLASSIFIER) \
-	        --n_tasks $(N_TASKS) \
-	        --n_shot $${shot} \
-	        --feature_detector $(FEATURE_DETECTOR) \
-	        --proba_detector $(PROBA_DETECTOR) \
-	        --detector_transforms  $(DET_TRANSFORMS) \
-	        --classifier_transforms  $(CLS_TRANSFORMS) \
-	        --visu_episode $(VISU) \
-	        --backbone $(BACKBONE) \
-	        --model_source $(MODEL_SRC) \
-	        --training $(TRAINING) \
-	        --split $(SPLIT) \
+			--exp_name $(EXP)/$(SRC_DATASET)'-->'$(TGT_DATASET)'('$(SPLIT)')'/$(BACKBONE)/$(MODEL_SRC)/$${shot} \
+			--data_dir $(DATADIR) \
+			--classifier $(CLASSIFIER) \
+			--n_tasks $(N_TASKS) \
+			--n_shot $${shot} \
+			--feature_detector $(FEATURE_DETECTOR) \
+			--proba_detector $(PROBA_DETECTOR) \
+			--detector_transforms  $(DET_TRANSFORMS) \
+			--classifier_transforms  $(CLS_TRANSFORMS) \
+			--visu_episode $(VISU) \
+			--backbone $(BACKBONE) \
+			--model_source $(MODEL_SRC) \
+			--training $(TRAINING) \
+			--split $(SPLIT) \
 			--src_dataset $(SRC_DATASET) \
 			--n_id_query $(ID_QUERY) \
 			--n_ood_query $(OOD_QUERY) \
 			--broad_open_set $(BROAD) \
 			--tgt_dataset $(TGT_DATASET) \
-	        --simu_hparams $(SIMU_PARAMS) \
-	        --override $(OVERRIDE) \
-	        --tune $(TUNE) \
-	        --ablate $(ABLATE) \
-	        --debug $(DEBUG) \
-	        --save_predictions $(SAVE_PREDICTIONS)  ;\
+			--simu_hparams $(SIMU_PARAMS) \
+			--override $(OVERRIDE) \
+			--tune $(TUNE) \
+			--ablate $(ABLATE) \
+			--debug $(DEBUG) \
+			--save_predictions $(SAVE_PREDICTIONS)  ;\
     done ;\
 
 # ========== Extraction pipelines ===========

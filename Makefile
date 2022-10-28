@@ -163,6 +163,7 @@ run_pyod:
 	done ;\
 
 run_best:
+	make run_robust_em ;\
 	make run_snatcher ;\
 	make run_ostim ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\

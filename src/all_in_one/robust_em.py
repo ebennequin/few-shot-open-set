@@ -105,6 +105,7 @@ class RobustEM(AllInOne):
             all_inliers_scores = torch.cat(
                 [torch.ones(support_size, 1), inlier_scores], 0
             )  # [support_size + query_size, 1]
+            #TODO : scaler par S/Q au numérateur et au dénominateur
             prototypes = (
                 (all_inliers_scores * all_assignements).T
                 @ all_features

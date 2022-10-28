@@ -336,6 +336,9 @@ ablation_n_query:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for query in 1 5 15 30; do \
 			make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} run_best ;\
+			for classifier in ICI LaplacianShot TIM_GD BDCSPN; do \
+				make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
+			done ;\
 		done ;\
 	done \
 

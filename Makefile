@@ -189,6 +189,9 @@ run_snatcher:
 run_ostim:
 	make FEATURE_DETECTOR=OSTIM run ;\
 
+run_robust_em:
+	make FEATURE_DETECTOR=RobustEM DET_TRANSFORMS="Pool MeanCentering L2norm" run ;\
+
 run_open_set:
 	for method in RPL PROSER OpenMax; do \
 		make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=$${method} run ;\
@@ -247,12 +250,13 @@ log_best_configs:
 
 _benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_robust_em ;\
 	done ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 benchmark:
 	make EXP=benchmark _benchmark ;\

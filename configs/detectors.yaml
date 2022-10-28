@@ -139,6 +139,22 @@ feature_detectors:
       hparams2tune: ['use_explicit_prototype', 'inference_steps', 'mu_init']
       hparam_values: {1: [[True, False], [0, 100, 200], ['zeros', 'base', 'mean']]}
 
+  RobustEM:
+    default: {
+        1: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 2,
+           },
+        5: {
+          'softmax_temperature': 10.0,
+          'inference_steps': 2,
+           },
+             }
+    # == For Grid Search
+    tuning:
+      hparams2tune: ['inference_steps']
+      hparam_values: {1: [[1, 5, 10]]}
+
 
 # === Detectors that work on probas ===
 # =======================================

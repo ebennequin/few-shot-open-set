@@ -228,6 +228,7 @@ maxprob_hist:
 # ========== 1) Validation ===========
 
 tuning:
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_robust_em ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ostim ;\
 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
@@ -251,12 +252,12 @@ log_best_configs:
 _benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_robust_em ;\
+ 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
+ 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
+ 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
+ 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
+ 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 	done ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
-# 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\
 
 benchmark:
 	make EXP=benchmark _benchmark ;\

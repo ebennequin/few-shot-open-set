@@ -3,7 +3,7 @@ SERVER_IP=
 SERVER_PATH=
 USER=
 
-
+DEVICE=cuda
 
 # Simu options
 SRC_DATASET=mini_imagenet
@@ -89,7 +89,8 @@ run:
 			--tune $(TUNE) \
 			--ablate $(ABLATE) \
 			--debug $(DEBUG) \
-			--save_predictions $(SAVE_PREDICTIONS)  ;\
+			--save_predictions $(SAVE_PREDICTIONS) \
+			--device $(DEVICE) ;\
     done ;\
 
 # ========== Extraction pipelines ===========

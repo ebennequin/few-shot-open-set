@@ -15,12 +15,14 @@ class RobustEM(AllInOne):
         inference_steps: int,
         lambda_s: float,
         lambda_z: float,
+        ema_weight: float = 1.0,
     ):
         super().__init__()
         self.inference_steps = inference_steps
         self.softmax_temperature = softmax_temperature
         self.lambda_s = lambda_s
         self.lambda_z = lambda_z
+        self.ema_weight = ema_weight
 
     def cosine(self, X, Y):
         return F.normalize(X, dim=-1) @ F.normalize(Y, dim=-1).T
@@ -38,8 +40,6 @@ class RobustEM(AllInOne):
         **kwargs,
     ) -> Tuple[Tensor, Tensor, Tensor]:
 
-        self.iter_ = 0
-
         # Metric dic
         num_classes = support_labels.unique().size(0)
         one_hot_labels = F.one_hot(
@@ -53,26 +53,32 @@ class RobustEM(AllInOne):
         soft_assignements = (1 / num_classes) * torch.ones(
             query_features.size(0), num_classes
         )  # [query_size, num_classes]
-        inlier_scores = 0.5 * torch.ones(query_features.size(0))
+        inlier_scores = 0.5 * torch.ones((query_features.size(0), 1))
 
         acc_values = []
         auprs = []
 
-        for self.iter_ in range(self.inference_steps):
+        for _ in range(self.inference_steps):
 
             # Compute inlier scores
             logits_q = self.get_logits(
                 prototypes, query_features
             )  # [query_size, num_classes]
             inlier_scores = (
-                (soft_assignements * logits_q / self.lambda_s)
-                .sum(-1, keepdim=True)
-                .sigmoid()
+                self.ema_weight
+                * (
+                    (soft_assignements * logits_q / self.lambda_s)
+                    .sum(-1, keepdim=True)
+                    .sigmoid()
+                )
+                + (1 - self.ema_weight) * inlier_scores
             )  # [query_size, 1]
 
             # Compute new assignements
-            soft_assignements = (inlier_scores * logits_q / self.lambda_z).softmax(
-                -1
+            soft_assignements = (
+                self.ema_weight
+                * ((inlier_scores * logits_q / self.lambda_z).softmax(-1))
+                + (1 - self.ema_weight) * soft_assignements
             )  # [query_size, num_classes]
 
             # COmpute metrics
@@ -107,9 +113,13 @@ class RobustEM(AllInOne):
             )  # [support_size + query_size, 1]
             # TODO : scaler par S/Q au numérateur et au dénominateur
             prototypes = (
-                (all_inliers_scores * all_assignements).T
-                @ all_features
-                / (all_inliers_scores * all_assignements).sum(0).unsqueeze(1)
+                self.ema_weight
+                * (
+                    (all_inliers_scores * all_assignements).T
+                    @ all_features
+                    / (all_inliers_scores * all_assignements).sum(0).unsqueeze(1)
+                )
+                + (1 - self.ema_weight) * prototypes
             )  # [num_classes, feature_dim]
 
         kwargs["intra_task_metrics"]["main_metrics"]["acc"].append(acc_values)

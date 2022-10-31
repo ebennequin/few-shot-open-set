@@ -40,6 +40,23 @@ directories images in `data/mini_imagenet/images`
 
 Download from [here](https://github.com/kjunelee/MetaOptNet) and place under `data/tiered_imagenet`.
 
+#### ImageNet
+Place ImageNet in `data/ilsvrc_2012` so that you have:
+```
+data/ilsvrc_2012
+├── train
+│   ├── n01440764
+│   │   ├── n01440764_10026.JPEG
+│   │   ├── ...
+│   ├── ...
+├── val
+│   ├── ILSVRC2012_val_00000001.JPEG
+│   ├── ...
+├── test
+│   ├── ILSVRC2012_test_00000001.JPEG
+│   ├── ...
+```
+
 #### Aircraft
 
 Execute `make aircraft`

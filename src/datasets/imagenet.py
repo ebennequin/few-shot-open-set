@@ -15,10 +15,6 @@ from .utils import get_transforms
 
 
 class ImageNet(VisionDataset):
-    """
-    Placeholder for compatitiblity
-    """
-
     def __init__(
         self,
         args,
@@ -27,15 +23,20 @@ class ImageNet(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
+        super().__init__(str(root), target_transform=target_transform)
         self.transform = get_transforms(args)
         self.target_transform = target_transform
         self.images = []
         self.labels = []
-        for class_id, class_name in enumerate(os.listdir(root / "val")):
-            for _, _, files in os.walk(root / "val" / class_name):
-                for file in files:
-                    self.labels.append(class_id)
-                    self.images.append(root / "val" / class_name / file)
+        if split == "train":
+            for class_id, class_name in enumerate((root / split).iterdir()):
+                for _, _, files in os.walk(root / split / class_name):
+                    for file in files:
+                        self.labels.append(class_id)
+                        self.images.append(root / split / class_name / file)
+        else:
+            self.images = list((root / split).iterdir())
+            self.labels = [0] * len(self.images)
 
     def __len__(self):
         return len(self.labels)

@@ -142,18 +142,16 @@ feature_detectors:
   RobustEM:
     default: {
         1: {
-          'softmax_temperature': 10.0,
-          'inference_steps': 10,
-          'lambda_s': 0.5,
-          'lambda_z': 1.0,
-          'ema_weight': 1.0,
+          'inference_steps': 5,
+          'lambda_s': 0.05,
+          'lambda_z': 0.1,
+          'ema_weight': 0.5,
            },
         5: {
-          'softmax_temperature': 10.0,
-          'inference_steps': 10,
-          'lambda_s': 0.5,
-          'lambda_z': 1.0,
-          'ema_weight': 1.0,
+          'inference_steps': 2,
+          'lambda_s': 0.05,
+          'lambda_z': 0.1,
+          'ema_weight': 0.8,
            },
              }
     # == For Grid Search

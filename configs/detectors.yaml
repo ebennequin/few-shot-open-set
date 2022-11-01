@@ -156,8 +156,8 @@ feature_detectors:
              }
     # == For Grid Search
     tuning:
-      hparams2tune: ['softmax_temperature', 'inference_steps','ema_weight']
-      hparam_values: {1: [[1.0, 5.0, 10.0], [2, 5, 10, 20, 50], [0.1, 0.2, 0.5, 0.8]]}
+      hparams2tune: ['inference_steps', 'lambda_s', 'lambda_z','ema_weight']
+      hparam_values: {1: [[2, 5, 10, 50], [0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0], [0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0], [0.01, 0.1, 0.5, 0.8]]}
 
 
 # === Detectors that work on probas ===

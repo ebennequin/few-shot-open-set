@@ -49,6 +49,7 @@ pretty["None"] = ""
 
 # ---------- Methods
 
+pretty["OSEM"] = r"\textsc{OSEM}"
 pretty["OTTIM"] = r"\textsc{OSTIM}"
 pretty["TIM_GD"] = r"\textsc{TIM}"
 pretty["kNNDetector"] = r"$k$-NN"

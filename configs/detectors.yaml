@@ -142,7 +142,7 @@ feature_detectors:
   OSEM:
     default: {
         1: {
-          'inference_steps': 5,
+          'inference_steps': 2,
           'lambda_s': 0.1,
           'lambda_z': 0.1,
           'ema_weight': 0.8,

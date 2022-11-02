@@ -143,15 +143,15 @@ feature_detectors:
     default: {
         1: {
           'inference_steps': 5,
-          'lambda_s': 0.05,
+          'lambda_s': 0.1,
           'lambda_z': 0.1,
-          'ema_weight': 0.5,
+          'ema_weight': 0.8,
            },
         5: {
           'inference_steps': 2,
-          'lambda_s': 0.05,
+          'lambda_s': 0.5,
           'lambda_z': 0.1,
-          'ema_weight': 0.8,
+          'ema_weight': 0.5,
            },
              }
     # == For Grid Search

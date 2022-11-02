@@ -164,14 +164,14 @@ run_pyod:
 	done ;\
 
 run_best:
-	make run_robust_em ;\
+	make run_osem ;\
 	make run_snatcher ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 	make DET_TRANSFORMS="Pool BaseCentering L2norm" FEATURE_DETECTOR=OpenMax run ;\
 	make CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=TIM_GD PROBA_DETECTOR=MaxProbDetector run ;\
 
 run_finalists:
-	make run_robust_em ;\
+	make run_osem ;\
 	make CLS_TRANSFORMS="Pool BaseCentering L2norm" DET_TRANSFORMS="Pool BaseCentering L2norm" CLASSIFIER=SimpleShot FEATURE_DETECTOR=KNN run ;\
 
 run_classifiers:
@@ -190,8 +190,8 @@ run_snatcher:
 run_ostim:
 	make FEATURE_DETECTOR=OSTIM run ;\
 
-run_robust_em:
-	make FEATURE_DETECTOR=RobustEM DET_TRANSFORMS="Pool MeanCentering L2norm" run ;\
+run_osem:
+	make FEATURE_DETECTOR=OSEM DET_TRANSFORMS="Pool MeanCentering L2norm" run ;\
 
 run_open_set:
 	for method in RPL PROSER OpenMax; do \
@@ -229,8 +229,7 @@ maxprob_hist:
 # ========== 1) Validation ===========
 
 tuning:
-	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_robust_em ;\
-	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_ostim ;\
+	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_osem ;\
 	make EXP=tuning TUNE=classifier SPLIT=val N_TASKS=500 run_classifiers ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_open_set ;\
 	make EXP=tuning TUNE=feature_detector SPLIT=val N_TASKS=500 run_pyod ;\
@@ -252,9 +251,8 @@ log_best_configs:
 
 _benchmark:
 	for dataset in mini_imagenet tiered_imagenet; do \
-		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_robust_em ;\
+		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_osem ;\
  		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_snatcher ;\
- 		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
  		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_classifiers ;\
  		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_pyod ;\
  		make SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_open_set ;\

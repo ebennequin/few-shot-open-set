@@ -8,7 +8,7 @@ from easyfsl.utils import compute_prototypes
 from sklearn.metrics import auc as auc_fn
 
 
-class RobustEM(AllInOne):
+class OSEM(AllInOne):
     def __init__(
         self,
         inference_steps: int,

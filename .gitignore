@@ -6,6 +6,7 @@ __pycache__/
 *.sublime-workspace
 *.DS_Store
 *.tar.gz
+plots/
 
 # C extensions
 *.so

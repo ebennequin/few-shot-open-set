@@ -523,7 +523,11 @@ def detect_outliers(
         for legend, values in intra_task_metrics[title].items():
             array = np.array(values)
             assert len(array.shape) == 2
-            m, pm = compute_confidence_interval(array, ignore_value=255)
+            if array.shape[1] > 1:
+                m, pm = compute_confidence_interval(array, ignore_value=255)
+            else:
+                m = array[:, 0]
+                pm = 0
             ax = plt.gca()
             if array.shape[0] == 1:
                 ax.scatter([0], m, c="r")

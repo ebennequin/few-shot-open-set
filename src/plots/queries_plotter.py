@@ -27,7 +27,6 @@ def main(
             "BDCSPN",
             r"\textsc{PT-MAP}",
             "\\textsc{TIM}",
-            "OSTIM",
             "\\textsc{OSEM}",
         ]
     )

@@ -372,6 +372,9 @@ variate_query:
 		done ;\
 	done \
 
+plot_variate_query:
+	python -m src.plots.queries_plotter variate_query ;/
+
 # ================= Deployment / Imports ==================
 
 deploy:

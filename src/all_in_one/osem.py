@@ -15,17 +15,19 @@ class OSEM(AllInOne):
         lambda_s: float,
         lambda_z: float,
         ema_weight: float = 1.0,
+        use_inlier_latent: bool = True,
     ):
         super().__init__()
         self.inference_steps = inference_steps
         self.lambda_s = lambda_s
         self.lambda_z = lambda_z
         self.ema_weight = ema_weight
+        self.use_inlier_latent = use_inlier_latent
 
     def cosine(self, X, Y):
         return F.normalize(X, dim=-1) @ F.normalize(Y, dim=-1).T
 
-    def get_logits(self, prototypes, query_features):
+    def get_logits(self, prototypes: Tensor, query_features: Tensor) -> Tensor:
         return self.cosine(query_features, prototypes)  # [query_size, num_classes]
 
     def __call__(
@@ -80,9 +82,16 @@ class OSEM(AllInOne):
 
             # Compute new assignements
             soft_assignements = (
-                self.ema_weight
-                * ((inlier_scores * logits_q / self.lambda_z).softmax(-1))
-                + (1 - self.ema_weight) * soft_assignements
+                (
+                    self.ema_weight
+                    * ((inlier_scores * logits_q / self.lambda_z).softmax(-1))
+                    + (1 - self.ema_weight) * soft_assignements
+                )
+                if self.use_inlier_latent
+                else (
+                    self.ema_weight * ((logits_q / self.lambda_z).softmax(-1))
+                    + (1 - self.ema_weight) * soft_assignements
+                )
             )  # [query_size, num_classes]
 
             # COmpute metrics
@@ -136,10 +145,11 @@ class OSEM(AllInOne):
             all_assignements = torch.cat(
                 [one_hot_labels, soft_assignements], dim=0
             )  # [support_size + query_size, num_classes]
-            all_inliers_scores = torch.cat(
-                [torch.ones(support_size, 1), inlier_scores], 0
+            all_inliers_scores = (
+                torch.cat([torch.ones(support_size, 1), inlier_scores], 0)
+                if self.use_inlier_latent
+                else torch.ones(support_size + len(inlier_scores), 1)
             )  # [support_size + query_size, 1]
-            # TODO : scaler par S/Q au numérateur et au dénominateur
             prototypes = (
                 self.ema_weight
                 * (
@@ -174,9 +184,21 @@ class OSEM(AllInOne):
         kwargs["intra_task_metrics"]["secondary_metrics"]["prototypes_norms"].append(
             prototypes_norms
         )
+
+        logits_s = self.get_logits(prototypes, support_features)
+        logits_q = self.get_logits(prototypes, query_features)
+
+        if self.inference_steps == 0:
+            outlier_scores = (
+                1
+                - (soft_assignements * logits_q / self.lambda_s)
+                .sum(-1, keepdim=True)
+                .sigmoid()
+            )
+
         return (
-            self.get_logits(prototypes, support_features).softmax(-1),
-            self.get_logits(prototypes, query_features).softmax(-1),
+            logits_s.softmax(-1),
+            logits_q.softmax(-1),
             outlier_scores,
         )
 

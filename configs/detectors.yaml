@@ -146,12 +146,14 @@ feature_detectors:
           'lambda_s': 0.05,
           'lambda_z': 0.1,
           'ema_weight': 1.0,
+          'use_inlier_latent': True,
            },
         5: {
           'inference_steps': 2,
           'lambda_s': 0.05,
           'lambda_z': 0.1,
           'ema_weight': 1.0,
+          'use_inlier_latent': True,
            },
              }
     # == For Grid Search
@@ -159,6 +161,10 @@ feature_detectors:
       hparams2tune: ['inference_steps', 'lambda_s', 'lambda_z']
       hparam_values: {1: [[2, 3, 5], [0.01, 0.05, 0.1, 0.5], [0.01, 0.05, 0.1, 0.5]]}
 
+    # == For ablation
+    ablation:
+      hparams2tune: ['use_inlier_latent', 'inference_steps', 'lambda_z']
+      hparam_values: {1: [[True, False], [0, 2], [0.5]]}
 
 # === Detectors that work on probas ===
 # =======================================

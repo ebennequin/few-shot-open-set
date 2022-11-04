@@ -52,6 +52,7 @@ pretty["None"] = ""
 pretty["OSEM"] = r"\textsc{OSEM}"
 pretty["OTTIM"] = r"\textsc{OSTIM}"
 pretty["TIM_GD"] = r"\textsc{TIM}"
+pretty["MAP"] = r"\textsc{PT-MAP}"
 pretty["kNNDetector"] = r"$k$-NN"
 
 
@@ -216,6 +217,7 @@ class CSVPlotter(Plotter):
                         self.metric_dic[metric][method]["y"][i] for i in sorted_indexes
                     ]
 
+
         self.out_dir = Path("plots") / kwargs["exp"]
         self.filters = "-".join(kwargs["filters"])
 
@@ -281,9 +283,9 @@ class CSVPrinter(CSVPlotter):
         for method in all_methods:
             df["method"].append(method)
             for metric in kwargs["metrics"]:
-                df[metric].append(self.metric_dic[metric][method]["y"][0])
+                df[metric].append(100 * self.metric_dic[metric][method]["y"][0])
         df = pd.DataFrame(df)
-        print(df.to_markdown())
+        print(df.to_markdown(floatfmt=".2f"))
 
 
 def remove_args_from_name(full_name: str):

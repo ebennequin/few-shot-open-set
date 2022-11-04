@@ -305,6 +305,17 @@ plot_spider_charts:
 		done ;\
 	done ;\
 
+plot_main_spider_chart:
+	python -m src.plots.spider_plotter \
+		--exp spider \
+		--groupby classifier feature_detector \
+		--use_pretty True \
+		--horizontal True \
+		--metrics mean_acc mean_rocauc mean_aupr \
+		--plot_versus src_dataset tgt_dataset \
+		--filters n_shot=1 \
+		backbone=resnet12 ;\
+
 
 # ========== 4) Model agnosticity ==========
 
@@ -336,13 +347,20 @@ ablate_ostim:
 		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
 	done \
 
-ablation_n_query:
+
+# ========== 6) Size of query set ==========
+
+_variate_query:
+	make run_finalists ;\
+	for classifier in LaplacianShot TIM_GD BDCSPN; do \
+		make PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
+	done ;\
+	make CLS_TRANSFORMS="Pool Power QRreduction L2norm MeanCentering"  PROBA_DETECTOR=MaxProbDetector CLASSIFIER=MAP run ;\
+
+variate_query:
 	for dataset in mini_imagenet tiered_imagenet; do \
 		for query in 1 5 15 30; do \
-			make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} run_best ;\
-			for classifier in ICI LaplacianShot TIM_GD BDCSPN; do \
-				make EXP=ablation_n_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} PROBA_DETECTOR=MaxProbDetector CLS_TRANSFORMS="Pool MeanCentering L2norm" CLASSIFIER=$${classifier} run ;\
-			done ;\
+			make EXP=variate_query/$${query} SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} ID_QUERY=$${query} OOD_QUERY=$${query} _variate_query ;\
 		done ;\
 	done \
 

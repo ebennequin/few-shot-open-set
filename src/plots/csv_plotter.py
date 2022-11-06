@@ -49,7 +49,8 @@ pretty["None"] = ""
 
 # ---------- Methods
 
-pretty["OSEM"] = r"\textsc{OSEM}"
+pretty["OSLO"] = r"\textsc{OSLO}"
+pretty["OSEM"] = r"\textsc{OSLO}"
 pretty["OTTIM"] = r"\textsc{OSTIM}"
 pretty["TIM_GD"] = r"\textsc{TIM}"
 pretty["MAP"] = r"\textsc{PT-MAP}"

@@ -27,7 +27,7 @@ def main(
             "BDCSPN",
             r"\textsc{PT-MAP}",
             "\\textsc{TIM}",
-            "\\textsc{OSEM}",
+            "\\textsc{OSLO}",
         ]
     )
     pretty["LaplacianShot"] = "LapShot"

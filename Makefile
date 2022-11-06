@@ -342,11 +342,11 @@ plot_model_agnosticity:
 # ========== 5) Ablation study ==========
 
 ablate_osem:
-	for dataset in mini_imagenet tiered_imagenet; do \
-		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
-		for centering in "Pool Trivial L2norm" "Pool BaseCentering L2norm" "Pool MeanCentering L2norm"; do \
-			make EXP=ablation FEATURE_DETECTOR=OSEM DET_TRANSFORMS=$${centering} run ;\
-		done ;\
+	for dataset in mini_imagenet tiered_imagenet ; do \
+		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_osem ;\
+		make EXP=ablation/trivial SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} FEATURE_DETECTOR=OSEM DET_TRANSFORMS="Pool Trivial L2norm" run ;\
+		make EXP=ablation/base SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} FEATURE_DETECTOR=OSEM DET_TRANSFORMS="Pool BaseCentering L2norm" run ;\
+		make EXP=ablation/mean SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} FEATURE_DETECTOR=OSEM DET_TRANSFORMS="Pool MeanCentering L2norm" run ;\
 	done ;\
 
 ablate_ostim:

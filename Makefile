@@ -372,6 +372,9 @@ variate_query:
 		done ;\
 	done \
 
+broad_open_set:
+	make EXP=broad_open_set SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet BROAD=True _variate_query ;\
+
 plot_variate_query:
 	python -m src.plots.queries_plotter variate_query ; \
 

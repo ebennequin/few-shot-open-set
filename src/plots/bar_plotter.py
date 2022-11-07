@@ -108,12 +108,12 @@ class BarPlotter(CSVPlotter):
                         if method_index == 1:
                             ax.text(
                                 bottoms[training] + 0.01,
-                                current_height,
+                                current_height - 0.0001,
                                 rf"$\mathbf{{+{np.round(100 * value, 1)}}}$",
                                 color=barplot_colors[methods.index(method)],
                                 va="center",
                                 ha="right" if metric_index == 0 else "left",
-                                fontsize=15,
+                                fontsize=12,
                             )
                         if (metric_index == 1) and (
                             training_index == len(grouped_items[arch]) - 1
@@ -124,7 +124,7 @@ class BarPlotter(CSVPlotter):
                                 arch,
                                 va="center",
                                 ha="center",
-                                fontsize=14,
+                                fontsize=11,
                             )
                         yticks_labels.append(rf"{training}")
                         yticks.append(current_height)
@@ -135,7 +135,7 @@ class BarPlotter(CSVPlotter):
             ax.set_xticks(np.arange(4, 9) / 10)
             ax.set_xlim(0.4, 0.85)
             ax.set_xticklabels([rf"${10 * x}$" for x in range(4, 9)])
-            ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=15)
+            ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=12)
 
             if metric_index == 0:
                 ax.set(yticks=yticks, yticklabels=["" for x in labels])
@@ -169,7 +169,7 @@ class BarPlotter(CSVPlotter):
                 ax.yaxis.set_ticks_position("right")
                 ax.xaxis.set_ticks_position("bottom")
 
-            ax.xaxis.set_tick_params(labelsize=15)
+            ax.xaxis.set_tick_params(labelsize=12)
 
             if metric_index == 1:
                 handles, labels = ax.get_legend_handles_labels()
@@ -178,7 +178,8 @@ class BarPlotter(CSVPlotter):
                     by_label.values(),
                     by_label.keys(),
                     loc="center",
-                    bbox_to_anchor=[0.53, 0.97],  # bottom-right
+                    bbox_to_anchor=[0.53, 0.97],
+                    fontsize=12,# bottom-right
                     ncol=2,
                     frameon=False,  # don't put a frame)
                 )

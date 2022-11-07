@@ -220,7 +220,10 @@ class SpiderPlotter(CSVPlotter):
         # ---- Save plots ----
         fig.tight_layout()
         os.makedirs(self.out_dir, exist_ok=True)
-        fig.savefig(self.out_dir / f"{self.filters}.pdf", dpi=300, bbox_inches="tight")
+        if horizontal:
+            fig.savefig(self.out_dir / f"main_spider.pdf", dpi=300, bbox_inches="tight")
+        else:
+            fig.savefig(self.out_dir / f"{self.filters}.pdf", dpi=300, bbox_inches="tight")
 
 
 if __name__ == "__main__":

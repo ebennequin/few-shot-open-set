@@ -372,11 +372,15 @@ variate_query:
 		done ;\
 	done \
 
-broad_open_set:
-	make EXP=broad_open_set SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet BROAD=True _variate_query ;\
-
 plot_variate_query:
 	python -m src.plots.queries_plotter variate_query ; \
+
+broad_open_set:
+	make EXP=broad_open_set/true SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet BROAD=True _variate_query ;\
+	make EXP=broad_open_set/false SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet BROAD=False _variate_query ;\
+
+plot_broad_open_set:
+	python -m src.plots.broad_plotter broad_open_set ; \
 
 # ================= Deployment / Imports ==================
 

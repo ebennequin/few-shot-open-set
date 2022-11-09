@@ -10,6 +10,62 @@ import typer
 from matplotlib import pyplot as plt
 
 from src.plots.csv_plotter import pretty
+
+DEFAULT_METHODS_FOR_QUERY_PLOTS = [
+            "$k$-NN",
+            "LapShot",
+            "BDCSPN",
+            r"\textsc{PT-MAP}",
+            "\\textsc{TIM}",
+            "\\textsc{OSLO}",
+        ]
+
+def make_output_dir(exp_name: str):
+    output_dir = Path("plots") / exp_name
+    output_dir.mkdir(exist_ok=True)
+    return output_dir
+
+def curate_results(results: pd.DataFrame, metrics: List[str], methods: List[str], keep_columns: List[str]):
+    metrics_std = [metric.replace("mean", "std") for metric in metrics]
+    results = (
+        results
+        .assign(
+            method_name=lambda df: (
+                df.feature_detector.where(df.feature_detector != "None", df.classifier)
+            )
+            .str.split("(", 1, expand=True)[0]
+            .map(pretty),
+        )[[*keep_columns, *metrics, *metrics_std]]
+        .loc[lambda df: df.method_name.isin(methods)]
+        .sort_values(
+            ["method_name"],
+            key=lambda col: col.map(
+                {method: rank for rank, method in enumerate(methods)}
+            ),
+        )
+    )
+
+    for metric in metrics + metrics_std:
+        results = results.assign(**{metric: lambda df: 100 * df[metric]})
+
+    return results
+
+
+def create_canvas(metrics, shots):
+    axes = {n_shot: {} for n_shot in shots}
+    fig, (
+        (
+            axes[shots[0]][metrics[0]],
+            axes[shots[1]][metrics[0]],
+        ),
+        (
+            axes[shots[0]][metrics[1]],
+            axes[shots[1]][metrics[1]],
+        ),
+    ) = plt.subplots(figsize=(14, 4), nrows=2, ncols=2)
+
+    return fig, axes
+
 def main(
     exp_name: str,
     metrics: Optional[List[str]] = None,
@@ -21,18 +77,9 @@ def main(
     selected_methods = (
         methods
         if methods
-        else [
-            "$k$-NN",
-            "LapShot",
-            "BDCSPN",
-            r"\textsc{PT-MAP}",
-            "\\textsc{TIM}",
-            "\\textsc{OSLO}",
-        ]
+        else DEFAULT_METHODS_FOR_QUERY_PLOTS
     )
-    pretty["LaplacianShot"] = "LapShot"
-    output_dir = Path("plots") / exp_name
-    output_dir.mkdir(exist_ok=True)
+    output_dir = make_output_dir(exp_name)
 
     assert len(metrics) == 2, "Can only handle two metrics for this plot."
     assert len(shots) == 2, "Can only handle two different n_shot for this plot."
@@ -45,28 +92,16 @@ def main(
     assert len(csv_files)
 
     #  ===== Get all results in one dataframe =====
-    metrics_std = [metric.replace("mean", "std") for metric in metrics]
-    all_results = (
-        pd.concat([pd.read_csv(file) for file in csv_files])
-        .assign(
-            method_name=lambda df: (
-                df.feature_detector.where(df.feature_detector != "None", df.classifier)
-            )
-            .str.split("(", 1, expand=True)[0]
-            .map(pretty),
-            n_query=lambda df: df.n_way * (df.n_id_query + df.n_ood_query),
-        )[["src_dataset", "n_shot", "n_query", "method_name", *metrics, *metrics_std]]
-        .loc[lambda df: df.method_name.isin(selected_methods)]
-        .sort_values(
-            ["method_name"],
-            key=lambda col: col.map(
-                {method: rank for rank, method in enumerate(selected_methods)}
-            ),
-        )
+    all_results = curate_results(
+        pd.concat(
+            [pd.read_csv(file) for file in csv_files]
+        ).assign(
+            n_query=lambda df: df.n_id_query,
+        ),
+        metrics=metrics,
+        methods=selected_methods,
+        keep_columns=["src_dataset", "n_shot", "method_name", "n_query"]
     )
-
-    for metric in metrics + metrics_std:
-        all_results = all_results.assign(**{metric: lambda df: 100 * df[metric]})
 
     # ===== Parameterize plotlib =====
     sequential_colors = sns.color_palette("RdPu", 4)
@@ -87,17 +122,7 @@ def main(
     # ===== Plot =====
     for dataset in all_results.src_dataset.unique():
 
-        axes = {n_shot: {} for n_shot in shots}
-        fig, (
-            (
-                axes[shots[0]][metrics[0]],
-                axes[shots[1]][metrics[0]],
-            ),
-            (
-                axes[shots[0]][metrics[1]],
-                axes[shots[1]][metrics[1]],
-            ),
-        ) = plt.subplots(figsize=(14, 4), nrows=2, ncols=2)
+        fig, axes = create_canvas(metrics, shots)
 
         for shot_id, n_shot in enumerate(shots):
 
@@ -191,8 +216,8 @@ def main(
         fig.legend(
             handles[:4],
             labels[:4],
-            loc=(0.479, 0.38),
-            title=r"$|Q|$",
+            loc=(0.481, 0.38),
+            title=r"$N_Q$",
             frameon=False,
             handlelength=1.0,
             labelspacing=0.8,

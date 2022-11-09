@@ -55,6 +55,7 @@ pretty["OTTIM"] = r"\textsc{OSTIM}"
 pretty["TIM_GD"] = r"\textsc{TIM}"
 pretty["MAP"] = r"\textsc{PT-MAP}"
 pretty["kNNDetector"] = r"$k$-NN"
+pretty["LaplacianShot"] = "LapShot"
 
 
 # ---------- Metrics

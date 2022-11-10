@@ -119,6 +119,10 @@ extract_all:
 		done ;\
 	done ;\
 
+extract_tane:
+	for dataset in mini_imagenet tiered_imagenet; do \
+		make BACKBONE=$${backbone} SRC_DATASET=$${dataset} TRAINING=tane MODEL_SRC=tane TGT_DATASET=$${dataset} extract ;\
+	done ;\
 
 extract_bis:
 	for backbone in resnet12 wrn2810; do \

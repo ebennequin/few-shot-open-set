@@ -152,6 +152,16 @@ def load_model(
         elif "params" in state_dict:
             state_dict = strip_prefix(state_dict["params"], "encoder.")
             state_dict = strip_prefix(state_dict, "module.")
+        # TANE weights
+        elif "cls_params" in state_dict:
+            state_dict = OrderedDict(
+                [
+                    ((k[:7] + "0." + k[7:]) if k.startswith("layer") else k, v)
+                    for k, v in strip_prefix(
+                        state_dict["cls_params"], "feature."
+                    ).items()
+                ]
+            )
         else:
             state_dict = strip_prefix(state_dict, "backbone.")
 

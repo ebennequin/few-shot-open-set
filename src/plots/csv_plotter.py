@@ -219,7 +219,6 @@ class CSVPlotter(Plotter):
                         self.metric_dic[metric][method]["y"][i] for i in sorted_indexes
                     ]
 
-
         self.out_dir = Path("plots") / kwargs["exp"]
         self.filters = "-".join(kwargs["filters"])
 

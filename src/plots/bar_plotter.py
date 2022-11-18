@@ -179,7 +179,7 @@ class BarPlotter(CSVPlotter):
                     by_label.keys(),
                     loc="center",
                     bbox_to_anchor=[0.53, 0.97],
-                    fontsize=12,# bottom-right
+                    fontsize=12,  # bottom-right
                     ncol=2,
                     frameon=False,  # don't put a frame)
                 )

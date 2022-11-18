@@ -12,24 +12,30 @@ from matplotlib import pyplot as plt
 from src.plots.csv_plotter import pretty
 
 DEFAULT_METHODS_FOR_QUERY_PLOTS = [
-            "$k$-NN",
-            "LapShot",
-            "BDCSPN",
-            r"\textsc{PT-MAP}",
-            "\\textsc{TIM}",
-            "\\textsc{OSLO}",
-        ]
+    "$k$-NN",
+    "LapShot",
+    "BDCSPN",
+    r"\textsc{PT-MAP}",
+    "\\textsc{TIM}",
+    "\\textsc{OSLO}",
+]
+
 
 def make_output_dir(exp_name: str):
     output_dir = Path("plots") / exp_name
     output_dir.mkdir(exist_ok=True)
     return output_dir
 
-def curate_results(results: pd.DataFrame, metrics: List[str], methods: List[str], keep_columns: List[str]):
+
+def curate_results(
+    results: pd.DataFrame,
+    metrics: List[str],
+    methods: List[str],
+    keep_columns: List[str],
+):
     metrics_std = [metric.replace("mean", "std") for metric in metrics]
     results = (
-        results
-        .assign(
+        results.assign(
             method_name=lambda df: (
                 df.feature_detector.where(df.feature_detector != "None", df.classifier)
             )
@@ -66,6 +72,7 @@ def create_canvas(metrics, shots):
 
     return fig, axes
 
+
 def main(
     exp_name: str,
     metrics: Optional[List[str]] = None,
@@ -74,11 +81,7 @@ def main(
 ):
     metrics = metrics if metrics else ["mean_acc", "mean_rocauc"]
     shots = [1, 5]
-    selected_methods = (
-        methods
-        if methods
-        else DEFAULT_METHODS_FOR_QUERY_PLOTS
-    )
+    selected_methods = methods if methods else DEFAULT_METHODS_FOR_QUERY_PLOTS
     output_dir = make_output_dir(exp_name)
 
     assert len(metrics) == 2, "Can only handle two metrics for this plot."
@@ -93,14 +96,12 @@ def main(
 
     #  ===== Get all results in one dataframe =====
     all_results = curate_results(
-        pd.concat(
-            [pd.read_csv(file) for file in csv_files]
-        ).assign(
+        pd.concat([pd.read_csv(file) for file in csv_files]).assign(
             n_query=lambda df: df.n_id_query,
         ),
         metrics=metrics,
         methods=selected_methods,
-        keep_columns=["src_dataset", "n_shot", "method_name", "n_query"]
+        keep_columns=["src_dataset", "n_shot", "method_name", "n_query"],
     )
 
     # ===== Parameterize plotlib =====

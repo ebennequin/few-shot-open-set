@@ -223,7 +223,9 @@ class SpiderPlotter(CSVPlotter):
         if horizontal:
             fig.savefig(self.out_dir / f"main_spider.pdf", dpi=300, bbox_inches="tight")
         else:
-            fig.savefig(self.out_dir / f"{self.filters}.pdf", dpi=300, bbox_inches="tight")
+            fig.savefig(
+                self.out_dir / f"{self.filters}.pdf", dpi=300, bbox_inches="tight"
+            )
 
 
 if __name__ == "__main__":

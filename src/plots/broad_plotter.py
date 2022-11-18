@@ -11,7 +11,12 @@ from matplotlib import pyplot as plt
 
 from src.plots.bar_plotter import barplot_colors
 from src.plots.csv_plotter import pretty
-from src.plots.queries_plotter import DEFAULT_METHODS_FOR_QUERY_PLOTS, make_output_dir, curate_results, create_canvas
+from src.plots.queries_plotter import (
+    DEFAULT_METHODS_FOR_QUERY_PLOTS,
+    make_output_dir,
+    curate_results,
+    create_canvas,
+)
 
 
 def main(
@@ -22,13 +27,8 @@ def main(
 ):
     metrics = metrics if metrics else ["mean_acc", "mean_rocauc"]
     shots = [1, 5]
-    selected_methods = (
-        methods
-        if methods
-        else DEFAULT_METHODS_FOR_QUERY_PLOTS
-    )
+    selected_methods = methods if methods else DEFAULT_METHODS_FOR_QUERY_PLOTS
     output_dir = make_output_dir(exp_name)
-
 
     assert len(metrics) == 2, "Can only handle two metrics for this plot."
     assert len(shots) == 2, "Can only handle two different n_shot for this plot."
@@ -37,16 +37,24 @@ def main(
     p = Path("results") / exp_name
     metrics_std = [metric.replace("mean", "std") for metric in metrics]
     all_results = curate_results(
-        pd.concat([
-            pd.read_csv(
-                p / str(is_broad).lower() / "mini_imagenet-->mini_imagenet(test)/resnet12/feat" / str(shot) / "out.csv"
-            ).assign(broad=is_broad).iloc[:6]
-            for is_broad in [True, False]
-            for shot in [1, 5]
-        ]),
+        pd.concat(
+            [
+                pd.read_csv(
+                    p
+                    / str(is_broad).lower()
+                    / "mini_imagenet-->mini_imagenet(test)/resnet12/feat"
+                    / str(shot)
+                    / "out.csv"
+                )
+                .assign(broad=is_broad)
+                .iloc[:6]
+                for is_broad in [True, False]
+                for shot in [1, 5]
+            ]
+        ),
         metrics=metrics,
         methods=selected_methods,
-        keep_columns=["src_dataset", "n_shot", "method_name", "broad"]
+        keep_columns=["src_dataset", "n_shot", "method_name", "broad"],
     )
 
     # ===== Parameterize plotlib =====
@@ -167,7 +175,8 @@ def main(
     handles, labels = axes[shots[1]][metrics[1]].get_legend_handles_labels()
     fig.legend(
         handles[:2],
-        [fill(label, 11)
+        [
+            fill(label, 11)
             for label in ["...from 5 classes", "...from all remaining classes"]
         ],
         loc=(0.465, 0.32),

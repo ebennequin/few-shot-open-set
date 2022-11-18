@@ -84,7 +84,7 @@ def get_fungi_set(args, split, training):
 
 def get_imagenet_val_set(args):
     return ImageNetVal(
-        root=Path("/data/etienneb/ILSVRC2015/"),
+        root=Path(args.data_dir) / "ILSVRC2015",
         args=args,
     )
 

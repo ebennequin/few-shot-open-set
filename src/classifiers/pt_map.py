@@ -21,7 +21,6 @@ class MAP(FewShotMethod):
         support_labels: Tensor,
         **kwargs
     ):
-
         support_features, query_features = (
             support_features.cuda(),
             query_features.cuda(),
@@ -38,7 +37,6 @@ class MAP(FewShotMethod):
         all_features = torch.cat([support_features, query_features], 0)
         acc_values = []
         for epoch in range(self.inference_steps):
-
             probs_q = self.get_probas(query_features)
             all_probs = torch.cat([probs_s, probs_q], dim=0)
 
@@ -61,7 +59,6 @@ class MAP(FewShotMethod):
         )
 
     def compute_optimal_transport(self, M, r, c, epsilon=1e-6):
-
         """
         M: [N, K]
         """
@@ -102,7 +99,6 @@ class MAP(FewShotMethod):
         return probas_q
 
     def update_prototypes(self, features, probas):
-
         """
         features: [N, d]
         probas: [N, K]

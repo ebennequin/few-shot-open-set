@@ -51,7 +51,6 @@ def str2bool(v):
 
 
 def parse_args() -> argparse.Namespace:
-
     # Data
     parser = argparse.ArgumentParser()
     parser.add_argument("--src_dataset", type=str, default="mini_imagenet")
@@ -195,7 +194,6 @@ def dump_config(args):
 
 
 def main(args):
-
     args.res_root = os.path.join("results", args.exp_name)
     os.makedirs(args.res_root, exist_ok=True)
 
@@ -222,7 +220,6 @@ def main(args):
     )
 
     if args.feature_detector in ALL_IN_ONE_METHODS:
-
         # ==== Prepare all in one detector ====
 
         feature_detectors: List[FeatureDetector] = get_modules_to_try(
@@ -309,7 +306,6 @@ def main(args):
     for feature_d, proba_d, classifier in itertools.product(
         feature_detectors, proba_detectors, classifiers
     ):
-
         # ==> Each run is an experiment with some set of hyper-parameters
 
         logger.info(f"Classifier transforms : {classifier_transforms}")
@@ -372,7 +368,6 @@ def detect_outliers(
     train_std,
     feature_extractor=None,
 ):
-
     tensors2save: Dict[str, List[torch.Tensor]] = defaultdict(list)
     metrics: Dict[str, List[float]] = defaultdict(list)
     intra_task_metrics = defaultdict(
@@ -387,7 +382,6 @@ def detect_outliers(
     for task_id, (support, support_labels, query, query_labels, outliers) in enumerate(
         tqdm(data_loader)
     ):
-
         support_labels, query_labels = support_labels.long(), query_labels.long()
 
         # ====== Extract features and transform them ======

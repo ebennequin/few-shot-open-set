@@ -36,7 +36,6 @@ class LAME(FewShotMethod):
         return F.normalize(X - self.mu, dim=1) @ F.normalize(Y - self.mu, dim=1).T
 
     def get_logits(self, support_labels, support_features, query_features, bias=True):
-
         cossim = self.cosine(query_features, support_features)  # [Nq, Ns]
         sorted_cossim = cossim.sort(descending=True, dim=-1).values  # [Nq, Ns]
         # sorted_cossim = cossim[:, sorted_indexes]
@@ -58,7 +57,6 @@ class LAME(FewShotMethod):
             return self.softmax_temperature * logits
 
     def laplacian_optimization(self, unary, kernel, max_steps=10):
-
         # E_list = []
         # oldE = float('inf')
         Z = unary  # [N, K]
@@ -76,7 +74,6 @@ class LAME(FewShotMethod):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
-
         if kwargs["use_transductively"] is not None:
             unlabelled_data = query_features[kwargs["use_transductively"]]
         else:
@@ -128,7 +125,6 @@ class LAME(FewShotMethod):
         )
 
         for i in range(self.inference_steps):
-
             logits_q = self.get_logits(
                 support_labels, support_features, unlabelled_data
             )

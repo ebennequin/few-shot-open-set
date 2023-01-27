@@ -11,7 +11,6 @@ class SnatcherF(AllInOne):
     """ """
 
     def __init__(self, args, temperature: float):
-
         self.temperature = 64.0
         self.device = args.device
         self.works_on_features = True

@@ -37,7 +37,6 @@ class OSEM(AllInOne):
         support_labels: Tensor,
         **kwargs,
     ) -> Tuple[Tensor, Tensor, Tensor]:
-
         # Metric dic
         num_classes = support_labels.unique().size(0)
         one_hot_labels = F.one_hot(
@@ -65,7 +64,6 @@ class OSEM(AllInOne):
         prototypes_norms = []
 
         for _ in range(self.inference_steps):
-
             # Compute inlier scores
             logits_q = self.get_logits(
                 prototypes, query_features

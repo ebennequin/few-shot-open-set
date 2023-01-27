@@ -12,7 +12,6 @@ class kNNDetector(ProbaDetector):
     """
 
     def __init__(self, distance: str, n_neighbors: int, method: str):
-
         self.distance = distance
         self.n_neighbors = n_neighbors
         self.method = method
@@ -40,15 +39,12 @@ class kNNDetector(ProbaDetector):
 
 
 def kl(prob_a, prob_b):
-
     return (prob_a * torch.log(prob_a / prob_b)).sum(-1)
 
 
 def reverse_kl(prob_a, prob_b):
-
     return (prob_b * torch.log(prob_b / prob_a)).sum(-1)
 
 
 def bc(prob_a, prob_b):
-
     return (prob_a * prob_b).sqrt().sum(-1)

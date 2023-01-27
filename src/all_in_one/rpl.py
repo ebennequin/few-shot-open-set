@@ -37,7 +37,6 @@ class RPL(AllInOne):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor, Tensor]:
-
         num_classes = len(support_labels.unique())
 
         self.reciprocal_points = nn.Parameter(
@@ -51,7 +50,6 @@ class RPL(AllInOne):
         )
 
         for iter_ in range(self.inference_steps):
-
             loss, _, _ = self.compute_rpl_loss(support_features, support_labels)
 
             optimizer.zero_grad()
@@ -85,7 +83,6 @@ class RPL(AllInOne):
         return F.normalize(X, dim=1) @ F.normalize(Y, dim=1).T
 
     def compute_rpl_loss(self, support_features, support_labels):
-
         criterion = nn.CrossEntropyLoss()
         latent_size = support_features.size(1)
 

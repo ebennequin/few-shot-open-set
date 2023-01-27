@@ -67,7 +67,6 @@ class BarPlotter(CSVPlotter):
         for metric_index, (metric_name, metric_dic) in enumerate(
             self.metric_dic.items()
         ):
-
             ax = axes[metric_index]
 
             methods = list(metric_dic.keys())
@@ -80,7 +79,6 @@ class BarPlotter(CSVPlotter):
             assert len(metric_dic) == 2, "Currently only support 2 methods at a time."
             bottoms = defaultdict(float)
             for method_index, (method, method_dic) in enumerate(sorted_items):
-
                 grouped_items = defaultdict(list)
                 for arch, result in zip(method_dic["x"], method_dic["y"]):
                     grouped_items[pretty_arch[arch]].append(

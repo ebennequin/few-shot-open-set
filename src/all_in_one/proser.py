@@ -32,7 +32,6 @@ class PROSER(AllInOne):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor, Tensor]:
-
         criterion = nn.CrossEntropyLoss()
 
         # Metric dic
@@ -44,7 +43,6 @@ class PROSER(AllInOne):
         optimizer = torch.optim.Adam(self.cls.parameters(), lr=self.inference_lr)
 
         for i in range(self.inference_steps):
-
             logits = self.cls(support_features)
 
             closed_set_loss = criterion(logits, support_labels)

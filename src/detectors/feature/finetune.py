@@ -42,7 +42,6 @@ class FinetuneDetector(FeatureDetector):
         return torch.cat([outlierness, 1 - outlierness], dim=1)
 
     def __call__(self, support_features, query_features, **kwargs):
-
         loss_values = []
         aucs = []
         marg_entropy = []
@@ -65,7 +64,6 @@ class FinetuneDetector(FeatureDetector):
         optimizer = eval(f"torch.optim.{self.optimizer_name}([mu], lr=self.lr)")
 
         for i in range(self.n_iter):
-
             # 1 --- Find potential outliers
 
             feat_s = F.normalize(raw_feat_s - mu, dim=1)

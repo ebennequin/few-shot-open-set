@@ -41,6 +41,5 @@ class _CrossEntropy(_Loss):
             return loss
 
     def forward(self, logits: Tensor, targets: Tensor):
-
         one_hot_targets = self.smooth_one_hot(targets)
         return self.loss_fn(logits, one_hot_targets)

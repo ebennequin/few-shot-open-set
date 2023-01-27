@@ -80,7 +80,6 @@ class RepriDetector(FeatureDetector):
         return scores
 
     def __call__(self, support_features, query_features, **kwargs):
-
         loss_values = []
         aucs = []
         marg_entropy = []
@@ -104,7 +103,6 @@ class RepriDetector(FeatureDetector):
         optimizer = eval(f"torch.optim.{self.optimizer_name}([mu], lr=self.lr)")
 
         for i in range(self.n_iter):
-
             if i == 0:
                 with torch.no_grad():
                     # mu_init = torch.cat([raw_feat_s, raw_feat_q], 0).mean(0, keepdim=True)

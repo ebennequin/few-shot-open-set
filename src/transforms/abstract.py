@@ -83,7 +83,6 @@ class Power(FeatureTransform):
 
 
 class QRreduction(FeatureTransform):
-
     name = "QRreduction"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
@@ -94,7 +93,6 @@ class QRreduction(FeatureTransform):
 
 
 class Trivial(FeatureTransform):
-
     name = "Trivial"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):
@@ -102,7 +100,6 @@ class Trivial(FeatureTransform):
 
 
 class BaseCentering(FeatureTransform):
-
     name = "Base Centering"
 
     def __call__(self, raw_feat_s: Tensor, raw_feat_q: Tensor, **kwargs):

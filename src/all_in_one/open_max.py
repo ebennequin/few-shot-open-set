@@ -28,7 +28,6 @@ class OpenMax(AllInOne):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor, Tensor]:
-
         n_shots = (support_labels == 0).sum()
         n_classes = len(support_labels.unique())
         N_q = query_features.size(0)

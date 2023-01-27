@@ -50,7 +50,6 @@ class SemiFEAT(FewShotMethod):
         self.attn_model = self.attn_model.to(self.device)
 
     def forward(self, support_features, query_features, support_labels, **kwargs):
-
         support_features, query_features = (
             support_features.cuda(),
             query_features.cuda(),

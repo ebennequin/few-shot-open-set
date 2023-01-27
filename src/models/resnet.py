@@ -509,7 +509,6 @@ class BasicBlock(nn.Module):
         nn.init.zeros_(self.bn2.weight)
 
     def forward(self, x):
-
         shortcut = x
         assert isinstance(x, torch.Tensor), type(x)
         x = self.conv1(x)
@@ -603,7 +602,6 @@ class Bottleneck(nn.Module):
         nn.init.zeros_(self.bn3.weight)
 
     def forward(self, x):
-
         shortcut = x
 
         x = self.conv1(x)

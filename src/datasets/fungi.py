@@ -40,7 +40,6 @@ class Fungi(VisionDataset):
             original_train["images"] + original_val["images"],
             original_train["annotations"] + original_val["annotations"],
         ):
-
             assert image_record["id"] == annot_record["image_id"], (
                 image_record,
                 annot_record,
@@ -69,7 +68,6 @@ class Fungi(VisionDataset):
         return self.transform(Image.open(filename).convert("RGB"))
 
     def create_splits(self, root):
-
         NUM_TRAIN_CLASSES = 994
         NUM_VALID_CLASSES = 200
         NUM_TEST_CLASSES = 200

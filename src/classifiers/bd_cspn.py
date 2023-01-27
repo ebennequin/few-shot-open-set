@@ -55,7 +55,6 @@ class BDCSPN(FewShotMethod):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
-
         unlabelled_data = query_features
 
         # Initialize prototypes

@@ -1,4 +1,4 @@
-#%%
+# %%
 from typing import List, Optional
 
 import numpy as np
@@ -122,11 +122,9 @@ def main(
 
     # ===== Plot =====
     for dataset in all_results.src_dataset.unique():
-
         fig, axes = create_canvas(metrics, shots)
 
         for shot_id, n_shot in enumerate(shots):
-
             for metric_id, metric in enumerate(metrics):
                 results = all_results.loc[lambda df: df.src_dataset == dataset].loc[
                     lambda df: df.n_shot == n_shot

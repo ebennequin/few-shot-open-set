@@ -26,7 +26,6 @@ class PyodWrapper(FeatureDetector):
         # assert isinstance(pyod_detector, BaseDetector)
 
     def __call__(self, support_features, query_features, **kwargs):
-
         self.detector.fit(support_features.cpu().numpy())
         return torch.from_numpy(
             self.detector.decision_function(query_features.cpu().numpy())

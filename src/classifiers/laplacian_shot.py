@@ -106,7 +106,6 @@ class LaplacianShot(FewShotMethod):
         support_labels: Tensor,
         **kwargs
     ):
-
         # Perform normalizations required
 
         rectifier = BDCSPN(self.softmax_temperature)

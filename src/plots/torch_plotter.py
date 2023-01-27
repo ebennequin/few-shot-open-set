@@ -74,7 +74,6 @@ class TorchPlotter(Plotter):
         self.baseline = {}
 
         for file in torch_files:
-
             # ==== Make sure this is a relevant experiment ====
 
             filters = [x.split("=") for x in kwargs["filters"]]
@@ -100,7 +99,6 @@ class TorchPlotter(Plotter):
         self.out_dir = Path("plots") / kwargs["exp"] / "-".join(kwargs["filters"])
 
     def plot(self, **kwargs):
-
         inliers = ~self.baseline["outliers"].bool()
         n_tasks, n_q, K = self.baseline["probas_q"].size()
         flat_probs = self.baseline["probas_q"].view(-1, K)
@@ -117,7 +115,6 @@ class TorchPlotter(Plotter):
         methods = list(self.metric_dic.keys())
         methods.sort(reverse=True)
         for i, (method, ax) in enumerate(zip(methods, axes)):
-
             inliers = ~self.metric_dic[method]["outliers"].bool()
             n_tasks, n_q, K = self.metric_dic[method]["probas_q"].size()
 

@@ -11,7 +11,6 @@ INTERPOLATIONS = {
 
 
 def get_transforms(args):
-
     mean = BACKBONE_CONFIGS[args.backbone]["mean"]
     std = BACKBONE_CONFIGS[args.backbone]["std"]
     interp = INTERPOLATIONS[BACKBONE_CONFIGS[args.backbone]["interpolation"]]

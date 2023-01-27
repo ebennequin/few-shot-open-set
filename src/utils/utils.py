@@ -217,7 +217,6 @@ def get_modules_to_try(
     tune: bool,
     ablate: bool,
 ):
-
     modules_to_try: List[Any] = []
     # logger.warning(module_pool)
     module_dict = eval(f"args.{module_group}")

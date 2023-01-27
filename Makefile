@@ -355,6 +355,11 @@ ablate_ostim:
 		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
 	done \
 
+ablate_rebuttal:
+	make EXP=ablation/rebuttal ABLATE=feature_detector SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet run_osem ;\
+	for dataset in tiered_imagenet fungi aircraft cub; do \
+		make EXP=agblation/rebuttal ABLATE=feature_detector SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_osem ;\
+	done ; \
 
 # ========== 6) Size of query set ==========
 

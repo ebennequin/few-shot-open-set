@@ -1,11 +1,8 @@
 from pathlib import Path
 import numpy as np
-from itertools import cycle
 from collections import defaultdict
-from functools import partial
 from loguru import logger
-from typing import Any, List, Tuple
-from .plotter import Plotter
+from src.plots.plotter import Plotter
 import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
@@ -57,6 +54,18 @@ pretty["MAP"] = r"\textsc{PT-MAP}"
 pretty["kNNDetector"] = r"$k$-NN"
 pretty["LaplacianShot"] = "LapShot"
 
+# ---------- Ablations
+
+pretty[
+    "OSEM(inference_steps=2,lambda_s=0.05,lambda_z=0.1,ema_weight=1.0,use_inlier_latent=True)"
+] = r"Leverage $\xi$"
+pretty[
+    "OSEM(inference_steps=2,lambda_s=0.05,lambda_z=0.1,ema_weight=1.0,use_inlier_latent=False)"
+] = r"Ignore $\xi$"
+pretty[
+    "OSEM(inference_steps=0,lambda_s=0.05,lambda_z=0.1,ema_weight=1.0,use_inlier_latent=True)"
+] = r"Before optimization"
+
 
 # ---------- Metrics
 
@@ -65,6 +74,7 @@ pretty["mean_rocauc"] = "AUROC"
 pretty["mean_aupr"] = "AUPR"
 pretty["mean_rec_at_90"] = "Rec@0.9"
 pretty["mean_prec_at_90"] = "Prec@0.9"
+pretty["mean_prototypes_errors"] = r"$\mu$-error"
 
 
 # ---------- Architectures
@@ -113,6 +123,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--action", type=str, default="plot")
     parser.add_argument("--plot_versus", type=str, nargs="+")
     parser.add_argument("--use_pretty", type=str2bool, default=True)
+    parser.add_argument("--ablation", type=str2bool, default=False)
     parser.add_argument("--latex", type=str2bool, default=True)
     parser.add_argument("--horizontal", type=str2bool, default=True)
     parser.add_argument(
@@ -180,7 +191,11 @@ class CSVPlotter(Plotter):
             # Read remaining rows and add it to result_dir
             for index, row in df.iterrows():
                 for metric in kwargs["metrics"]:
-                    if kwargs["use_pretty"]:
+                    if kwargs["ablation"]:
+                        full_method_name = [
+                            process_dic[row[x]] for x in kwargs["groupby"]
+                        ]
+                    elif kwargs["use_pretty"]:
                         full_method_name = [
                             process_dic[row[x].split("(")[0]] for x in kwargs["groupby"]
                         ]

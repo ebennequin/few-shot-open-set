@@ -358,7 +358,7 @@ ablate_ostim:
 ablate_rebuttal:
 	make EXP=ablation/rebuttal ABLATE=feature_detector SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet run_osem ;\
 	for dataset in tiered_imagenet fungi aircraft cub; do \
-		make EXP=agblation/rebuttal ABLATE=feature_detector SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_osem ;\
+		make EXP=ablation/rebuttal ABLATE=feature_detector SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_osem ;\
 	done ; \
 
 plot_ablation_rebuttal:
@@ -367,11 +367,12 @@ plot_ablation_rebuttal:
 			 --exp ablation/rebuttal \
 			 --groupby feature_detector \
 			 --use_pretty True \
+			 --ablation True \
 			 --horizontal False \
-			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
+			 --metrics mean_acc mean_rocauc mean_prototypes_errors \
 			 --plot_versus src_dataset tgt_dataset \
 			 --filters n_shot=$${shot} \
-			 backbone=$${backbone} ;\
+			 backbone=resnet12 ;\
 	done ;\
 
 # ========== 6) Size of query set ==========

@@ -1,14 +1,6 @@
-from pathlib import Path
 import numpy as np
-from itertools import cycle
-from collections import defaultdict
-from functools import partial
 from loguru import logger
-from typing import Any, List, Tuple
-from .plotter import Plotter
-import pandas as pd
-import argparse
-from .csv_plotter import CSVPlotter, parse_args, pretty, spider_colors
+from src.plots.csv_plotter import CSVPlotter, parse_args, pretty, spider_colors
 import matplotlib.pyplot as plt
 import os
 from copy import deepcopy

@@ -520,8 +520,8 @@ def detect_outliers(
                     x = np.arange(len(m))
                     ax.plot(m, label=legend)
                     ax.fill_between(x, m - pm, m + pm, alpha=0.5)
-            if legend == "prototypes_error":
-                metrics["prototypes_error"] = [error[-1] for error in values]
+            if legend == "prototypes_errors":
+                metrics["prototypes_errors"] = [error[-1] for error in values]
         plt.legend()
         plt.savefig(Path(args.res_dir) / f"{title}.png")
         plt.clf()

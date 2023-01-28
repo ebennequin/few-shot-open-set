@@ -163,8 +163,8 @@ feature_detectors:
 
     # == For ablation
     ablation:
-      hparams2tune: ['use_inlier_latent', 'inference_steps', 'lambda_z']
-      hparam_values: {1: [[True, False], [0, 2], [0.5]]}
+      hparams2tune: ['use_inlier_latent', 'inference_steps']
+      hparam_values: {1: [[True, False], [0, 2]]}
 
 # === Detectors that work on probas ===
 # =======================================

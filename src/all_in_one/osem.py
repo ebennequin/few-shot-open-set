@@ -52,6 +52,13 @@ class OSEM(AllInOne):
         )  # [query_size, num_classes]
         inlier_scores = 0.5 * torch.ones((query_features.size(0), 1))
 
+        # To measure the distance to the true prototype
+        outliers = kwargs["outliers"].bool()
+        inliers = ~outliers
+        true_prototypes = compute_prototypes(
+            torch.cat((support_features, query_features[inliers])),
+            torch.cat((support_labels, kwargs["query_labels"][inliers])),
+        )
         acc_values = []
         auprs = []
         losses = []
@@ -62,6 +69,7 @@ class OSEM(AllInOne):
         inlier_scores_means = []
         inlier_scores_stds = []
         prototypes_norms = []
+        prototypes_errors = []
 
         for _ in range(self.inference_steps):
             # Compute inlier scores
@@ -92,10 +100,8 @@ class OSEM(AllInOne):
                 )
             )  # [query_size, num_classes]
 
-            # COmpute metrics
-            outliers = kwargs["outliers"].bool()
+            # Compute metrics
             outlier_scores = 1 - inlier_scores
-            inliers = ~outliers
             acc = (
                 (soft_assignements.argmax(-1) == kwargs["query_labels"])[inliers]
                 .float()
@@ -135,6 +141,8 @@ class OSEM(AllInOne):
             inlier_scores_means.append(inlier_scores.mean())
             inlier_scores_stds.append(inlier_scores.std())
             prototypes_norms.append(prototypes.norm(dim=-1).mean())
+
+            prototypes_errors.append((prototypes - true_prototypes).norm(dim=-1).mean())
 
             # Compute new prototypes
             all_features = torch.cat(
@@ -181,6 +189,11 @@ class OSEM(AllInOne):
         )
         kwargs["intra_task_metrics"]["secondary_metrics"]["prototypes_norms"].append(
             prototypes_norms
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"]["prototypes_errors"].append(
+            prototypes_errors
+            if len(prototypes_errors) > 0
+            else [(prototypes - true_prototypes).norm(dim=-1).mean()]
         )
 
         logits_s = self.get_logits(prototypes, support_features)

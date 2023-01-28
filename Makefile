@@ -361,6 +361,19 @@ ablate_rebuttal:
 		make EXP=agblation/rebuttal ABLATE=feature_detector SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_osem ;\
 	done ; \
 
+plot_ablation_rebuttal:
+	for shot in 1 5; do \
+		python -m src.plots.spider_plotter \
+			 --exp ablation/rebuttal \
+			 --groupby feature_detector \
+			 --use_pretty True \
+			 --horizontal False \
+			 --metrics mean_acc mean_rocauc mean_aupr mean_prec_at_90 \
+			 --plot_versus src_dataset tgt_dataset \
+			 --filters n_shot=$${shot} \
+			 backbone=$${backbone} ;\
+	done ;\
+
 # ========== 6) Size of query set ==========
 
 _variate_query:

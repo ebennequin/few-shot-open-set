@@ -500,16 +500,6 @@ def detect_outliers(
             metrics["rec_at_90"].append(recall_at_90)
             metrics["outlier_ratio"].append(outliers.sum().item() / outliers.size(0))
 
-    # ====== Computing mean and std of metrics across tasks ======
-
-    final_metrics = {}
-    for metric_name in metrics:
-        mean, std = compute_confidence_interval(
-            np.array(metrics[metric_name]), ignore_value=255
-        )
-        final_metrics[f"mean_{metric_name}"] = np.round(mean, 4)
-        final_metrics[f"std_{metric_name}"] = np.round(std, 4)
-
     # ====== Quick intra-task metrics ======
 
     for title in intra_task_metrics.keys():
@@ -530,9 +520,21 @@ def detect_outliers(
                     x = np.arange(len(m))
                     ax.plot(m, label=legend)
                     ax.fill_between(x, m - pm, m + pm, alpha=0.5)
+            if legend == "prototypes_error":
+                metrics["prototypes_error"] = [error[-1] for error in values]
         plt.legend()
         plt.savefig(Path(args.res_dir) / f"{title}.png")
         plt.clf()
+
+    # ====== Computing mean and std of metrics across tasks ======
+
+    final_metrics = {}
+    for metric_name in metrics:
+        mean, std = compute_confidence_interval(
+            np.array(metrics[metric_name]), ignore_value=255
+        )
+        final_metrics[f"mean_{metric_name}"] = np.round(mean, 4)
+        final_metrics[f"std_{metric_name}"] = np.round(std, 4)
 
     # ====== Save predictions and gts in case ====
 

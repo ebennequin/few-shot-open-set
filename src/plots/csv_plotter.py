@@ -75,6 +75,7 @@ pretty["mean_aupr"] = "AUPR"
 pretty["mean_rec_at_90"] = "Rec@0.9"
 pretty["mean_prec_at_90"] = "Prec@0.9"
 pretty["mean_prototypes_errors"] = r"$\mu$-error"
+pretty["mean_prototypes_similarity"] = r"$\mu$-similarity"
 
 
 # ---------- Architectures

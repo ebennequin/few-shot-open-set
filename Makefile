@@ -369,7 +369,7 @@ plot_ablation_rebuttal:
 			 --use_pretty True \
 			 --ablation True \
 			 --horizontal False \
-			 --metrics mean_acc mean_rocauc mean_prototypes_errors \
+			 --metrics mean_prototypes_similarity \
 			 --plot_versus src_dataset tgt_dataset \
 			 --filters n_shot=$${shot} \
 			 backbone=resnet12 ;\

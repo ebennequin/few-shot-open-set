@@ -70,7 +70,10 @@ class SpiderPlotter(CSVPlotter):
             del self.metric_dic[metric][baseline_method]
 
         for i, metric_name in enumerate(self.metric_dic):
-            ax = axes[i]
+            if nrows*n_cols > 1:
+                ax = axes[i]
+            else:
+                ax = axes
 
             BG_WHITE = "#fbf9f4"
             BLUE = "#2a475e"

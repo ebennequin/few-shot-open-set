@@ -8,6 +8,9 @@ import typer as typer
 from matplotlib import pyplot as plt
 from matplotlib import collections
 
+TICKS_FONT_SIZE = 22
+VALUES_FONT_SIZE = 22
+LEGENDS_FONT_SIZE = 27
 
 def main(
     exp_name: str,
@@ -58,7 +61,7 @@ def main(
             "text.usetex": True,
             "mathtext.fontset": "stix",
             "font.family": "STIXGeneral",
-            "font.size": 20,
+            "font.size": TICKS_FONT_SIZE,
         }
     )
 
@@ -77,7 +80,7 @@ def main(
                 f"{100 * acc_df.iloc[i, j]:.2f}",
                 ha="center",
                 va="center",
-                fontsize=18,
+                fontsize=VALUES_FONT_SIZE,
                 color="w",
             )
             ax.text(
@@ -86,14 +89,14 @@ def main(
                 f"{100 * rocauc_df.iloc[i, j]:.2f}",
                 ha="center",
                 va="center",
-                fontsize=18,
+                fontsize=VALUES_FONT_SIZE,
                 color="w",
             )
 
     ax.set_xticks([0, 1, 2, 3], [0.01, 0.05, 0.1, 0.5])
     ax.set_yticks([0, 1, 2, 3], [0.01, 0.05, 0.1, 0.5])
-    ax.set_xlabel(r"$\lambda_z$", fontsize=25)
-    ax.set_ylabel(r"$\lambda_\xi$", rotation=0, fontsize=25)
+    ax.set_xlabel(r"$\lambda_z$", fontsize=LEGENDS_FONT_SIZE)
+    ax.set_ylabel(r"$\lambda_\xi$", rotation=0, fontsize=LEGENDS_FONT_SIZE)
     ax.yaxis.set_label_coords(-0.1, 0.47)
     ax.xaxis.set_label_coords(0.5, -0.05)
     fig.set_size_inches(6, 6)

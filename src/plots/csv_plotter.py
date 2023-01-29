@@ -64,7 +64,7 @@ pretty[
 ] = r"Ignore $\xi$"
 pretty[
     "OSEM(inference_steps=0,lambda_s=0.05,lambda_z=0.1,ema_weight=1.0,use_inlier_latent=True)"
-] = r"Before optimization"
+] = r"At initialization"
 
 
 # ---------- Metrics

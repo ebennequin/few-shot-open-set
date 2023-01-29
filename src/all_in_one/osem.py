@@ -70,6 +70,7 @@ class OSEM(AllInOne):
         inlier_scores_stds = []
         prototypes_norms = []
         prototypes_errors = []
+        prototypes_similarity = []
 
         for _ in range(self.inference_steps):
             # Compute inlier scores
@@ -143,6 +144,9 @@ class OSEM(AllInOne):
             prototypes_norms.append(prototypes.norm(dim=-1).mean())
 
             prototypes_errors.append((prototypes - true_prototypes).norm(dim=-1).mean())
+            prototypes_similarity.append(
+                F.cosine_similarity(prototypes, true_prototypes, dim=-1).mean()
+            )
 
             # Compute new prototypes
             all_features = torch.cat(
@@ -194,6 +198,13 @@ class OSEM(AllInOne):
             prototypes_errors
             if len(prototypes_errors) > 0
             else [(prototypes - true_prototypes).norm(dim=-1).mean()]
+        )
+        kwargs["intra_task_metrics"]["secondary_metrics"][
+            "prototypes_similarity"
+        ].append(
+            prototypes_similarity
+            if len(prototypes_similarity) > 0
+            else [F.cosine_similarity(prototypes, true_prototypes, dim=-1).mean()]
         )
 
         logits_s = self.get_logits(prototypes, support_features)

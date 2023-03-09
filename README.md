@@ -1,9 +1,11 @@
-# Model-Agnostic Few-Shot Open-Set Recognition
+# Open-Set Likelihood Maximization for Few-Shot Learning
+
 
 ![Python Versions](https://img.shields.io/badge/python-3.8-%23EBBD68.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 
-Code for the paper "Model-Agnostic Few-Shot Open-Set Recognition", under review.
+Code for the paper [Open-Set Likelihood Maximization for Few-Shot Learning](https://arxiv.org/abs/2301.08390)
+, accepted at CVPR 2023.
 
 # Getting started
 

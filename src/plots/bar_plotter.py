@@ -57,7 +57,7 @@ class BarPlotter(CSVPlotter):
                                     'pm': Optional[ndarray],
                                    }
         """
-        fig, axes = plt.subplots(figsize=(10, 6), ncols=2)
+        fig, axes = plt.subplots(figsize=(11, 4.7), ncols=2)
 
         metric_names = list(self.metric_dic.keys())
         assert (
@@ -98,7 +98,7 @@ class BarPlotter(CSVPlotter):
                             [value],
                             edgecolor="white",
                             color=barplot_colors[methods.index(method)],
-                            height=0.01,
+                            height=0.005,
                             left=[bottoms[training]],
                             label=r"Strong baseline" if method_index == 0 else method,
                         )
@@ -117,26 +117,26 @@ class BarPlotter(CSVPlotter):
                             training_index == len(grouped_items[arch]) - 1
                         ):
                             ax.text(
-                                0.24,
-                                current_height + 0.02,
+                                0.245,
+                                current_height + 0.008,
                                 arch,
                                 va="center",
                                 ha="center",
-                                fontsize=11,
+                                fontsize=12,
                             )
                         yticks_labels.append(rf"{training}")
                         yticks.append(current_height)
-                        current_height += 0.02
-                    current_height += 0.03
+                        current_height += 0.008
+                    current_height += 0.012
 
             current_height -= 0.03
             ax.set_xticks(np.arange(4, 9) / 10)
             ax.set_xlim(0.4, 0.85)
             ax.set_xticklabels([rf"${10 * x}$" for x in range(4, 9)])
-            ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=12)
+            ax.set_title(rf"\textbf{{{pretty[metric_name]}}}", fontsize=13)
 
             if metric_index == 0:
-                ax.set(yticks=yticks, yticklabels=["" for x in labels])
+                ax.set(yticks=yticks, yticklabels=["" for _ in labels])
                 ax.yaxis.tick_right()
             else:
                 ax.set(yticks=yticks)
@@ -145,11 +145,11 @@ class BarPlotter(CSVPlotter):
                     ha="center",
                     va="center",
                     position=(-0.32, 0),
-                    fontsize=12,
+                    # fontsize=20,
                 )
                 # ax.yaxis.tick_left()
             plt.subplots_adjust(wspace=0.7)
-            ax.set_ylim(-0.03, current_height)
+            ax.set_ylim(-0.01, current_height + 0.02)
 
             # Hide the right and top spines
             if metric_index == 1:

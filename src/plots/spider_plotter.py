@@ -60,17 +60,19 @@ class SpiderPlotter(CSVPlotter):
             y_baseline = np.array(self.metric_dic[metric][baseline_method]["y"])
             baseline_values[metric] = y_baseline
             for method in methods:
-                assert self.metric_dic[metric][method]["x"] == x_names, (
-                    self.metric_dic[metric][method]["x"],
-                    x_names,
-                )
+                assert (
+                    self.metric_dic[metric][method]["x"] == x_names
+                ), f"""
+                    Available metrics for {method}: {self.metric_dic[metric][method]["x"]}, but 
+                    metrics for baseline {baseline_method} are {x_names}
+                   """
                 self.metric_dic[metric][method]["y"] = (
                     np.array(self.metric_dic[metric][method]["y"]) - y_baseline
                 )
             del self.metric_dic[metric][baseline_method]
 
         for i, metric_name in enumerate(self.metric_dic):
-            if nrows*n_cols > 1:
+            if nrows * n_cols > 1:
                 ax = axes[i]
             else:
                 ax = axes
@@ -135,6 +137,9 @@ class SpiderPlotter(CSVPlotter):
             ax.set_ylim(yticks[0] - 0.01, yticks[-1])
 
             # Set values for the angular axis (x)
+            # At some point we compressed the angles to gain space in the paper
+            # logger.info(f"ANGLES : {ANGLES}")
+            # ax.set_xticks([0.0, 1.2566370614359172, 2.2132741228718345, 4.0699111843077517, 5.026548245743669])
             ax.set_xticks(ANGLES[:-1])
             ax.set_xticklabels(VARIABLES, size=30, y=-0.35)
 
@@ -170,7 +175,7 @@ class SpiderPlotter(CSVPlotter):
                 )
                 for li in yticks
             ]
-            ax.text(angle, 0.0 + PAD, 0.0, size=size)
+            # ax.text(angle, 0.0 + PAD, 0.0, size=size)
 
             # Now fill the area of the circle with radius 1.
             # This create the effect of gray background.
@@ -189,7 +194,7 @@ class SpiderPlotter(CSVPlotter):
                 perf = np.mean(values)
                 values = np.concatenate([values, [values[0]]])  # to close the spider
                 is_best = max_avg_perf == perf
-                label = f"{method.split('(')[0]} ({np.round(100 * perf, 2)})"
+                label = f"{method.split('(')[0]} (+{np.round(100 * perf, 2)})"
                 ax.plot(
                     ANGLES,
                     values,

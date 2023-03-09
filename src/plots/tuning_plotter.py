@@ -12,6 +12,7 @@ TICKS_FONT_SIZE = 22
 VALUES_FONT_SIZE = 22
 LEGENDS_FONT_SIZE = 27
 
+
 def main(
     exp_name: str,
     n_shot: int = 1,

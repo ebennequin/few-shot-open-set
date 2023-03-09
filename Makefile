@@ -368,8 +368,8 @@ plot_ablation_rebuttal:
 			 --groupby feature_detector \
 			 --use_pretty True \
 			 --ablation True \
-			 --horizontal False \
-			 --metrics mean_prototypes_similarity \
+			 --horizontal True \
+			 --metrics mean_prototypes_similarity mean_acc mean_rocauc \
 			 --plot_versus src_dataset tgt_dataset \
 			 --filters n_shot=$${shot} \
 			 backbone=resnet12 ;\

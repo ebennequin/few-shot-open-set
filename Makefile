@@ -355,6 +355,25 @@ ablate_ostim:
 		make EXP=ablation ABLATE=feature_detector SRC_DATASET=$${dataset} TGT_DATASET=$${dataset} run_ostim ;\
 	done \
 
+ablate_rebuttal:
+	make EXP=ablation/rebuttal ABLATE=feature_detector SRC_DATASET=mini_imagenet TGT_DATASET=mini_imagenet run_osem ;\
+	for dataset in tiered_imagenet fungi aircraft cub; do \
+		make EXP=ablation/rebuttal ABLATE=feature_detector SRC_DATASET=tiered_imagenet TGT_DATASET=$${dataset} run_osem ;\
+	done ; \
+
+plot_ablation_rebuttal:
+	for shot in 1 5; do \
+		python -m src.plots.spider_plotter \
+			 --exp ablation/rebuttal \
+			 --groupby feature_detector \
+			 --use_pretty True \
+			 --ablation True \
+			 --horizontal True \
+			 --metrics mean_prototypes_similarity mean_acc mean_rocauc \
+			 --plot_versus src_dataset tgt_dataset \
+			 --filters n_shot=$${shot} \
+			 backbone=resnet12 ;\
+	done ;\
 
 # ========== 6) Size of query set ==========
 

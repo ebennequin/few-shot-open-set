@@ -22,7 +22,6 @@ class FewShotCIFAR100(CIFAR100):
         training: bool = False,
         download: bool = False,
     ):
-
         transform = (
             transforms.Compose(
                 [

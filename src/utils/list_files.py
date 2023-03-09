@@ -28,7 +28,6 @@ def menu_selection(paths: Union[Path, List[Path]]) -> List[Path]:
 
 
 if __name__ == "__main__":
-
     in_folder = sys.argv[1]
     out_folder = sys.argv[2]
     out_file = sys.argv[3]

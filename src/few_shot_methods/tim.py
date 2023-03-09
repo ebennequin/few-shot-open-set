@@ -35,7 +35,6 @@ class TIM_GD(AbstractTIM):
         query_features: Tensor,
         support_labels: Tensor,
     ) -> Tuple[Tensor, Tensor]:
-
         # Metric dic
         num_classes = support_labels.unique().size(0)
         support_labels_one_hot = F.one_hot(support_labels, num_classes)

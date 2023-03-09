@@ -103,7 +103,6 @@ def check_if_record_exists(args, path: str):
 
 
 def update_csv(args: argparse.Namespace, metrics: dict, path: str):
-
     # Load records
     try:
         res = pd.read_csv(path)

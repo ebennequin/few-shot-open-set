@@ -9,7 +9,6 @@ class kNNDetector(FeatureDetector):
     """
 
     def __init__(self, distance: str, n_neighbors: int, method: str):
-
         self.distance = distance
         self.n_neighbors = n_neighbors
         self.method = method

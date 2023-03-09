@@ -47,7 +47,6 @@ class OSTIM(AllInOne):
         delattr(self, "mu")
 
     def get_logits(self, prototypes, query_features):
-
         logits = self.cosine(query_features, prototypes)  # [Nq, K]
         if not self.use_explicit_prototype:
             logits = torch.cat(
@@ -63,7 +62,6 @@ class OSTIM(AllInOne):
         support_labels: Tensor,
         **kwargs,
     ) -> Tuple[Tensor, Tensor, Tensor]:
-
         self.iter_ = 0
 
         # Metric dic
@@ -134,7 +132,6 @@ class OSTIM(AllInOne):
         acc_values = []
 
         for self.iter_ in range(self.inference_steps):
-
             # Compute loss
 
             logits_s = self.get_logits(self.prototypes, support_features)

@@ -182,7 +182,6 @@ class PowerTransform(AbstractFeatureTransformer):
     def forward(
         self, support_features: Tensor, query_features: Tensor
     ) -> Tuple[Tensor, Tensor]:
-
         return torch.pow(support_features + EPSILON, self.beta), torch.pow(
             query_features + EPSILON, self.beta
         )

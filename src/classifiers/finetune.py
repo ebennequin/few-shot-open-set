@@ -33,7 +33,6 @@ class Finetune(FewShotMethod):
         support_labels: Tensor,
         **kwargs,
     ) -> Tuple[Tensor, Tensor]:
-
         # Initialize prototypes
         self.prototypes = compute_prototypes(support_features, support_labels)
 
@@ -41,7 +40,6 @@ class Finetune(FewShotMethod):
         self.prototypes.requires_grad_()
         optimizer = torch.optim.Adam([self.prototypes], lr=self.inference_lr)
         for i in range(self.inference_steps):
-
             logits_s = self.get_logits_from_cosine_distances_to_prototypes(
                 support_features
             )

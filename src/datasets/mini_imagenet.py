@@ -99,7 +99,6 @@ class MiniImageNet(VisionDataset):
         target_transform: Optional[Callable] = None,
         training: bool = False,
     ):
-
         image_path = root / "images"
         transform = get_transforms(args)
         super(MiniImageNet, self).__init__(
@@ -124,7 +123,6 @@ class MiniImageNet(VisionDataset):
         return len(self.images)
 
     def __getitem__(self, item):
-
         img, label = (
             self.load_image(self.images[item]),
             self.labels[item],

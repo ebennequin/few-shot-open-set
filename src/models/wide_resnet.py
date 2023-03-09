@@ -112,6 +112,5 @@ class Wide_ResNet(nn.Module):
 
 
 def wrn2810(**kwargs):
-
     model = Wide_ResNet(28, 10, 0.0, **kwargs)
     return model

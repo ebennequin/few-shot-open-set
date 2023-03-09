@@ -51,7 +51,6 @@ class TieredImageNet(VisionDataset):
             return data
 
     def __getitem__(self, item):
-
         img, label = (
             self.transform(self.images[item]),
             self.labels[item],

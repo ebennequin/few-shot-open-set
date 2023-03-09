@@ -31,7 +31,6 @@ class AlternateDetector(FeatureDetector):
         return auc_fn(fp_rate, tp_rate)
 
     def __call__(self, query_features, **kwargs):
-
         loss_values = []
         aucs = []
         marg_entropy = []
@@ -51,7 +50,6 @@ class AlternateDetector(FeatureDetector):
         optimizer = torch.optim.SGD([mu], lr=self.lr)
 
         for i in range(self.n_iter):
-
             # 1 --- Find potential outliers
 
             feat_s = F.normalize(raw_feat_s - mu, dim=1)

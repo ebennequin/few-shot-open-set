@@ -37,7 +37,6 @@ class TIM_GD(AbstractTIM):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
-
         unlabelled_data = query_features
 
         # Metric dic

@@ -41,7 +41,6 @@ class RePRI(FewShotMethod):
         support_labels: Tensor,
         **kwargs
     ) -> Tuple[Tensor, Tensor]:
-
         support_features, query_features = (
             support_features.cuda(),
             query_features.cuda(),
@@ -92,7 +91,6 @@ class RePRI(FewShotMethod):
         acc_otsu = []
 
         for i in range(self.inference_steps):
-
             # Center data
             centered_feats_s = raw_feat_s.unsqueeze(0) - mu  # [ens, N,  d]
             centered_feats_q = raw_feat_q.unsqueeze(0) - mu  # [ens, N, d]

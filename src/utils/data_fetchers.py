@@ -164,7 +164,6 @@ def get_classic_loader(
     world_size=1,
     n_workers=6,
 ):
-
     dataset = get_dataset(dataset_name, args, split, training)
     sampler = DistributedSampler(dataset, shuffle=True) if (world_size > 1) else None
     batch_size = int(args.batch_size / world_size) if (world_size > 1) else batch_size

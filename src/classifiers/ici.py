@@ -40,7 +40,6 @@ class ICI(FewShotMethod):
         )
 
     def forward(self, support_features, query_features, support_labels, **kwargs):
-
         support_X, support_y = support_features.numpy(), support_labels.numpy()
         way, num_support = support_labels.unique().size(0), len(support_X)
 
@@ -66,7 +65,6 @@ class ICI(FewShotMethod):
         self.classifier.fit(support_X, support_y)
 
         for _ in range(self.max_iter):
-
             # Get pseudo labels
             pseudo_y = self.classifier.predict(unlabel_X)
             y = np.concatenate([support_y, pseudo_y])
@@ -91,7 +89,6 @@ class ICI(FewShotMethod):
     def expand(
         self, support_set, X_hat, y_hat, way, num_support, pseudo_y, embeddings, targets
     ):
-
         # Get the path (i.e the evolution of |gamma_i| as a function of lambda increasing)
         _, coefs, _ = self.elasticnet.path(X_hat, y_hat, l1_ratio=1.0)
         coefs = np.sum(np.abs(coefs.transpose(2, 1, 0)[::-1, num_support:, :]), axis=2)
